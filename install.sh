@@ -11,26 +11,16 @@ set -e
 INSTALL_DIR="/opt/winterflow"
 AGENT_BINARY="${INSTALL_DIR}/agent"
 SERVICE_FILE="/etc/systemd/system/winterflow-agent.service"
-PLAYBOOKS_DIR="${INSTALL_DIR}/playbooks"
 
-# API endpoint for downloading the agent
+# Endpoint for downloading the agent (redirects to the latest version on GitHub)
 DOWNLOAD_API_URL="https://get.winterflow.com/agent"
 
-# Repository URLs (using HTTPS for better compatibility)
-PLAYBOOKS_REPO="https://github.com/winterflowio/winterflow-playbooks.git"
-
 # Required packages
-REQUIRED_PACKAGES="ansible git curl"
+REQUIRED_PACKAGES="curl"
 
 # Minimum required versions
 MIN_UBUNTU_VERSION=20
 MIN_DEBIAN_VERSION=12
-
-# Colors for better readability
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-NC='\033[0m' # No Color
 
 #######################
 # Utility Functions
@@ -40,6 +30,10 @@ NC='\033[0m' # No Color
 log() {
     local level="$1"
     local message="$2"
+    local RED='\033[0;31m'
+    local GREEN='\033[0;32m'
+    local YELLOW='\033[0;33m'
+    local NC='\033[0m' # No Color
     
     case "$level" in
         "info")
@@ -225,30 +219,6 @@ EOF
     fi
 }
 
-# Function to clone or update repositories
-handle_repositories() {
-    log "info" "Setting up playbook repository..."
-    
-    # Handle winterflow-playbooks repository
-    if [ -d "${PLAYBOOKS_DIR}/.git" ]; then
-        log "info" "Updating winterflow-playbooks repository..."
-        cd "${PLAYBOOKS_DIR}" || return 1
-        if ! git pull; then
-            log "warn" "Failed to update winterflow-playbooks repository"
-        fi
-    else
-        log "info" "Cloning winterflow-playbooks repository..."
-        if ! git clone "${PLAYBOOKS_REPO}" "${PLAYBOOKS_DIR}"; then
-            log "warn" "Failed to clone winterflow-playbooks repository"
-        fi
-    fi
-    
-    # Set proper permissions
-    chown -R root:root "${PLAYBOOKS_DIR}"
-    
-    return 0
-}
-
 # Function to display next steps
 display_next_steps() {
     log "info" "Installation completed successfully!"
@@ -276,7 +246,7 @@ check_os_version
 log "info" "Updating package repositories..."
 apt-get update
 
-# Install required packages
+# Install required packages (only curl now)
 log "info" "Installing required packages..."
 apt-get install -y ${REQUIRED_PACKAGES}
 
@@ -301,9 +271,6 @@ fi
 
 # Manage systemd service
 manage_systemd_service "${SERVICE_WAS_RUNNING}"
-
-# Clone or update repositories
-handle_repositories
 
 # Display next steps
 display_next_steps
