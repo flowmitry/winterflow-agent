@@ -25,9 +25,11 @@ set -e
 INSTALL_DIR="/opt/winterflow"
 AGENT_BINARY="${INSTALL_DIR}/agent"
 SERVICE_FILE="/etc/systemd/system/winterflow-agent.service"
+INSTALL_SCRIPT="${INSTALL_DIR}/install.sh"
 
-# GitHub repository information
+# URLs
 GITHUB_API="https://api.github.com/repos/winterflowio/agent/releases/latest"
+INSTALL_SCRIPT_URL="https://winterflowio.github.io/agent/install.sh"
 
 # Required packages
 REQUIRED_PACKAGES="curl"
@@ -256,6 +258,21 @@ display_next_steps() {
     echo "For more information, visit: https://docs.winterflow.com"
 }
 
+# Function to save installation script
+save_installation_script() {
+    log "info" "Saving installation script to ${INSTALL_SCRIPT}"
+    
+    # Download the installation script
+    if ! curl -fsSL "${INSTALL_SCRIPT_URL}" > "${INSTALL_SCRIPT}"; then
+        log "error" "Failed to download installation script"
+        return 1
+    fi
+    
+    # Make the saved script executable
+    chmod +x "${INSTALL_SCRIPT}"
+    log "info" "Installation script saved and made executable"
+}
+
 # Main installation process
 log "info" "Starting Winterflow Agent installation..."
 
@@ -295,6 +312,11 @@ fi
 
 # Manage systemd service
 manage_systemd_service "${SERVICE_WAS_RUNNING}"
+
+# Save installation script for future use
+if ! save_installation_script; then
+    log "warn" "Failed to save installation script, but agent installation was successful"
+fi
 
 # Display next steps
 display_next_steps
