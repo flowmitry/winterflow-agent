@@ -16,9 +16,8 @@ type Config struct {
 	WorkingDir    string `json:"working_dir"`    // Directory where the agent stores its files
 	PlaybooksPath string `json:"playbooks_path"` // Path to the winterflow playbooks
 	DeviceID      string `json:"device_id"`
-	AgentToken    string `json:"agent_token"`   // Token received after registration
-	RegisteredAt  string `json:"registered_at"` // ISO 8601 timestamp
-	Port          int    `json:"port"`          // Port for the application to listen on
+	AgentToken    string `json:"agent_token"` // Token received after registration
+	Port          int    `json:"port"`        // Port for the application to listen on
 }
 
 // Manager handles configuration loading and saving
@@ -31,6 +30,18 @@ func NewManager(configPath string) *Manager {
 	return &Manager{
 		configPath: configPath,
 	}
+}
+
+// IsRegistered checks if the agent is already registered
+func (c *Config) IsRegistered() (bool, error) {
+	return c.AgentToken != "", nil
+}
+
+func (c *Config) GetPort() int {
+	if c.Port == 0 {
+		return DefaultPort
+	}
+	return c.Port
 }
 
 // LoadConfig loads and validates the configuration from the specified file

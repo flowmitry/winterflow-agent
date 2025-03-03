@@ -126,11 +126,9 @@ func Register(configPath string) error {
 		}
 
 		if statusResp.Status == "complete" {
-			// Save configuration
 			cfg := &config.Config{
-				DeviceID:     deviceID,
-				AgentToken:   statusResp.AgentToken,
-				RegisteredAt: time.Now().UTC().Format(time.RFC3339),
+				DeviceID:   deviceID,
+				AgentToken: statusResp.AgentToken,
 			}
 
 			if err := configManager.SaveConfig(cfg); err != nil {

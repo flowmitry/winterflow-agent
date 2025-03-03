@@ -2,14 +2,13 @@
 package system
 
 import (
-	"winterflow-agent/internal/config"
 	internaldevice "winterflow-agent/internal/system/device"
 	internalsystem "winterflow-agent/internal/system/system"
 )
 
-// UpdateSystem updates the system packages
-func UpdateSystem() error {
-	return internalsystem.UpdateSystem()
+// FetchPackagesUpdates fetches the system packages updates
+func FetchPackagesUpdates() error {
+	return internalsystem.FetchPackagesUpdates()
 }
 
 // InstallRequiredPackages installs necessary system packages
@@ -17,9 +16,9 @@ func InstallRequiredPackages() error {
 	return internalsystem.InstallRequiredPackages()
 }
 
-// ManagePlaybooksRepo ensures the winterflow playbooks repository is cloned and up to date
-func ManagePlaybooksRepo(cfg *config.Config) error {
-	return internalsystem.ManagePlaybooksRepo(cfg)
+// DownloadPlaybooks ensures the winterflow playbooks repository is cloned and up to date
+func DownloadPlaybooks(playbooksPath string) error {
+	return internalsystem.DownloadPlaybooks(playbooksPath)
 }
 
 func GetDeviceID() (string, error) {

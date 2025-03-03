@@ -2,7 +2,6 @@
 package winterflow
 
 import (
-	"fmt"
 	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/client"
 	"winterflow-agent/internal/winterflow/registration"
@@ -14,11 +13,6 @@ func Register(configPath string) error {
 }
 
 // NewClient creates a new Winterflow API client
-func NewClient(configPath string) (*client.Client, error) {
-	configManager := config.NewManager(configPath)
-	cfg, err := configManager.LoadConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
-	}
-	return client.NewClient(cfg.AgentToken, cfg.DeviceID)
+func NewClient(config *config.Config) (*client.Client, error) {
+	return client.NewClient(config.AgentToken, config.DeviceID)
 }

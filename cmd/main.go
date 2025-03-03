@@ -79,7 +79,7 @@ func main() {
 
 	// Update system packages
 	fmt.Println("Updating system packages...")
-	if err := system.UpdateSystem(); err != nil {
+	if err := system.FetchPackagesUpdates(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to update system: %v\n", err)
 		os.Exit(1)
 	}
@@ -93,7 +93,7 @@ func main() {
 
 	// Manage playbooks repository
 	fmt.Println("Managing playbooks repository...")
-	if err := system.ManagePlaybooksRepo(cfg); err != nil {
+	if err := system.DownloadPlaybooks(cfg.PlaybooksPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to manage playbooks repository: %v\n", err)
 		os.Exit(1)
 	}
