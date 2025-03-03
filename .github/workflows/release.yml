@@ -9,17 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  release:
     runs-on: ubuntu-latest
     
-    strategy:
-      matrix:
-        include:
-          - os: linux
-            arch: amd64
-          - os: linux
-            arch: arm64
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,40 +33,20 @@ jobs:
         run: |
           echo "version=$(date +'%Y%m%d.%H%M%S')" >> $GITHUB_OUTPUT
 
-      - name: Build binary
-        env:
-          GOOS: ${{ matrix.os }}
-          GOARCH: ${{ matrix.arch }}
+      - name: Build binaries
         run: |
-          binary_name="winterflow-agent-${{ matrix.os }}-${{ matrix.arch }}"
-          go build -v -o "$binary_name" .
-
-      - name: Upload binary artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: winterflow-agent-${{ matrix.os }}-${{ matrix.arch }}
-          path: winterflow-agent-${{ matrix.os }}-${{ matrix.arch }}
-          if-no-files-found: error
-
-  create-release:
-    needs: build-and-release
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Generate version
-        id: version
-        run: |
-          echo "version=$(date +'%Y%m%d.%H%M%S')" >> $GITHUB_OUTPUT
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+          # Build for linux/amd64
+          GOOS=linux GOARCH=amd64 go build -v -o winterflow-agent-linux-amd64 .
+          
+          # Build for linux/arm64
+          GOOS=linux GOARCH=arm64 go build -v -o winterflow-agent-linux-arm64 .
 
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "v${{ steps.version.outputs.version }}" \
+            winterflow-agent-linux-* \
             --title "Release v${{ steps.version.outputs.version }}" \
             --draft=false \
-            --prerelease=false \
-            winterflow-agent-*/*
+            --prerelease=false
