@@ -1,4 +1,4 @@
-package winterflow
+package registration
 
 import (
 	"encoding/json"
@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"winterflow-agent/internal/config"
-	"winterflow-agent/internal/device"
+	internalsystem "winterflow-agent/internal/system"
+	"winterflow-agent/internal/winterflow/client"
 )
 
 const (
@@ -60,7 +61,7 @@ func Register(configPath string) error {
 	}
 
 	// Read device ID from system for registration
-	deviceID, err := device.GetDeviceID()
+	deviceID, err := internalsystem.GetDeviceID()
 	if err != nil {
 		return fmt.Errorf("failed to read device ID: %w", err)
 	}
@@ -72,7 +73,7 @@ func Register(configPath string) error {
 	}
 
 	// Create API client with real device ID for registration
-	client, err := NewClient("", "", deviceID) // No credentials needed for initial request
+	apiClient, err := client.NewClient("", deviceID) // No credentials needed for initial request
 	if err != nil {
 		return fmt.Errorf("failed to create API client: %w", err)
 	}
@@ -83,7 +84,7 @@ func Register(configPath string) error {
 		Hostname: hostname,
 	}
 
-	respData, err := client.DoRequest("POST", "/agents/device-code", reqBody)
+	respData, err := apiClient.DoRequest("POST", "/agents/device-code", reqBody)
 	if err != nil {
 		return fmt.Errorf("failed to get device code: %w", err)
 	}
@@ -114,7 +115,7 @@ func Register(configPath string) error {
 			DeviceCode: deviceResp.DeviceCode,
 		}
 
-		respData, err := client.DoRequest("POST", "/agents/registration-status", statusReq)
+		respData, err := apiClient.DoRequest("POST", "/agents/registration-status", statusReq)
 		if err != nil {
 			continue // Just retry on error
 		}

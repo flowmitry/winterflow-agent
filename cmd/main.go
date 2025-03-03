@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/system"
 	"winterflow-agent/internal/winterflow"
 )
 
@@ -41,6 +43,27 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Create configuration manager
+	configManager := config.NewManager(*configPath)
+
+	// Load configuration
+	cfg, err := configManager.LoadConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Verify device ID matches the system
+	systemDeviceID, err := system.GetDeviceID()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get system device ID: %v\n", err)
+		os.Exit(1)
+	}
+	if cfg.DeviceID != systemDeviceID {
+		fmt.Fprintf(os.Stderr, "Device ID mismatch: config has %s but system has %s\n", cfg.DeviceID, systemDeviceID)
+		os.Exit(1)
+	}
+
 	// Handle registration
 	if *register {
 		fmt.Println("Starting agent registration...")
@@ -52,6 +75,28 @@ func main() {
 		os.Exit(0)
 	}
 
-	// TODO: Add your agent initialization and main logic here
 	fmt.Println("Winterflow Agent starting...")
+
+	// Update system packages
+	fmt.Println("Updating system packages...")
+	if err := system.UpdateSystem(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to update system: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Install required packages
+	fmt.Println("Installing required packages...")
+	if err := system.InstallRequiredPackages(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to install required packages: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Manage playbooks repository
+	fmt.Println("Managing playbooks repository...")
+	if err := system.ManagePlaybooksRepo(cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to manage playbooks repository: %v\n", err)
+		os.Exit(1)
+	}
+
+	// TODO: Add your agent initialization and main logic here
 }

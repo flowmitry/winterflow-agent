@@ -1,4 +1,4 @@
-package winterflow
+package client
 
 import (
 	"bytes"
@@ -20,20 +20,18 @@ const (
 
 // Client represents a Winterflow API client
 type Client struct {
-	apiKey     string
 	agentToken string
 	machineID  string
 	baseURL    string
 }
 
 // NewClient creates a new Winterflow API client
-func NewClient(apiKey string, agentToken string, machineID string) (*Client, error) {
+func NewClient(agentToken string, machineID string) (*Client, error) {
 	if machineID == "" {
 		return nil, fmt.Errorf("machine ID is required")
 	}
 
 	return &Client{
-		apiKey:     apiKey,
 		agentToken: agentToken,
 		machineID:  machineID,
 		baseURL:    APIEndpoint,
@@ -54,7 +52,7 @@ func (c *Client) signRequest(method, path string, timestamp string, body []byte)
 	}, "\n")
 
 	// Create HMAC-SHA256 signature
-	h := hmac.New(sha256.New, []byte(c.apiKey))
+	h := hmac.New(sha256.New, []byte(c.agentToken))
 	h.Write([]byte(stringToSign))
 	signature := hex.EncodeToString(h.Sum(nil))
 
