@@ -24,6 +24,7 @@ set -e
 # Installation paths
 INSTALL_DIR="/opt/winterflow"
 AGENT_BINARY="${INSTALL_DIR}/agent"
+CONFIG_FILE="${INSTALL_DIR}/agent.config.json"
 SERVICE_FILE="/etc/systemd/system/winterflow-agent.service"
 INSTALL_SCRIPT="${INSTALL_DIR}/install.sh"
 
@@ -130,6 +131,17 @@ create_directories() {
     fi
 }
 
+# Function to create empty config file
+create_config_file() {
+    if [ ! -f "${CONFIG_FILE}" ]; then
+        log "info" "Creating empty configuration file..."
+        echo "{}" > "${CONFIG_FILE}"
+        chmod 600 "${CONFIG_FILE}"
+    else
+        log "info" "Configuration file already exists"
+    fi
+}
+
 # Function to handle agent binary download and installation
 handle_agent_binary() {
     local service_was_running="$1"
@@ -217,7 +229,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=${AGENT_BINARY}
+ExecStart=${AGENT_BINARY} --config ${CONFIG_FILE}
 Restart=always
 RestartSec=10
 User=root
@@ -250,7 +262,7 @@ display_next_steps() {
     log "info" "Installation completed successfully!"
     echo ""
     echo "Next steps:"
-    echo "1. Configure your agent by editing ${INSTALL_DIR}/config.yaml"
+    echo "1. Configure your agent by editing ${CONFIG_FILE}"
     echo "2. Start the agent with: sudo systemctl start winterflow-agent"
     echo "3. Enable auto-start on boot with: sudo systemctl enable winterflow-agent"
     echo "4. Check agent status with: sudo systemctl status winterflow-agent"
@@ -293,6 +305,9 @@ apt-get install -y ${REQUIRED_PACKAGES}
 
 # Create required directories
 create_directories
+
+# Create empty config file
+create_config_file
 
 # Check if service exists and is running
 SERVICE_WAS_RUNNING=false
