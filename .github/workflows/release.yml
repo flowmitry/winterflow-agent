@@ -1,0 +1,80 @@
+name: Agent Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get Go version from go.mod
+        id: goversion
+        run: |
+          GO_VERSION=$(grep -E '^go [0-9]+\.[0-9]+' go.mod | cut -d ' ' -f 2)
+          echo "version=$GO_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ steps.goversion.outputs.version }}
+          check-latest: true
+
+      - name: Generate version
+        id: version
+        run: |
+          echo "version=$(date +'%Y%m%d.%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          binary_name="winterflow-agent-${{ matrix.os }}-${{ matrix.arch }}"
+          go build -v -o "$binary_name" .
+
+      - name: Upload binary artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: winterflow-agent-${{ matrix.os }}-${{ matrix.arch }}
+          path: winterflow-agent-${{ matrix.os }}-${{ matrix.arch }}
+          if-no-files-found: error
+
+  create-release:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Generate version
+        id: version
+        run: |
+          echo "version=$(date +'%Y%m%d.%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --title "Release v${{ steps.version.outputs.version }}" \
+            --draft=false \
+            --prerelease=false \
+            winterflow-agent-*/*
