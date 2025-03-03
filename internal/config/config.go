@@ -9,11 +9,16 @@ import (
 	"winterflow-agent/internal/device"
 )
 
+const (
+	DefaultPort = 18080 // Default port for the application to listen on
+)
+
 // Config represents the agent configuration
 type Config struct {
 	DeviceID     string `json:"device_id"`
 	AgentToken   string `json:"agent_token"`   // Token received after registration
 	RegisteredAt string `json:"registered_at"` // ISO 8601 timestamp
+	Port         int    `json:"port"`          // Port for the application to listen on
 }
 
 // Manager handles configuration loading and saving
@@ -32,7 +37,7 @@ func NewManager(configPath string) *Manager {
 func (m *Manager) LoadConfig() (*Config, error) {
 	// Check if config file exists
 	if _, err := os.Stat(m.configPath); os.IsNotExist(err) {
-		return &Config{}, nil
+		return &Config{Port: DefaultPort}, nil // Set default port for new configurations
 	}
 
 	data, err := os.ReadFile(m.configPath)
@@ -43,6 +48,11 @@ func (m *Manager) LoadConfig() (*Config, error) {
 	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	// Set default port if not specified
+	if config.Port == 0 {
+		config.Port = DefaultPort
 	}
 
 	// If the config has a device ID, validate it
