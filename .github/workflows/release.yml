@@ -1,15 +1,21 @@
 name: Agent Release
 
 on:
-  push:
-    branches:
-      - main
+#   push:
+#     branches:
+#       - main
+
+  workflow_dispatch:
+
+concurrency:
+  group: "agent-release"
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  agent-release:
     runs-on: ubuntu-latest
     
     steps:
