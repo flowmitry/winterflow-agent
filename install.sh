@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# Winterflow Agent Installer
+# -------------------------
+# This script installs the Winterflow Agent on Ubuntu 20.04+ or Debian 12+
+#
+# Quick Install:
+#   curl -fsSL https://winterflowio.github.io/agent/install.sh | sudo bash
+#
+# Manual Install:
+#   curl -fsSL https://winterflowio.github.io/agent/install.sh > winterflow-install.sh
+#   chmod +x winterflow-install.sh
+#   sudo ./winterflow-install.sh
+#
+# Source: https://github.com/winterflowio/agent
+
 # Exit on any error
 set -e
 
