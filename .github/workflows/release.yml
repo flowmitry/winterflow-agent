@@ -40,12 +40,20 @@ jobs:
           echo "version=$(date +'%Y%m%d.%H%M%S')" >> $GITHUB_OUTPUT
 
       - name: Build binaries
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CGO_ENABLED: 0
         run: |
+          # Common build flags
+          BUILD_FLAGS="-v -ldflags=\"-s -w -X main.version=${VERSION}\""
+          
           # Build for linux/amd64
-          GOOS=linux GOARCH=amd64 go build -v -o winterflow-agent-linux-amd64 .
+          echo "Building for linux/amd64..."
+          GOOS=linux GOARCH=amd64 go build ${BUILD_FLAGS} -o winterflow-agent-linux-amd64 ./cmd/main.go
           
           # Build for linux/arm64
-          GOOS=linux GOARCH=arm64 go build -v -o winterflow-agent-linux-arm64 .
+          echo "Building for linux/arm64..."
+          GOOS=linux GOARCH=arm64 go build ${BUILD_FLAGS} -o winterflow-agent-linux-arm64 ./cmd/main.go
 
       - name: Create Release
         env:
