@@ -12,8 +12,8 @@ INSTALL_DIR="/opt/winterflow"
 AGENT_BINARY="${INSTALL_DIR}/agent"
 SERVICE_FILE="/etc/systemd/system/winterflow-agent.service"
 
-# Endpoint for downloading the agent (redirects to the latest version on GitHub)
-DOWNLOAD_API_URL="https://get.winterflow.com/agent"
+# GitHub repository information
+GITHUB_API="https://api.github.com/repos/winterflowio/agent/releases/latest"
 
 # Required packages
 REQUIRED_PACKAGES="curl"
@@ -118,25 +118,35 @@ create_directories() {
 handle_agent_binary() {
     local service_was_running="$1"
     
-    # Get system architecture and OS
+    # Get system architecture
     local arch
     arch=$(get_arch)
-    
-    local os_id
-    os_id=$(. /etc/os-release && echo "$ID")
-    
     log "info" "Detected architecture: $arch"
-    log "info" "Detected OS: $os_id"
-    
-    # Construct binary URL
-    local binary_url="${DOWNLOAD_API_URL}?os=${os_id}&arch=${arch}"
     
     # Create a temporary file for downloading
     local temp_binary
     temp_binary=$(mktemp)
     
-    log "info" "Downloading Winterflow Agent from $binary_url"
-    if ! curl -L -f -S --progress-bar -o "${temp_binary}" "${binary_url}"; then
+    # Get the latest release download URL for the current architecture
+    log "info" "Fetching latest release information..."
+    local download_url
+    download_url=$(curl -s "${GITHUB_API}" | \
+                  grep -o "\"browser_download_url\": \"[^\"]*linux-${arch}[^\"]*\"" | \
+                  head -n 1 | \
+                  cut -d'"' -f4)
+
+    if [ -z "${download_url}" ]; then
+        log "error" "Could not find release for linux-${arch}"
+        rm -f "${temp_binary}"
+        if [ "${service_was_running}" = true ]; then
+            log "info" "Restarting Winterflow Agent service..."
+            systemctl start winterflow-agent
+        fi
+        return 1
+    fi
+    
+    log "info" "Downloading Winterflow Agent from ${download_url}"
+    if ! curl -L -f -S --progress-bar -o "${temp_binary}" "${download_url}"; then
         log "error" "Failed to download the agent binary"
         rm -f "${temp_binary}"
         if [ "${service_was_running}" = true ]; then
