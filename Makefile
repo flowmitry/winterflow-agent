@@ -4,7 +4,7 @@ VERSION=$(shell date +'%Y.%m.%d')
 BUILD_DIR=build
 
 # Go build flags
-LDFLAGS=-X winterflow-agent/pkg/agent.version=${VERSION}
+LDFLAGS=-X winterflow-agent/pkg/version.version=${VERSION}
 BUILD_FLAGS=-v -ldflags="${LDFLAGS}"
 
 .PHONY: all clean grpc build run install-tools
