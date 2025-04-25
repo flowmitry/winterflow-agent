@@ -1,35 +1,47 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
 
 	"winterflow-agent/internal/agent"
+	"winterflow-agent/internal/config"
 	"winterflow-agent/pkg/version"
 )
 
 func main() {
-	// Parse configuration
-	config := agent.NewConfig()
+	// Parse command line flags
+	showVersion := flag.Bool("version", false, "Show version information")
+	showHelp := flag.Bool("help", false, "Show help information")
+	configPath := flag.String("config", "agent.config.json", "Path to configuration file")
+	flag.Parse()
 
 	// Show version if requested
-	if config.ShowVersion {
+	if *showVersion {
 		fmt.Printf("WinterFlow.io Agent version: %s (#%d)\n", version.GetVersion(), version.GetNumericVersion())
 		os.Exit(0)
 	}
 
-	if config.ShowHelp {
+	if *showHelp {
 		fmt.Println("WinterFlow.io Agent")
 		fmt.Println("Usage: winterflow-agent [options]")
 		fmt.Println("Options:")
 		fmt.Println("  --version  Show version information")
 		fmt.Println("  --help     Show help information")
+		fmt.Println("  --config   Path to configuration file (default: /opt/winterflow/agent.config.json)")
 		os.Exit(0)
 	}
 
+	// Load configuration
+	cfg, err := config.LoadConfig(*configPath)
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
 	// Create and initialize agent
-	app, err := agent.NewAgent(config)
+	app, err := agent.NewAgent(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
 	}

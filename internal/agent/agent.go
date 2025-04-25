@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/grpc/client"
 	"winterflow-agent/pkg/version"
 )
@@ -14,11 +15,11 @@ import (
 // Agent represents the application agent
 type Agent struct {
 	client *client.Client
-	config *Config
+	config *config.Config
 }
 
 // NewAgent creates a new agent instance
-func NewAgent(config *Config) (*Agent, error) {
+func NewAgent(config *config.Config) (*Agent, error) {
 	c, err := client.NewClient(config.ServerAddress)
 	if err != nil {
 		return nil, err
@@ -32,9 +33,9 @@ func NewAgent(config *Config) (*Agent, error) {
 
 // Register registers the agent with the server
 func (a *Agent) Register() (string, error) {
-	capabilities := map[string]string{
-		"os":      "darwin",
-		"version": version.GetVersion(),
+	capabilities := make(map[string]string)
+	for k, v := range a.config.Capabilities {
+		capabilities[k] = fmt.Sprintf("%v", v)
 	}
 
 	resp, err := a.client.RegisterAgent(version.GetVersion(), capabilities, a.config.ServerID, a.config.ServerToken)
