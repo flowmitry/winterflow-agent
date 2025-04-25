@@ -1,10 +1,10 @@
 # Build configuration
 BINARY_NAME=winterflow-agent
-VERSION=$(shell date +'%Y%m%d.%H%M%S')
+VERSION=$(shell date +'%Y.%m.%d')
 BUILD_DIR=build
 
 # Go build flags
-LDFLAGS=-X main.version=${VERSION}
+LDFLAGS=-X winterflow-agent/pkg/agent.version=${VERSION}
 BUILD_FLAGS=-v -ldflags="${LDFLAGS}"
 
 .PHONY: all clean build

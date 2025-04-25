@@ -31,6 +31,7 @@ INSTALL_SCRIPT="${INSTALL_DIR}/install.sh"
 # URLs
 GITHUB_API="https://api.github.com/repos/winterflowio/agent/releases/latest"
 INSTALL_SCRIPT_URL="https://winterflowio.github.io/agent/install.sh"
+UNINSTALL_SCRIPT_URL="https://winterflowio.github.io/agent/uninstall.sh"
 
 # Required packages
 REQUIRED_PACKAGES="curl"
@@ -285,6 +286,21 @@ save_installation_script() {
     log "info" "Installation script saved and made executable"
 }
 
+# Function to save uninstallation script
+save_uninstallation_script() {
+    log "info" "Saving uninstallation script to ${INSTALL_DIR}/uninstall.sh"
+    
+    # Download the uninstallation script
+    if ! curl -fsSL "${UNINSTALL_SCRIPT_URL}" > "${INSTALL_DIR}/uninstall.sh"; then
+        log "error" "Failed to download uninstallation script"
+        return 1
+    fi
+    
+    # Make the saved script executable
+    chmod +x "${INSTALL_DIR}/uninstall.sh"
+    log "info" "Uninstallation script saved and made executable"
+}
+
 # Main installation process
 log "info" "Starting Winterflow Agent installation..."
 
@@ -328,9 +344,13 @@ fi
 # Manage systemd service
 manage_systemd_service "${SERVICE_WAS_RUNNING}"
 
-# Save installation script for future use
+# Save installation and uninstallation scripts for future use
 if ! save_installation_script; then
     log "warn" "Failed to save installation script, but agent installation was successful"
+fi
+
+if ! save_uninstallation_script; then
+    log "warn" "Failed to save uninstallation script, but agent installation was successful"
 fi
 
 # Display next steps

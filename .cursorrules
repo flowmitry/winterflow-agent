@@ -1,0 +1,11 @@
+[[Use the following technical stack]]:
+- Backend: Go 1.24.0
+- Use only standard library for GO;
+- Use GRPC;
+- Use JSON file for the configuration storage.
+
+
+[[GO source code location]]:
+- cmd
+- internal
+- pkg
