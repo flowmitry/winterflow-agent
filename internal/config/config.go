@@ -23,43 +23,31 @@ type Config struct {
 
 // LoadConfig loads the configuration from a JSON file
 func LoadConfig(configPath string) (*Config, error) {
-	// Wait for config file to exist
+	// Wait for config file to exist and have valid content
 	for {
 		if _, err := os.Stat(configPath); err == nil {
-			break
+			// Try to read and validate the config
+			data, err := os.ReadFile(configPath)
+			if err == nil {
+				var config Config
+				if err := json.Unmarshal(data, &config); err == nil {
+					// Check if required fields are filled
+					if config.ServerID != "" && config.ServerToken != "" {
+						// All required fields are present, proceed
+						if config.Capabilities == nil {
+							config.Capabilities = make(map[string]bool)
+						}
+						if config.ServerAddress == "" {
+							config.ServerAddress = DefaultServerAddress
+						}
+						return &config, nil
+					}
+				}
+			}
 		}
-		fmt.Printf("Waiting for configuration file at %s...\n", configPath)
+		fmt.Printf("Waiting for valid configuration file at %s...\n", configPath)
 		time.Sleep(5 * time.Second)
 	}
-
-	// Read the config file
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %v", err)
-	}
-
-	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %v", err)
-	}
-
-	// Validate required fields
-	if config.ServerID == "" {
-		return nil, fmt.Errorf("server_id is required")
-	}
-	if config.ServerToken == "" {
-		return nil, fmt.Errorf("server_token is required")
-	}
-	if config.Capabilities == nil {
-		config.Capabilities = make(map[string]bool)
-	}
-
-	// Set default server address if not specified
-	if config.ServerAddress == "" {
-		config.ServerAddress = DefaultServerAddress
-	}
-
-	return &config, nil
 }
 
 // SaveConfig saves the configuration to a JSON file
