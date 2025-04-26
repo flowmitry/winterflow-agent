@@ -13,18 +13,28 @@ const (
 	DefaultGRPCServerAddress = "localhost:8081"
 	// DefaultAPIBaseURL is the default HTTP API server URL for web interface
 	DefaultAPIBaseURL = "http://localhost:8080"
+
+	// Feature constants
+	FeatureFileOperations   = "file_operations"
+	FeatureNetworkScanning  = "network_scanning"
+	FeatureProcessControl   = "process_control"
+	FeatureSystemMonitoring = "system_monitoring"
+	FeatureLogCollection    = "log_collection"
+	FeatureRemoteExecution  = "remote_execution"
+	FeatureDataCollection   = "data_collection"
+	FeatureSecurityScanning = "security_scanning"
 )
 
-// SupportedFeatures defines all available features that can be enabled/disabled
-var SupportedFeatures = map[string]bool{
-	"file_operations":   true,
-	"network_scanning":  true,
-	"process_control":   true,
-	"system_monitoring": true,
-	"log_collection":    true,
-	"remote_execution":  false,
-	"data_collection":   true,
-	"security_scanning": false,
+// DefaultFeatureValues defines the default values for each feature
+var DefaultFeatureValues = map[string]bool{
+	FeatureFileOperations:   true,
+	FeatureNetworkScanning:  true,
+	FeatureProcessControl:   true,
+	FeatureSystemMonitoring: true,
+	FeatureLogCollection:    true,
+	FeatureRemoteExecution:  false,
+	FeatureDataCollection:   true,
+	FeatureSecurityScanning: false,
 }
 
 // Config holds the application configuration
@@ -46,7 +56,7 @@ func validateAndMergeFeatures(configFeatures map[string]bool) map[string]bool {
 
 	// Create a new map with default values
 	mergedFeatures := make(map[string]bool)
-	for feature, defaultValue := range SupportedFeatures {
+	for feature, defaultValue := range DefaultFeatureValues {
 		// If the feature is defined in config, use that value
 		if value, exists := configFeatures[feature]; exists {
 			mergedFeatures[feature] = value

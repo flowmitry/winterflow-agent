@@ -46,12 +46,13 @@ func (c *Client) Close() error {
 }
 
 // RegisterAgent registers the agent with the server
-func (c *Client) RegisterAgent(version string, features map[string]bool, serverID, serverToken string) (*pb.RegisterAgentResponseV1, error) {
+func (c *Client) RegisterAgent(version string, capabilities map[string]string, features map[string]bool, serverID, serverToken string) (*pb.RegisterAgentResponseV1, error) {
 	req := &pb.RegisterAgentRequestV1{
-		Version:     version,
-		Features:    features,
-		ServerId:    serverID,
-		ServerToken: serverToken,
+		Version:      version,
+		Capabilities: capabilities,
+		Features:     features,
+		ServerId:     serverID,
+		ServerToken:  serverToken,
 	}
 
 	return c.client.RegisterAgentV1(c.ctx, req)

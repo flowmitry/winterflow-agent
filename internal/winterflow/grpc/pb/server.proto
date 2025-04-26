@@ -7,9 +7,10 @@ option go_package = "winterflow-agent/internal/winterflow/grpc/pb";
 // Agent registration messages
 message RegisterAgentRequestV1 {
   string version = 1;
-  map<string, bool> features = 2;
-  string server_id = 3;
-  string server_token = 4;
+  map<string, string> capabilities = 2;
+  map<string, bool> features = 3;
+  string server_id = 4;
+  string server_token = 5;
 }
 
 message RegisterAgentResponseV1 {

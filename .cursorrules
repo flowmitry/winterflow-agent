@@ -9,3 +9,123 @@
 - cmd
 - internal
 - pkg
+
+
+[[Adding New Capabilities]]:
+To add a new capability to the system, follow these steps:
+
+1. Add a new constant in pkg/capabilities/capability.go:
+   ```go
+   const (
+       CapabilityNewTool = "new-tool"
+   )
+   ```
+
+2. Create a new file pkg/capabilities/new_tool.go:
+   ```go
+   package capabilities
+
+   import (
+       "os/exec"
+       "strings"
+   )
+
+   // NewToolCapability represents the New Tool capability
+   type NewToolCapability struct {
+       version string
+   }
+
+   // NewNewToolCapability creates a new New Tool capability
+   func NewNewToolCapability() *NewToolCapability {
+       return &NewToolCapability{
+           version: "1.0", // Default version
+       }
+   }
+
+   // Name returns the name of the capability
+   func (c *NewToolCapability) Name() string {
+       return CapabilityNewTool
+   }
+
+   // Version returns the version of the capability
+   func (c *NewToolCapability) Version() string {
+       return c.version
+   }
+
+   // IsAvailable checks if New Tool is available on the system
+   func (c *NewToolCapability) IsAvailable() bool {
+       cmd := exec.Command("new-tool", "--version")
+       output, err := cmd.Output()
+       if err != nil {
+           return false
+       }
+       
+       // Parse version from output
+       versionStr := string(output)
+       if strings.Contains(versionStr, "new-tool version") {
+           // Extract version from output
+           parts := strings.Split(versionStr, " ")
+           if len(parts) > 2 {
+               c.version = parts[2]
+           }
+           return true
+       }
+       return false
+   }
+   ```
+
+3. Add the new capability to the factory in pkg/capabilities/capability.go:
+   ```go
+   func NewCapabilityFactory() *CapabilityFactory {
+       return &CapabilityFactory{
+           capabilities: []Capability{
+               // ... existing capabilities ...
+               NewNewToolCapability(),
+           },
+       }
+   }
+   ```
+
+4. Update the SystemCapabilities struct in internal/agent/capabilities.go:
+   ```go
+   type SystemCapabilities struct {
+       // ... existing fields ...
+       NewTool string
+   }
+   ```
+
+5. Update the ToMap method in internal/agent/capabilities.go:
+   ```go
+   func (c SystemCapabilities) ToMap() map[string]string {
+       return map[string]string{
+           // ... existing mappings ...
+           "new-tool": c.NewTool,
+       }
+   }
+   ```
+
+6. Update the GetSystemCapabilities function in internal/agent/capabilities.go:
+   ```go
+   func GetSystemCapabilities() SystemCapabilities {
+       // ... existing code ...
+       for _, c := range factory.GetAllCapabilities() {
+           if c.IsAvailable() {
+               switch c.Name() {
+               // ... existing cases ...
+               case capabilities.CapabilityNewTool:
+                   result.NewTool = c.Version()
+               }
+           }
+       }
+       return result
+   }
+   ```
+
+Best Practices:
+- Use consistent naming conventions (e.g., snake_case for file names, CamelCase for types)
+- Include proper error handling in IsAvailable()
+- Add appropriate comments and documentation
+- Test the capability detection on different platforms
+- Keep version parsing logic consistent with existing capabilities
+- Use meaningful default versions
+- Follow the existing code structure and patterns

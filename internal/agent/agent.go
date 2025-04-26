@@ -32,7 +32,9 @@ func NewAgent(config *config.Config) (*Agent, error) {
 
 // Register registers the agent with the server
 func (a *Agent) Register() (string, error) {
-	resp, err := a.client.RegisterAgent(GetVersion(), a.config.Features, a.config.ServerID, a.config.ServerToken)
+	capabilities := GetSystemCapabilities().ToMap()
+
+	resp, err := a.client.RegisterAgent(GetVersion(), capabilities, a.config.Features, a.config.ServerID, a.config.ServerToken)
 	if err != nil {
 		return "", err
 	}
