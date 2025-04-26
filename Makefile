@@ -4,7 +4,7 @@ VERSION=$(shell date +'%Y.%m.%d')
 BUILD_DIR=build
 
 # Go build flags
-LDFLAGS=-X winterflow-agent/pkg/version.version=${VERSION}
+LDFLAGS=-X winterflow-agent/internal/agent.version=${VERSION}
 BUILD_FLAGS=-v -ldflags="${LDFLAGS}"
 
 .PHONY: all clean grpc build run install-tools
@@ -30,7 +30,7 @@ clean:
 
 grpc:
 	@echo "Generating gRPC code..."
-	@PATH="$$PATH:$$(go env GOPATH)/bin" protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative internal/grpc/pb/server.proto
+	@PATH="$$PATH:$$(go env GOPATH)/bin" protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative internal/winterflow/grpc/pb/server.proto
 
 install-tools:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0

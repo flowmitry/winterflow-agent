@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package pb;
 
-option go_package = "winterflow-agent/internal/grpc/pb";
+option go_package = "winterflow-agent/internal/winterflow/grpc/pb";
 
 // Agent registration messages
 message RegisterAgentRequestV1 {

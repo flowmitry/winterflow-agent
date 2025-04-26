@@ -9,7 +9,6 @@ import (
 	"winterflow-agent/internal/agent"
 	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/api"
-	"winterflow-agent/pkg/version"
 )
 
 func main() {
@@ -22,7 +21,7 @@ func main() {
 
 	// Show version if requested
 	if *showVersion {
-		fmt.Printf("WinterFlow.io Agent version: %s (#%d)\n", version.GetVersion(), version.GetNumericVersion())
+		fmt.Printf("WinterFlow.io Agent version: %s (#%d)\n", agent.GetVersion(), agent.GetNumericVersion())
 		os.Exit(0)
 	}
 

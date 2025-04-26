@@ -8,8 +8,7 @@ import (
 	"syscall"
 
 	"winterflow-agent/internal/config"
-	"winterflow-agent/internal/grpc/client"
-	"winterflow-agent/pkg/version"
+	"winterflow-agent/internal/winterflow/grpc/client"
 )
 
 // Agent represents the application agent
@@ -33,7 +32,7 @@ func NewAgent(config *config.Config) (*Agent, error) {
 
 // Register registers the agent with the server
 func (a *Agent) Register() (string, error) {
-	resp, err := a.client.RegisterAgent(version.GetVersion(), a.config.Features, a.config.ServerID, a.config.ServerToken)
+	resp, err := a.client.RegisterAgent(GetVersion(), a.config.Features, a.config.ServerID, a.config.ServerToken)
 	if err != nil {
 		return "", err
 	}

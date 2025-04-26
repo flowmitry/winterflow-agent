@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"winterflow-agent/internal/grpc/pb"
+	"winterflow-agent/internal/winterflow/grpc/pb"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
