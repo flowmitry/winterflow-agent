@@ -20,7 +20,7 @@ type Agent struct {
 
 // NewAgent creates a new agent instance
 func NewAgent(config *config.Config) (*Agent, error) {
-	c, err := client.NewClient(config.ServerAddress)
+	c, err := client.NewClient(config.GRPCServerAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -33,12 +33,7 @@ func NewAgent(config *config.Config) (*Agent, error) {
 
 // Register registers the agent with the server
 func (a *Agent) Register() (string, error) {
-	capabilities := make(map[string]string)
-	for k, v := range a.config.Capabilities {
-		capabilities[k] = fmt.Sprintf("%v", v)
-	}
-
-	resp, err := a.client.RegisterAgent(version.GetVersion(), capabilities, a.config.ServerID, a.config.ServerToken)
+	resp, err := a.client.RegisterAgent(version.GetVersion(), a.config.Features, a.config.ServerID, a.config.ServerToken)
 	if err != nil {
 		return "", err
 	}

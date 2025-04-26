@@ -8,6 +8,7 @@ import (
 
 	"winterflow-agent/internal/agent"
 	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/winterflow/api"
 	"winterflow-agent/pkg/version"
 )
 
@@ -16,6 +17,7 @@ func main() {
 	showVersion := flag.Bool("version", false, "Show version information")
 	showHelp := flag.Bool("help", false, "Show help information")
 	configPath := flag.String("config", "agent.config.json", "Path to configuration file")
+	register := flag.Bool("register", false, "Register the agent with the server")
 	flag.Parse()
 
 	// Show version if requested
@@ -30,39 +32,48 @@ func main() {
 		fmt.Println("Options:")
 		fmt.Println("  --version  Show version information")
 		fmt.Println("  --help     Show help information")
-		fmt.Println("  --config   Path to configuration file (default: /opt/winterflow/agent.config.json)")
+		fmt.Println("  --config   Path to configuration file (default: agent.config.json)")
+		fmt.Println("  --register Register the agent with the server")
 		os.Exit(0)
 	}
 
-	// Load configuration
-	cfg, err := config.LoadConfig(*configPath)
+	// Handle registration if requested
+	if *register {
+		if err := api.RegisterAgent(*configPath); err != nil {
+			log.Fatalf("Registration failed: %v", err)
+		}
+		return
+	}
+
+	// Load configuration for normal operation
+	cfg, err := config.WaitUntilReady(*configPath)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
 	// Create and initialize agent
-	app, err := agent.NewAgent(cfg)
+	agent, err := agent.NewAgent(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
 	}
-	defer app.Close()
+	defer agent.Close()
 
 	// Register the agent
-	accessToken, err := app.Register()
+	accessToken, err := agent.Register()
 	if err != nil {
 		log.Fatalf("Failed to register agent: %v", err)
 	}
 
 	// Start heartbeat stream
-	if err := app.StartHeartbeat(accessToken); err != nil {
+	if err := agent.StartHeartbeat(accessToken); err != nil {
 		log.Fatalf("Failed to start heartbeat stream: %v", err)
 	}
 
 	// Wait for interrupt signal
-	app.WaitForSignal()
+	agent.WaitForSignal()
 
 	// Unregister the agent
-	if err := app.Unregister(accessToken); err != nil {
+	if err := agent.Unregister(accessToken); err != nil {
 		log.Printf("Failed to unregister agent: %v", err)
 	}
 }
