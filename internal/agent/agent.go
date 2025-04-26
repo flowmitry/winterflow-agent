@@ -54,7 +54,17 @@ func (a *Agent) StartHeartbeat(accessToken string) error {
 		"memory":    "512MB",
 	}
 
-	return a.client.StartHeartbeatStream(a.config.ServerID, accessToken, metrics)
+	capabilities := GetSystemCapabilities().ToMap()
+
+	return a.client.StartHeartbeatStream(
+		a.config.ServerID,
+		accessToken,
+		metrics,
+		GetVersion(),
+		capabilities,
+		a.config.Features,
+		a.config.ServerToken,
+	)
 }
 
 // Unregister unregisters the agent from the server

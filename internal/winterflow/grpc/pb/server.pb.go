@@ -21,6 +21,71 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Response codes for all responses
+type ResponseCode int32
+
+const (
+	ResponseCode_RESPONSE_CODE_UNSPECIFIED             ResponseCode = 0
+	ResponseCode_RESPONSE_CODE_SUCCESS                 ResponseCode = 1
+	ResponseCode_RESPONSE_CODE_INVALID_REQUEST         ResponseCode = 2
+	ResponseCode_RESPONSE_CODE_UNAUTHORIZED            ResponseCode = 3
+	ResponseCode_RESPONSE_CODE_SERVER_ERROR            ResponseCode = 4
+	ResponseCode_RESPONSE_CODE_AGENT_NOT_FOUND         ResponseCode = 5
+	ResponseCode_RESPONSE_CODE_SERVER_NOT_FOUND        ResponseCode = 6
+	ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED ResponseCode = 7
+)
+
+// Enum value maps for ResponseCode.
+var (
+	ResponseCode_name = map[int32]string{
+		0: "RESPONSE_CODE_UNSPECIFIED",
+		1: "RESPONSE_CODE_SUCCESS",
+		2: "RESPONSE_CODE_INVALID_REQUEST",
+		3: "RESPONSE_CODE_UNAUTHORIZED",
+		4: "RESPONSE_CODE_SERVER_ERROR",
+		5: "RESPONSE_CODE_AGENT_NOT_FOUND",
+		6: "RESPONSE_CODE_SERVER_NOT_FOUND",
+		7: "RESPONSE_CODE_AGENT_ALREADY_CONNECTED",
+	}
+	ResponseCode_value = map[string]int32{
+		"RESPONSE_CODE_UNSPECIFIED":             0,
+		"RESPONSE_CODE_SUCCESS":                 1,
+		"RESPONSE_CODE_INVALID_REQUEST":         2,
+		"RESPONSE_CODE_UNAUTHORIZED":            3,
+		"RESPONSE_CODE_SERVER_ERROR":            4,
+		"RESPONSE_CODE_AGENT_NOT_FOUND":         5,
+		"RESPONSE_CODE_SERVER_NOT_FOUND":        6,
+		"RESPONSE_CODE_AGENT_ALREADY_CONNECTED": 7,
+	}
+)
+
+func (x ResponseCode) Enum() *ResponseCode {
+	p := new(ResponseCode)
+	*p = x
+	return p
+}
+
+func (x ResponseCode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ResponseCode) Descriptor() protoreflect.EnumDescriptor {
+	return file_internal_winterflow_grpc_pb_server_proto_enumTypes[0].Descriptor()
+}
+
+func (ResponseCode) Type() protoreflect.EnumType {
+	return &file_internal_winterflow_grpc_pb_server_proto_enumTypes[0]
+}
+
+func (x ResponseCode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ResponseCode.Descriptor instead.
+func (ResponseCode) EnumDescriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{0}
+}
+
 // Agent registration messages
 type RegisterAgentRequestV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -103,6 +168,7 @@ type RegisterAgentResponseV1 struct {
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	AccessToken   string                 `protobuf:"bytes,3,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	ResponseCode  ResponseCode           `protobuf:"varint,4,opt,name=response_code,json=responseCode,proto3,enum=pb.ResponseCode" json:"response_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -156,6 +222,13 @@ func (x *RegisterAgentResponseV1) GetAccessToken() string {
 		return x.AccessToken
 	}
 	return ""
+}
+
+func (x *RegisterAgentResponseV1) GetResponseCode() ResponseCode {
+	if x != nil {
+		return x.ResponseCode
+	}
+	return ResponseCode_RESPONSE_CODE_UNSPECIFIED
 }
 
 type UnregisterAgentRequestV1 struct {
@@ -214,6 +287,7 @@ type UnregisterAgentResponseV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	ResponseCode  ResponseCode           `protobuf:"varint,3,opt,name=response_code,json=responseCode,proto3,enum=pb.ResponseCode" json:"response_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -260,6 +334,13 @@ func (x *UnregisterAgentResponseV1) GetMessage() string {
 		return x.Message
 	}
 	return ""
+}
+
+func (x *UnregisterAgentResponseV1) GetResponseCode() ResponseCode {
+	if x != nil {
+		return x.ResponseCode
+	}
+	return ResponseCode_RESPONSE_CODE_UNSPECIFIED
 }
 
 // Agent heartbeat and status messages
@@ -327,6 +408,7 @@ type AgentHeartbeatResponseV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	ResponseCode  ResponseCode           `protobuf:"varint,3,opt,name=response_code,json=responseCode,proto3,enum=pb.ResponseCode" json:"response_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -375,6 +457,13 @@ func (x *AgentHeartbeatResponseV1) GetMessage() string {
 	return ""
 }
 
+func (x *AgentHeartbeatResponseV1) GetResponseCode() ResponseCode {
+	if x != nil {
+		return x.ResponseCode
+	}
+	return ResponseCode_RESPONSE_CODE_UNSPECIFIED
+}
+
 var File_internal_winterflow_grpc_pb_server_proto protoreflect.FileDescriptor
 
 const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
@@ -391,27 +480,39 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a;\n" +
 	"\rFeaturesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"p\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xa7\x01\n" +
 	"\x17RegisterAgentResponseV1\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12!\n" +
-	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\"Z\n" +
+	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x125\n" +
+	"\rresponse_code\x18\x04 \x01(\x0e2\x10.pb.ResponseCodeR\fresponseCode\"Z\n" +
 	"\x18UnregisterAgentRequestV1\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12!\n" +
-	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\"O\n" +
+	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\"\x86\x01\n" +
 	"\x19UnregisterAgentResponseV1\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xcb\x01\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x125\n" +
+	"\rresponse_code\x18\x03 \x01(\x0e2\x10.pb.ResponseCodeR\fresponseCode\"\xcb\x01\n" +
 	"\x10AgentHeartbeatV1\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12!\n" +
 	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x12;\n" +
 	"\ametrics\x18\x03 \x03(\v2!.pb.AgentHeartbeatV1.MetricsEntryR\ametrics\x1a:\n" +
 	"\fMetricsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"N\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x85\x01\n" +
 	"\x18AgentHeartbeatResponseV1\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\xfb\x01\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x125\n" +
+	"\rresponse_code\x18\x03 \x01(\x0e2\x10.pb.ResponseCodeR\fresponseCode*\x9d\x02\n" +
+	"\fResponseCode\x12\x1d\n" +
+	"\x19RESPONSE_CODE_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15RESPONSE_CODE_SUCCESS\x10\x01\x12!\n" +
+	"\x1dRESPONSE_CODE_INVALID_REQUEST\x10\x02\x12\x1e\n" +
+	"\x1aRESPONSE_CODE_UNAUTHORIZED\x10\x03\x12\x1e\n" +
+	"\x1aRESPONSE_CODE_SERVER_ERROR\x10\x04\x12!\n" +
+	"\x1dRESPONSE_CODE_AGENT_NOT_FOUND\x10\x05\x12\"\n" +
+	"\x1eRESPONSE_CODE_SERVER_NOT_FOUND\x10\x06\x12)\n" +
+	"%RESPONSE_CODE_AGENT_ALREADY_CONNECTED\x10\a2\xfb\x01\n" +
 	"\fAgentService\x12L\n" +
 	"\x0fRegisterAgentV1\x12\x1a.pb.RegisterAgentRequestV1\x1a\x1b.pb.RegisterAgentResponseV1\"\x00\x12R\n" +
 	"\x11UnregisterAgentV1\x12\x1c.pb.UnregisterAgentRequestV1\x1a\x1d.pb.UnregisterAgentResponseV1\"\x00\x12I\n" +
@@ -429,33 +530,38 @@ func file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP() []byte {
 	return file_internal_winterflow_grpc_pb_server_proto_rawDescData
 }
 
+var file_internal_winterflow_grpc_pb_server_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_internal_winterflow_grpc_pb_server_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_internal_winterflow_grpc_pb_server_proto_goTypes = []any{
-	(*RegisterAgentRequestV1)(nil),    // 0: pb.RegisterAgentRequestV1
-	(*RegisterAgentResponseV1)(nil),   // 1: pb.RegisterAgentResponseV1
-	(*UnregisterAgentRequestV1)(nil),  // 2: pb.UnregisterAgentRequestV1
-	(*UnregisterAgentResponseV1)(nil), // 3: pb.UnregisterAgentResponseV1
-	(*AgentHeartbeatV1)(nil),          // 4: pb.AgentHeartbeatV1
-	(*AgentHeartbeatResponseV1)(nil),  // 5: pb.AgentHeartbeatResponseV1
-	nil,                               // 6: pb.RegisterAgentRequestV1.CapabilitiesEntry
-	nil,                               // 7: pb.RegisterAgentRequestV1.FeaturesEntry
-	nil,                               // 8: pb.AgentHeartbeatV1.MetricsEntry
+	(ResponseCode)(0),                 // 0: pb.ResponseCode
+	(*RegisterAgentRequestV1)(nil),    // 1: pb.RegisterAgentRequestV1
+	(*RegisterAgentResponseV1)(nil),   // 2: pb.RegisterAgentResponseV1
+	(*UnregisterAgentRequestV1)(nil),  // 3: pb.UnregisterAgentRequestV1
+	(*UnregisterAgentResponseV1)(nil), // 4: pb.UnregisterAgentResponseV1
+	(*AgentHeartbeatV1)(nil),          // 5: pb.AgentHeartbeatV1
+	(*AgentHeartbeatResponseV1)(nil),  // 6: pb.AgentHeartbeatResponseV1
+	nil,                               // 7: pb.RegisterAgentRequestV1.CapabilitiesEntry
+	nil,                               // 8: pb.RegisterAgentRequestV1.FeaturesEntry
+	nil,                               // 9: pb.AgentHeartbeatV1.MetricsEntry
 }
 var file_internal_winterflow_grpc_pb_server_proto_depIdxs = []int32{
-	6, // 0: pb.RegisterAgentRequestV1.capabilities:type_name -> pb.RegisterAgentRequestV1.CapabilitiesEntry
-	7, // 1: pb.RegisterAgentRequestV1.features:type_name -> pb.RegisterAgentRequestV1.FeaturesEntry
-	8, // 2: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
-	0, // 3: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
-	2, // 4: pb.AgentService.UnregisterAgentV1:input_type -> pb.UnregisterAgentRequestV1
-	4, // 5: pb.AgentService.AgentStreamV1:input_type -> pb.AgentHeartbeatV1
-	1, // 6: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
-	3, // 7: pb.AgentService.UnregisterAgentV1:output_type -> pb.UnregisterAgentResponseV1
-	5, // 8: pb.AgentService.AgentStreamV1:output_type -> pb.AgentHeartbeatResponseV1
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	7, // 0: pb.RegisterAgentRequestV1.capabilities:type_name -> pb.RegisterAgentRequestV1.CapabilitiesEntry
+	8, // 1: pb.RegisterAgentRequestV1.features:type_name -> pb.RegisterAgentRequestV1.FeaturesEntry
+	0, // 2: pb.RegisterAgentResponseV1.response_code:type_name -> pb.ResponseCode
+	0, // 3: pb.UnregisterAgentResponseV1.response_code:type_name -> pb.ResponseCode
+	9, // 4: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
+	0, // 5: pb.AgentHeartbeatResponseV1.response_code:type_name -> pb.ResponseCode
+	1, // 6: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
+	3, // 7: pb.AgentService.UnregisterAgentV1:input_type -> pb.UnregisterAgentRequestV1
+	5, // 8: pb.AgentService.AgentStreamV1:input_type -> pb.AgentHeartbeatV1
+	2, // 9: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
+	4, // 10: pb.AgentService.UnregisterAgentV1:output_type -> pb.UnregisterAgentResponseV1
+	6, // 11: pb.AgentService.AgentStreamV1:output_type -> pb.AgentHeartbeatResponseV1
+	9, // [9:12] is the sub-list for method output_type
+	6, // [6:9] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_internal_winterflow_grpc_pb_server_proto_init() }
@@ -468,13 +574,14 @@ func file_internal_winterflow_grpc_pb_server_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_winterflow_grpc_pb_server_proto_rawDesc), len(file_internal_winterflow_grpc_pb_server_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_internal_winterflow_grpc_pb_server_proto_goTypes,
 		DependencyIndexes: file_internal_winterflow_grpc_pb_server_proto_depIdxs,
+		EnumInfos:         file_internal_winterflow_grpc_pb_server_proto_enumTypes,
 		MessageInfos:      file_internal_winterflow_grpc_pb_server_proto_msgTypes,
 	}.Build()
 	File_internal_winterflow_grpc_pb_server_proto = out.File

@@ -4,6 +4,19 @@ package pb;
 
 option go_package = "winterflow-agent/internal/winterflow/grpc/pb";
 
+
+// Response codes for all responses
+enum ResponseCode {
+  RESPONSE_CODE_UNSPECIFIED = 0;
+  RESPONSE_CODE_SUCCESS = 1;
+  RESPONSE_CODE_INVALID_REQUEST = 2;
+  RESPONSE_CODE_UNAUTHORIZED = 3;
+  RESPONSE_CODE_SERVER_ERROR = 4;
+  RESPONSE_CODE_AGENT_NOT_FOUND = 5;
+  RESPONSE_CODE_SERVER_NOT_FOUND = 6;
+  RESPONSE_CODE_AGENT_ALREADY_CONNECTED = 7;
+}
+
 // Agent registration messages
 message RegisterAgentRequestV1 {
   string version = 1;
@@ -17,6 +30,7 @@ message RegisterAgentResponseV1 {
   bool success = 1;
   string message = 2;
   string access_token = 3;
+  ResponseCode response_code = 4;
 }
 
 message UnregisterAgentRequestV1 {
@@ -27,6 +41,7 @@ message UnregisterAgentRequestV1 {
 message UnregisterAgentResponseV1 {
   bool success = 1;
   string message = 2;
+  ResponseCode response_code = 3;
 }
 
 // Agent heartbeat and status messages
@@ -39,6 +54,7 @@ message AgentHeartbeatV1 {
 message AgentHeartbeatResponseV1 {
   bool success = 1;
   string message = 2;
+  ResponseCode response_code = 3;
 }
 
 // Agent service definition
@@ -51,4 +67,4 @@ service AgentService {
 
   // Bidirectional streaming for agent communication
   rpc AgentStreamV1(stream AgentHeartbeatV1) returns (stream AgentHeartbeatResponseV1) {}
-} 
+}
