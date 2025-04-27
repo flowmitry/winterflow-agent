@@ -103,7 +103,7 @@ func (a *Agent) RegisterWithRetry(ctx context.Context) (string, error) {
 		}
 
 		// Unrecoverable errors should bubble up to abort agent run.
-		if err == client.ErrUnrecoverableServerNotFound || err == client.ErrUnrecoverableAgentAlreadyConnected || err == client.ErrUnrecoverableAgentNotFound {
+		if err == client.ErrUnrecoverable || err == client.ErrUnrecoverableAgentAlreadyConnected {
 			return "", err
 		}
 

@@ -32,9 +32,8 @@ const (
 // ErrUnrecoverable is returned by RegisterAgent when the server indicates that
 // the agent must not retry the registration (e.g. wrong server-token pairing
 // or duplicate agent).
-var ErrUnrecoverableServerNotFound = errors.New("unrecoverable registration error: server not found")
-var ErrUnrecoverableAgentAlreadyConnected = errors.New("unrecoverable registration error: agent already connected")
-var ErrUnrecoverableAgentNotFound = errors.New("unrecoverable registration error: agent not found")
+var ErrUnrecoverable = errors.New("unrecoverable error. check your server ID and token")
+var ErrUnrecoverableAgentAlreadyConnected = errors.New("unrecoverable error: agent already connected")
 
 // Client represents a gRPC client for agent communication
 type Client struct {
@@ -281,61 +280,53 @@ func (c *Client) RegisterAgent(version string, capabilities map[string]string, f
 		resp, err := c.client.RegisterAgentV1(c.ctx, req)
 		if err != nil {
 			grpcCode := status.Code(err)
-			// If the server explicitly tells that the agent already exists or the
-			// server/agent is not found we treat it as unrecoverable and abort
-			// further retries so that the caller can exit.
-			if grpcCode == codes.AlreadyExists {
+			switch grpcCode {
+			case codes.FailedPrecondition:
+				return nil, ErrUnrecoverable
+			case codes.AlreadyExists:
 				return nil, ErrUnrecoverableAgentAlreadyConnected
-			}
-			if grpcCode == codes.NotFound {
-				return nil, ErrUnrecoverableAgentNotFound
-			}
-
-			if grpcCode == codes.Unavailable {
+			case codes.Unavailable:
 				log.Printf("Connection unavailable during registration, attempting to reconnect")
 				if err := c.reconnect(); err != nil {
 					log.Printf("Failed to reconnect, will retry: %v", err)
-
-					// Use a timer so we can interrupt the wait
 					timer := time.NewTimer(c.getNextReconnectInterval())
 					select {
 					case <-timer.C:
-						// Timer expired, continue with next attempt
 					case <-c.ctx.Done():
-						// Context cancelled, abort reconnection
 						timer.Stop()
 						return nil, fmt.Errorf("registration cancelled during reconnection: %v", c.ctx.Err())
 					}
-
-					continue
+				}
+				continue
+			default:
+				log.Printf("Error during registration, will retry: %v", err)
+				timer := time.NewTimer(c.getNextReconnectInterval())
+				select {
+				case <-timer.C:
+				case <-c.ctx.Done():
+					timer.Stop()
+					return nil, fmt.Errorf("registration cancelled during retry: %v", c.ctx.Err())
 				}
 				continue
 			}
-			// For other errors, log and retry
-			log.Printf("Error during registration, will retry: %v", err)
-
-			// Use a timer so we can interrupt the wait
-			timer := time.NewTimer(c.getNextReconnectInterval())
-			select {
-			case <-timer.C:
-				// Timer expired, continue with next attempt
-			case <-c.ctx.Done():
-				// Context cancelled, abort reconnection
-				timer.Stop()
-				return nil, fmt.Errorf("registration cancelled during retry: %v", c.ctx.Err())
-			}
-
-			continue
 		}
 
-		// Evaluate response codes that indicate unrecoverable registration errors.
-		switch resp.ResponseCode {
-		case pb.ResponseCode_RESPONSE_CODE_SERVER_NOT_FOUND:
-			return nil, ErrUnrecoverableServerNotFound
-		case pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
-			return nil, ErrUnrecoverableAgentAlreadyConnected
-		case pb.ResponseCode_RESPONSE_CODE_AGENT_NOT_FOUND:
-			return nil, ErrUnrecoverableAgentNotFound
+		// Handle application-level response codes
+		if resp.ResponseCode != pb.ResponseCode_RESPONSE_CODE_SUCCESS {
+			switch resp.ResponseCode {
+			case pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
+				return nil, ErrUnrecoverableAgentAlreadyConnected
+			default:
+				log.Printf("Registration failed with response code %v, retrying", resp.ResponseCode)
+				timer := time.NewTimer(c.getNextReconnectInterval())
+				select {
+				case <-timer.C:
+				case <-c.ctx.Done():
+					timer.Stop()
+					return nil, fmt.Errorf("registration cancelled during retry: %v", c.ctx.Err())
+				}
+				continue
+			}
 		}
 
 		// Success path.
