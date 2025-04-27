@@ -103,6 +103,11 @@ func (a *Agent) RegisterWithRetry(ctx context.Context) (string, error) {
 			return token, nil
 		}
 
+		// Unrecoverable errors should bubble up to abort agent run.
+		if err == client.ErrUnrecoverableServerNotFound || err == client.ErrUnrecoverableAgentAlreadyConnected || err == client.ErrUnrecoverableAgentNotFound {
+			return "", err
+		}
+
 		delay := b.Next()
 		log.Printf("Registration failed: %v. Retrying in %s", err, delay)
 

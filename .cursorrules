@@ -10,6 +10,9 @@
 - internal
 - pkg
 
+[[GO shared libraries and packages]]:
+Create a package in pkg if you need to create some shared component.
+
 
 [[Adding New Capabilities]]:
 To add a new capability to the system, follow these steps:

@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -27,6 +28,13 @@ const (
 	defaultConnectionTimeout        = 30 * time.Second
 	heartbeatInterval               = 5 * time.Second // unified heartbeat cadence
 )
+
+// ErrUnrecoverable is returned by RegisterAgent when the server indicates that
+// the agent must not retry the registration (e.g. wrong server-token pairing
+// or duplicate agent).
+var ErrUnrecoverableServerNotFound = errors.New("unrecoverable registration error: server not found")
+var ErrUnrecoverableAgentAlreadyConnected = errors.New("unrecoverable registration error: agent already connected")
+var ErrUnrecoverableAgentNotFound = errors.New("unrecoverable registration error: agent not found")
 
 // Client represents a gRPC client for agent communication
 type Client struct {
@@ -154,6 +162,11 @@ func (c *Client) waitForConnectionReady() error {
 
 		if state == connectivity.Ready {
 			log.Printf("Connection is ready")
+			// Reset the backoff sequence because the connection has been
+			// successfully re-established. This prevents the next transient
+			// failure from starting with an unnecessarily long delay and keeps
+			// the reconnection behaviour predictable and responsive.
+			c.backoffStrategy.Reset()
 			return nil
 		}
 		if state == connectivity.Shutdown {
@@ -267,7 +280,18 @@ func (c *Client) RegisterAgent(version string, capabilities map[string]string, f
 		log.Printf("Sending RegisterAgentV1 request")
 		resp, err := c.client.RegisterAgentV1(c.ctx, req)
 		if err != nil {
-			if status.Code(err) == codes.Unavailable {
+			grpcCode := status.Code(err)
+			// If the server explicitly tells that the agent already exists or the
+			// server/agent is not found we treat it as unrecoverable and abort
+			// further retries so that the caller can exit.
+			if grpcCode == codes.AlreadyExists {
+				return nil, ErrUnrecoverableAgentAlreadyConnected
+			}
+			if grpcCode == codes.NotFound {
+				return nil, ErrUnrecoverableAgentNotFound
+			}
+
+			if grpcCode == codes.Unavailable {
 				log.Printf("Connection unavailable during registration, attempting to reconnect")
 				if err := c.reconnect(); err != nil {
 					log.Printf("Failed to reconnect, will retry: %v", err)
@@ -304,7 +328,17 @@ func (c *Client) RegisterAgent(version string, capabilities map[string]string, f
 			continue
 		}
 
-		// Set registration state and store access token
+		// Evaluate response codes that indicate unrecoverable registration errors.
+		switch resp.ResponseCode {
+		case pb.ResponseCode_RESPONSE_CODE_SERVER_NOT_FOUND:
+			return nil, ErrUnrecoverableServerNotFound
+		case pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
+			return nil, ErrUnrecoverableAgentAlreadyConnected
+		case pb.ResponseCode_RESPONSE_CODE_AGENT_NOT_FOUND:
+			return nil, ErrUnrecoverableAgentNotFound
+		}
+
+		// Success path.
 		log.Printf("Registration successful, setting registered state")
 		c.SetRegistered(true)
 		c.accessToken = resp.AccessToken
@@ -410,18 +444,11 @@ func (c *Client) StartHeartbeatStream(serverID, accessToken string, metrics map[
 						}
 						return
 
-					case pb.ResponseCode_RESPONSE_CODE_SERVER_NOT_FOUND:
-						log.Printf("Server not found, this is a fatal error")
+					case pb.ResponseCode_RESPONSE_CODE_SERVER_NOT_FOUND,
+						pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
+						log.Printf("Received response code %v, triggering re-registration", response.ResponseCode)
 						select {
-						case fatalErrorCh <- fmt.Errorf("server not found"):
-						default:
-						}
-						return
-
-					case pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
-						log.Printf("Agent already connected, this is a fatal error")
-						select {
-						case fatalErrorCh <- fmt.Errorf("agent already connected"):
+						case reregisterCh <- struct{}{}:
 						default:
 						}
 						return
