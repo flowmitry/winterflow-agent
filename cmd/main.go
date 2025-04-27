@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"winterflow-agent/internal/agent"
 	"winterflow-agent/internal/config"
@@ -44,35 +48,44 @@ func main() {
 		return
 	}
 
-	// Load configuration for normal operation
+	// Set up signal handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Create a context that can be cancelled
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Handle signals in a separate goroutine
+	go func() {
+		sig := <-sigChan
+		log.Printf("Received signal: %v", sig)
+		cancel() // Cancel the context to abort operations
+		// Give a short time for cleanup, then exit
+		time.Sleep(500 * time.Millisecond)
+		log.Printf("Shutting down agent")
+		os.Exit(0)
+	}()
+
+	// Load configuration
+	log.Printf("Loading configuration from %s", *configPath)
 	cfg, err := config.WaitUntilReady(*configPath)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
 	// Create and initialize agent
-	agent, err := agent.NewAgent(cfg)
+	log.Printf("Creating agent")
+	a, err := agent.NewAgent(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
 	}
-	defer agent.Close()
+	defer a.Close()
 
-	// Register the agent
-	accessToken, err := agent.Register()
-	if err != nil {
-		log.Fatalf("Failed to register agent: %v", err)
+	// Run the agent
+	if err := a.Run(ctx); err != nil {
+		log.Fatalf("Agent failed: %v", err)
 	}
 
-	// Start heartbeat stream
-	if err := agent.StartHeartbeat(accessToken); err != nil {
-		log.Fatalf("Failed to start heartbeat stream: %v", err)
-	}
-
-	// Wait for interrupt signal
-	agent.WaitForSignal()
-
-	// Unregister the agent
-	if err := agent.Unregister(accessToken); err != nil {
-		log.Printf("Failed to unregister agent: %v", err)
-	}
+	// Wait indefinitely
+	select {}
 }

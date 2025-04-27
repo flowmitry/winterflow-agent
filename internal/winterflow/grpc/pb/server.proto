@@ -33,17 +33,6 @@ message RegisterAgentResponseV1 {
   ResponseCode response_code = 4;
 }
 
-message UnregisterAgentRequestV1 {
-  string server_id = 1;
-  string access_token = 2;
-}
-
-message UnregisterAgentResponseV1 {
-  bool success = 1;
-  string message = 2;
-  ResponseCode response_code = 3;
-}
-
 // Agent heartbeat and status messages
 message AgentHeartbeatV1 {
   string server_id = 1;
@@ -61,9 +50,6 @@ message AgentHeartbeatResponseV1 {
 service AgentService {
   // Register an agent
   rpc RegisterAgentV1(RegisterAgentRequestV1) returns (RegisterAgentResponseV1) {}
-
-  // Unregister an agent
-  rpc UnregisterAgentV1(UnregisterAgentRequestV1) returns (UnregisterAgentResponseV1) {}
 
   // Bidirectional streaming for agent communication
   rpc AgentStreamV1(stream AgentHeartbeatV1) returns (stream AgentHeartbeatResponseV1) {}

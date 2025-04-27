@@ -19,9 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgentService_RegisterAgentV1_FullMethodName   = "/pb.AgentService/RegisterAgentV1"
-	AgentService_UnregisterAgentV1_FullMethodName = "/pb.AgentService/UnregisterAgentV1"
-	AgentService_AgentStreamV1_FullMethodName     = "/pb.AgentService/AgentStreamV1"
+	AgentService_RegisterAgentV1_FullMethodName = "/pb.AgentService/RegisterAgentV1"
+	AgentService_AgentStreamV1_FullMethodName   = "/pb.AgentService/AgentStreamV1"
 )
 
 // AgentServiceClient is the client API for AgentService service.
@@ -32,8 +31,6 @@ const (
 type AgentServiceClient interface {
 	// Register an agent
 	RegisterAgentV1(ctx context.Context, in *RegisterAgentRequestV1, opts ...grpc.CallOption) (*RegisterAgentResponseV1, error)
-	// Unregister an agent
-	UnregisterAgentV1(ctx context.Context, in *UnregisterAgentRequestV1, opts ...grpc.CallOption) (*UnregisterAgentResponseV1, error)
 	// Bidirectional streaming for agent communication
 	AgentStreamV1(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AgentHeartbeatV1, AgentHeartbeatResponseV1], error)
 }
@@ -50,16 +47,6 @@ func (c *agentServiceClient) RegisterAgentV1(ctx context.Context, in *RegisterAg
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RegisterAgentResponseV1)
 	err := c.cc.Invoke(ctx, AgentService_RegisterAgentV1_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *agentServiceClient) UnregisterAgentV1(ctx context.Context, in *UnregisterAgentRequestV1, opts ...grpc.CallOption) (*UnregisterAgentResponseV1, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UnregisterAgentResponseV1)
-	err := c.cc.Invoke(ctx, AgentService_UnregisterAgentV1_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +74,6 @@ type AgentService_AgentStreamV1Client = grpc.BidiStreamingClient[AgentHeartbeatV
 type AgentServiceServer interface {
 	// Register an agent
 	RegisterAgentV1(context.Context, *RegisterAgentRequestV1) (*RegisterAgentResponseV1, error)
-	// Unregister an agent
-	UnregisterAgentV1(context.Context, *UnregisterAgentRequestV1) (*UnregisterAgentResponseV1, error)
 	// Bidirectional streaming for agent communication
 	AgentStreamV1(grpc.BidiStreamingServer[AgentHeartbeatV1, AgentHeartbeatResponseV1]) error
 	mustEmbedUnimplementedAgentServiceServer()
@@ -103,9 +88,6 @@ type UnimplementedAgentServiceServer struct{}
 
 func (UnimplementedAgentServiceServer) RegisterAgentV1(context.Context, *RegisterAgentRequestV1) (*RegisterAgentResponseV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterAgentV1 not implemented")
-}
-func (UnimplementedAgentServiceServer) UnregisterAgentV1(context.Context, *UnregisterAgentRequestV1) (*UnregisterAgentResponseV1, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UnregisterAgentV1 not implemented")
 }
 func (UnimplementedAgentServiceServer) AgentStreamV1(grpc.BidiStreamingServer[AgentHeartbeatV1, AgentHeartbeatResponseV1]) error {
 	return status.Errorf(codes.Unimplemented, "method AgentStreamV1 not implemented")
@@ -149,24 +131,6 @@ func _AgentService_RegisterAgentV1_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AgentService_UnregisterAgentV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UnregisterAgentRequestV1)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AgentServiceServer).UnregisterAgentV1(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AgentService_UnregisterAgentV1_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServiceServer).UnregisterAgentV1(ctx, req.(*UnregisterAgentRequestV1))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _AgentService_AgentStreamV1_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(AgentServiceServer).AgentStreamV1(&grpc.GenericServerStream[AgentHeartbeatV1, AgentHeartbeatResponseV1]{ServerStream: stream})
 }
@@ -184,10 +148,6 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegisterAgentV1",
 			Handler:    _AgentService_RegisterAgentV1_Handler,
-		},
-		{
-			MethodName: "UnregisterAgentV1",
-			Handler:    _AgentService_UnregisterAgentV1_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
