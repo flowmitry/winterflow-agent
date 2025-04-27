@@ -348,7 +348,7 @@ func (c *Client) RegisterAgent(version string, capabilities map[string]string, f
 }
 
 // StartHeartbeatStream starts a bidirectional stream for heartbeat communication
-func (c *Client) StartHeartbeatStream(serverID, accessToken string, metrics map[string]string, version string, capabilities map[string]string, features map[string]bool, serverToken string) error {
+func (c *Client) StartHeartbeatStream(serverID, accessToken string, metricsProvider func() map[string]string, version string, capabilities map[string]string, features map[string]bool, serverToken string) error {
 	log.Printf("Starting heartbeat stream with server ID: %s", serverID)
 	log.Printf("Current registration state: %v", c.IsRegistered())
 
@@ -400,7 +400,7 @@ func (c *Client) StartHeartbeatStream(serverID, accessToken string, metrics map[
 			heartbeat := &pb.AgentHeartbeatV1{
 				ServerId:    serverID,
 				AccessToken: accessToken,
-				Metrics:     metrics,
+				Metrics:     metricsProvider(),
 			}
 
 			if err := stream.Send(heartbeat); err != nil {
@@ -486,7 +486,7 @@ func (c *Client) StartHeartbeatStream(serverID, accessToken string, metrics map[
 					heartbeat := &pb.AgentHeartbeatV1{
 						ServerId:    serverID,
 						AccessToken: accessToken,
-						Metrics:     metrics,
+						Metrics:     metricsProvider(),
 					}
 
 					if err := stream.Send(heartbeat); err != nil {

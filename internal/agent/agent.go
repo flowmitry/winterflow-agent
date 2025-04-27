@@ -9,13 +9,15 @@ import (
 	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/grpc/client"
 	"winterflow-agent/pkg/backoff"
+	"winterflow-agent/pkg/metrics"
 )
 
 // Agent represents the application agent
 type Agent struct {
-	client    *client.Client
-	config    *config.Config
-	startTime time.Time
+	client         *client.Client
+	config         *config.Config
+	startTime      time.Time
+	metricsFactory *metrics.MetricFactory
 }
 
 // NewAgent creates a new agent instance
@@ -25,10 +27,13 @@ func NewAgent(config *config.Config) (*Agent, error) {
 		return nil, err
 	}
 
+	start := time.Now()
+
 	return &Agent{
-		client:    c,
-		config:    config,
-		startTime: time.Now(),
+		client:         c,
+		config:         config,
+		startTime:      start,
+		metricsFactory: metrics.NewMetricFactory(start),
 	}, nil
 }
 
@@ -56,19 +61,13 @@ func (a *Agent) Register() (string, error) {
 
 // collectMetrics collects system metrics for heartbeat
 func (a *Agent) collectMetrics() map[string]string {
-	// TODO: Implement actual system metrics collection
-	// For now, return static metrics
-	return map[string]string{
-		"cpu_usage": "0.5",
-		"memory":    "512MB",
-		"uptime":    time.Since(a.startTime).String(),
-	}
+	return a.metricsFactory.Collect()
 }
 
 // StartHeartbeat starts the heartbeat stream
 func (a *Agent) StartHeartbeat(accessToken string) error {
 	log.Printf("Collecting system metrics for heartbeat")
-	metrics := a.collectMetrics()
+	metricsProvider := a.collectMetrics
 
 	log.Printf("Getting system capabilities for heartbeat")
 	capabilities := GetSystemCapabilities().ToMap()
@@ -77,7 +76,7 @@ func (a *Agent) StartHeartbeat(accessToken string) error {
 	return a.client.StartHeartbeatStream(
 		a.config.ServerID,
 		accessToken,
-		metrics,
+		metricsProvider,
 		GetVersion(),
 		capabilities,
 		a.config.Features,
