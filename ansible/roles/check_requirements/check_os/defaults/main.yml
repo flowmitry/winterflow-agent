@@ -1,0 +1,15 @@
+---
+# List of supported operating systems and their minimum versions
+supported_os:
+  - distribution: "Ubuntu"
+    min_version: "20.04"
+    description: "Ubuntu LTS releases starting from 20.04"
+  - distribution: "Debian"
+    min_version: "12"
+    description: "Debian stable starting from version 12 (Bookworm)"
+
+# Variable descriptions for documentation
+supported_os_description: >
+  WinterFlow playbooks supports the following operating systems:
+  - Ubuntu 20.04 LTS and newer LTS releases
+  - Debian 12 (Bookworm) and newer stable releases 

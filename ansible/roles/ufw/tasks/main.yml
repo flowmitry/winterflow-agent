@@ -1,0 +1,51 @@
+---
+# Install UFW package
+- name: Install UFW
+  apt:
+    name: ufw
+    state: present
+    update_cache: yes
+  become: true
+
+# Reset UFW if requested
+- name: Reset UFW to default state
+  shell: |
+    ufw --force reset
+  become: true
+  when: ufw_reset | default(false)
+
+# Configure default policies
+- name: Set default UFW policies
+  ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  with_items:
+    - { direction: 'incoming', policy: 'deny' }
+    - { direction: 'outgoing', policy: 'allow' }
+  become: true
+
+# Allow SSH by default to prevent lockout
+- name: Allow SSH
+  ufw:
+    rule: allow
+    port: "{{ ufw_ssh_port }}"
+    proto: tcp
+  become: true
+
+# Configure additional allowed ports
+- name: Configure allowed ports
+  ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto | default('tcp') }}"
+    from_ip: "{{ item.from_ip | default(omit) }}"
+    comment: "{{ item.comment | default(omit) }}"
+  with_items: "{{ ufw_allowed_ports }}"
+  when: ufw_allowed_ports is defined
+  become: true
+
+# Enable UFW
+- name: Enable UFW
+  ufw:
+    state: enabled
+  become: true 

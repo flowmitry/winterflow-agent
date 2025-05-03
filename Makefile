@@ -1,21 +1,28 @@
 # Build configuration
-BINARY_NAME=winterflow-agent
+BINARY_NAME=agent
 VERSION=$(shell date +'%Y.%m.%d')
-BUILD_DIR=build
+BUILD_DIR=.
 
 # Go build flags
 LDFLAGS=-X winterflow-agent/internal/agent.version=${VERSION}
 BUILD_FLAGS=-v -ldflags="${LDFLAGS}"
 
-.PHONY: all clean grpc build run install-tools
+.PHONY: all clean grpc build run install-tools ansible-version
 
 all: grpc build
 
+# Create version file
+ansible-version:
+	@echo "Creating version file..."
+	@mkdir -p ansible
+	@echo "${VERSION}" > ansible/version.txt
+
 # Build for local development
-build:
+build: ansible-version
 	@echo "Building ${BINARY_NAME}..."
 	@mkdir -p ${BUILD_DIR}
-	@go build ${BUILD_FLAGS} -o ${BUILD_DIR}/${BINARY_NAME} ./cmd/main.go
+	@go build ${BUILD_FLAGS} -o ${BUILD_DIR}/${BINARY_NAME} ./main.go
+	@chmod +x ${BUILD_DIR}/${BINARY_NAME}
 
 # Run the agent
 run: build
@@ -25,8 +32,9 @@ run: build
 # Clean build artifacts
 clean:
 	@echo "Cleaning build directory..."
-	@rm -rf ${BUILD_DIR}
+	@rm -f ${BUILD_DIR}/${BINARY_NAME}
 	@rm -f internal/grpc/pb/*.pb.go
+	@rm -f ansible/version.txt
 
 grpc:
 	@echo "Generating gRPC code..."

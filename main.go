@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"embed"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/signal"
@@ -11,9 +13,13 @@ import (
 	"time"
 
 	"winterflow-agent/internal/agent"
+	"winterflow-agent/internal/ansible"
 	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/api"
 )
+
+//go:embed ansible/inventory/** ansible/playbooks/** ansible/roles/** ansible/ansible.cfg
+var ansibleFS embed.FS
 
 func main() {
 	// Parse command line flags
@@ -46,6 +52,11 @@ func main() {
 			log.Fatalf("Registration failed: %v", err)
 		}
 		return
+	}
+
+	ansibleManager := ansible.NewManager(GetAnsibleFS())
+	if err := ansibleManager.SyncAnsibleFiles(); err != nil {
+		log.Fatalf("Failed to sync ansible files: %v", err)
 	}
 
 	// Set up signal handling
@@ -88,4 +99,12 @@ func main() {
 
 	// Wait indefinitely
 	select {}
+}
+
+func GetAnsibleFS() fs.FS {
+	fsys, err := fs.Sub(ansibleFS, "ansible")
+	if err != nil {
+		return nil
+	}
+	return fsys
 }

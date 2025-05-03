@@ -1,0 +1,22 @@
+---
+# Role: check_requirements/check_os
+# Purpose: Validate that the target system meets the OS requirements
+# Usage: Include this role in playbooks that need OS compatibility validation
+#
+# Example:
+#   roles:
+#     - role: check_requirements/check_os
+#     - role: your_actual_role
+
+- name: Check if system is supported
+  fail:
+    msg: >
+      This system is not supported. Current system: {{ ansible_distribution }} {{ ansible_distribution_version }}.
+      {{ supported_os_description }}
+  vars:
+    # Find the minimum version for the current distribution
+    min_version: "{{ (supported_os | selectattr('distribution', 'equalto', ansible_distribution) | list | first).min_version | default('0') }}"
+    supported_distributions: "{{ supported_os | map(attribute='distribution') | list }}"
+  when: >
+    ansible_distribution not in supported_distributions or
+    (ansible_distribution_version | string) is version(min_version | string, '<', strict=False) 

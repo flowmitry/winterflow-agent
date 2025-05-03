@@ -1,0 +1,13 @@
+---
+# Default SSH port
+ufw_ssh_port: 22
+
+# Default allowed ports (empty by default)
+ufw_allowed_ports: []
+
+# Example of how to define allowed ports in your playbook:
+# ufw_allowed_ports:
+#   - port: 80
+#     proto: tcp
+#   - port: 443
+#     proto: tcp 

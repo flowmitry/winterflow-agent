@@ -1,0 +1,5 @@
+---
+- name: Check if running as root
+  fail:
+    msg: "This playbook must be run with sudo/become privileges"
+  when: ansible_user_id != 'root'

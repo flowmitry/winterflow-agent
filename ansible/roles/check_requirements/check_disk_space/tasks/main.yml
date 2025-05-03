@@ -1,0 +1,16 @@
+---
+# Tasks for checking system requirements
+
+- name: Get available disk space
+  shell: df -m / | tail -n1 | awk '{print $4}'
+  register: available_space
+  changed_when: false
+
+- name: Display available disk space
+  debug:
+    msg: "Available disk space: {{ available_space.stdout }}MB"
+
+- name: Verify sufficient disk space
+  fail:
+    msg: "Insufficient disk space. Required: {{ min_disk_space_mb }}MB, Available: {{ available_space.stdout }}MB"
+  when: available_space.stdout|int < min_disk_space_mb
