@@ -48,16 +48,13 @@ jobs:
           # Remove 'v' prefix for semantic version used in build flags
           SEMVER=${VERSION#v}
           
-          # Common build flags
-          BUILD_FLAGS="-v -ldflags=-s -w -X winterflow-agent/internal/agent.version=${SEMVER}"
-          
           # Build for linux/amd64
           echo "Building for linux/amd64..."
-          GOOS=linux GOARCH=amd64 go build ${BUILD_FLAGS} -o winterflow-agent-linux-amd64 ./main.go
+          GOOS=linux GOARCH=amd64 go build -v -ldflags="-s -w -X winterflow-agent/internal/agent.version=${SEMVER}" -o winterflow-agent-linux-amd64 ./main.go
           
           # Build for linux/arm64
           echo "Building for linux/arm64..."
-          GOOS=linux GOARCH=arm64 go build ${BUILD_FLAGS} -o winterflow-agent-linux-arm64 ./main.go
+          GOOS=linux GOARCH=arm64 go build -v -ldflags="-s -w -X winterflow-agent/internal/agent.version=${SEMVER}" -o winterflow-agent-linux-arm64 ./main.go
 
       - name: Create Release
         env:
