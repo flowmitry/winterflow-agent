@@ -1,0 +1,72 @@
+---
+# Playbook for system reboot
+# Usage: ansible-playbook playbooks/system/management/reboot.yml [-e force_reboot=true]
+
+- name: Reboot system
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    force_reboot: false
+    reboot_timeout: 600
+    pre_reboot_delay: 5
+    post_reboot_delay: 30
+
+  roles:
+    - role: check_requirements
+
+  tasks:
+    - name: Check if reboot is required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+      
+    - name: Check system uptime
+      shell: cat /proc/uptime | awk '{print $1}'
+      register: uptime
+      changed_when: false
+      
+    - name: Get running processes
+      shell: ps aux | grep -v "ps aux" | grep -v "grep" | wc -l
+      register: process_count
+      changed_when: false
+
+    - name: Display pre-reboot system status
+      debug:
+        msg: |
+          System Status:
+          - Uptime: {{ (uptime.stdout | float / 3600) | round(2) }} hours
+          - Running processes: {{ process_count.stdout }}
+          - Reboot required: {{ reboot_required.stat.exists }}
+
+    - name: Verify reboot conditions
+      assert:
+        that:
+          - reboot_required.stat.exists or force_reboot|bool
+        fail_msg: >
+          Reboot is not required and force_reboot is false.
+          Use -e force_reboot=true to force a reboot.
+        success_msg: "Proceeding with system reboot..."
+
+    - name: Perform system reboot
+      reboot:
+        msg: "Controlled system reboot initiated by Ansible"
+        connect_timeout: 5
+        reboot_timeout: 600
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        test_command: uptime
+
+    - name: Verify system is up after reboot
+      wait_for_connection:
+        delay: 10
+        timeout: 300
+
+    - name: Get post-reboot uptime
+      shell: cat /proc/uptime | awk '{print $1}'
+      register: post_uptime
+      changed_when: false
+
+    - name: Display post-reboot status
+      debug:
+        msg: "System successfully rebooted. New uptime: {{ (post_uptime.stdout | float / 60) | round(2) }} minutes" 

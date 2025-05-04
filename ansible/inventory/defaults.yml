@@ -2,3 +2,6 @@
 all:
   vars:
     # Variables
+    timezone: UTC
+    ssh_login_type: "password"
+    app_server: "docker-swarm"

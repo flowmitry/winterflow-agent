@@ -1,0 +1,20 @@
+---
+# Playbook for configuring UFW (Uncomplicated Firewall)
+
+- name: Configure UFW
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: check_requirements
+    - role: ufw
+      vars:
+        ufw_allowed_ports: >-
+          {{
+            base_ufw_rules +
+            (restricted_web_ufw_rules if cloudflare_enabled | default(false) else direct_web_ufw_rules) +
+            (k3s_ufw_rules if app_server == 'k3s' else []) +
+            (docker_swarm_ufw_rules if app_server == 'docker-swarm' else []) +
+            custom_ufw_rules
+          }}

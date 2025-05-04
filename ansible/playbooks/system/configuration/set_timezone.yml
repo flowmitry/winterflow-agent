@@ -1,0 +1,32 @@
+---
+# Playbook for basic system configuration
+# Usage: ansible-playbook playbooks/system/configuration/set_timezone.yml [-e timezone=UTC] 
+
+- name: Configure system settings
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: check_requirements
+
+  tasks:
+    - name: Debug timezone variable
+      debug:
+        msg: "Current timezone value: {{ timezone }}"
+        verbosity: 2
+
+    - name: Set timezone
+      community.general.timezone:
+        name: "{{ timezone }}"
+      register: timezone_change
+
+    - name: Verify timezone setting
+      command: timedatectl
+      register: timezone_verify
+      changed_when: false
+
+    - name: Show current timezone
+      debug:
+        var: timezone_verify.stdout_lines
+

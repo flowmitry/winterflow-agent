@@ -1,0 +1,38 @@
+---
+# Playbook for uninstalling UFW (Uncomplicated Firewall)
+# Usage: ansible-playbook playbooks/system/security/uninstall_ufw.yml
+
+- name: Uninstall UFW
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: check_requirements
+
+  tasks:
+    - name: Disable UFW
+      ufw:
+        state: disabled
+      ignore_errors: true
+
+    - name: Wait for UFW to be disabled
+      wait_for:
+        timeout: 5
+      
+    - name: Remove UFW package
+      apt:
+        name: ufw
+        state: absent
+        purge: yes
+        autoremove: yes
+      
+    - name: Remove UFW configuration files
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /etc/ufw
+        - /lib/ufw
+        - /etc/default/ufw
+      ignore_errors: true 
