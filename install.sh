@@ -29,7 +29,7 @@ SERVICE_FILE="/etc/systemd/system/winterflow-agent.service"
 INSTALL_SCRIPT="${INSTALL_DIR}/install.sh"
 
 # URLs
-GITHUB_API="https://api.github.com/repos/winterflowio/agent/releases/latest"
+GITHUB_API="https://api.github.com/repos/winterflowio/agent/releases"
 INSTALL_SCRIPT_URL="https://winterflowio.github.io/agent/install.sh"
 
 # Required packages
@@ -155,13 +155,14 @@ handle_agent_binary() {
     local temp_binary
     temp_binary=$(mktemp)
     
-    # Get the latest release download URL for the current architecture
-    log "info" "Fetching latest release information..."
+    # Get the latest stable release download URL for the current architecture (ignoring pre-releases)
+    log "info" "Fetching latest stable release information..."
     local download_url
     download_url=$(curl -s "${GITHUB_API}" | \
+                  grep -A 50 '"prerelease": false' | \
                   grep -o "\"browser_download_url\": \"[^\"]*linux-${arch}[^\"]*\"" | \
                   head -n 1 | \
-                  cut -d'"' -f4)
+                  cut -d '"' -f4)
 
     if [ -z "${download_url}" ]; then
         log "error" "Could not find release for linux-${arch}"
