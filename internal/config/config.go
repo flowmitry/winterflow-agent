@@ -15,6 +15,10 @@ const (
 	DefaultAPIBaseURL = "http://localhost:8080"
 	// DefaultAnsiblePath is the default path for Ansible files
 	DefaultAnsiblePath = "ansible"
+	// DefaultAppsPath is the default path for application files
+	DefaultAppsPath = "apps"
+	// DefaultAnsibleAppsPath is the default path for Ansible application files
+	DefaultAnsibleAppsPath = "ansible_apps"
 )
 
 // Config holds the application configuration
@@ -28,6 +32,29 @@ type Config struct {
 	APIBaseURL string `json:"api_base_url,omitempty"`
 	// AnsiblePath is the path where ansible files are stored
 	AnsiblePath string `json:"ansible_path,omitempty"`
+	// AppsPath is the path where application files are stored
+	AppsPath string `json:"apps_path,omitempty"`
+	// AnsibleAppsPath is the path where ansible application files are stored
+	AnsibleAppsPath string `json:"ansible_apps_path,omitempty"`
+}
+
+// applyDefaults ensures that all necessary fields have default values if they are empty.
+func applyDefaults(cfg *Config) {
+	if cfg.GRPCServerAddress == "" {
+		cfg.GRPCServerAddress = DefaultGRPCServerAddress
+	}
+	if cfg.APIBaseURL == "" {
+		cfg.APIBaseURL = DefaultAPIBaseURL
+	}
+	if cfg.AnsiblePath == "" {
+		cfg.AnsiblePath = DefaultAnsiblePath
+	}
+	if cfg.AppsPath == "" {
+		cfg.AppsPath = DefaultAppsPath
+	}
+	if cfg.AnsibleAppsPath == "" {
+		cfg.AnsibleAppsPath = DefaultAnsibleAppsPath
+	}
 }
 
 // validateAndMergeFeatures ensures only supported features are used and merges with defaults
@@ -53,15 +80,12 @@ func validateAndMergeFeatures(configFeatures map[string]bool) map[string]bool {
 
 // LoadConfig loads the configuration from a JSON file
 func LoadConfig(configPath string) (*Config, error) {
-	// Create a new config with default values
+	// Create a new config struct (defaults will be applied later)
 	config := &Config{
-		Features:          make(map[string]bool),
-		GRPCServerAddress: DefaultGRPCServerAddress,
-		APIBaseURL:        DefaultAPIBaseURL,
-		AnsiblePath:       DefaultAnsiblePath,
+		Features: make(map[string]bool),
 	}
 
-	// Set default features
+	// Set default features initially
 	config.Features = validateAndMergeFeatures(nil)
 
 	// Try to load existing config if it exists
@@ -69,22 +93,19 @@ func LoadConfig(configPath string) (*Config, error) {
 		data, err := os.ReadFile(configPath)
 		if err == nil {
 			if err := json.Unmarshal(data, config); err == nil {
-				// Validate and merge features
+				// Validate and merge features from the loaded config
 				config.Features = validateAndMergeFeatures(config.Features)
-
-				// Ensure AnsiblePath has a default if missing
-				if config.AnsiblePath == "" {
-					config.AnsiblePath = DefaultAnsiblePath
-				}
-
-				// If we have an API base URL in the config, use it
-				if config.APIBaseURL != "" {
-					return config, nil
-				}
+				// Apply defaults to the loaded config (overwriting empty fields)
+				applyDefaults(config)
+				// Config loaded and defaults applied, return it
+				return config, nil
 			}
 		}
 	}
 
+	// If file doesn't exist or any error occurred during loading,
+	// apply defaults to the initial empty config structure.
+	applyDefaults(config)
 	return config, nil
 }
 
@@ -95,22 +116,15 @@ func WaitUntilReady(configPath string) (*Config, error) {
 			// Try to read and validate the config
 			data, err := os.ReadFile(configPath)
 			if err == nil {
-				var config Config
+				var config Config // Start with an empty config
 				if err := json.Unmarshal(data, &config); err == nil {
 					// Check if required fields are filled
 					if config.ServerID != "" && config.ServerToken != "" {
 						// All required fields are present, proceed
 						// Validate and merge features
 						config.Features = validateAndMergeFeatures(config.Features)
-						if config.GRPCServerAddress == "" {
-							config.GRPCServerAddress = DefaultGRPCServerAddress
-						}
-						if config.APIBaseURL == "" {
-							config.APIBaseURL = DefaultAPIBaseURL
-						}
-						if config.AnsiblePath == "" {
-							config.AnsiblePath = DefaultAnsiblePath
-						}
+						// Apply defaults for optional fields
+						applyDefaults(&config)
 						return &config, nil
 					}
 				}
@@ -129,15 +143,10 @@ func SaveConfig(config *Config, configPath string) error {
 		return fmt.Errorf("failed to create config directory: %v", err)
 	}
 
-	// Set default values if not provided
-	if config.APIBaseURL == "" {
-		config.APIBaseURL = DefaultAPIBaseURL
-	}
-	if config.AnsiblePath == "" {
-		config.AnsiblePath = DefaultAnsiblePath
-	}
+	// Ensure default values are set before saving
+	applyDefaults(config)
 
-	// Validate and merge features
+	// Validate and merge features before saving
 	config.Features = validateAndMergeFeatures(config.Features)
 
 	// Marshal config to JSON
