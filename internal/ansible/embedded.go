@@ -20,7 +20,12 @@ type Manager struct {
 // NewManager creates a new Ansible manager
 func NewManager(embeddedFS fs.FS) *Manager {
 	return &Manager{
-		embeddedManager: embedded.NewManager(embeddedFS, AnsibleDir, agent.GetVersion()),
+		embeddedManager: embedded.NewManager(embeddedFS, AnsibleDir, agent.GetVersion(), []string{
+			"inventory/defaults.yml",
+			"playbooks",
+			"roles",
+			"ansible.cfg",
+		}),
 	}
 }
 

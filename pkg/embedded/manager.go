@@ -18,14 +18,17 @@ type Manager struct {
 	embeddedFS fs.FS
 	targetDir  string
 	version    string
+	// pathsToRemove contains the list of paths that should be removed before replacement
+	pathsToRemove []string
 }
 
 // NewManager creates a new embedded files manager
-func NewManager(embeddedFS fs.FS, targetDir string, version string) *Manager {
+func NewManager(embeddedFS fs.FS, targetDir string, version string, pathsToRemove []string) *Manager {
 	return &Manager{
-		embeddedFS: embeddedFS,
-		targetDir:  targetDir,
-		version:    version,
+		embeddedFS:    embeddedFS,
+		targetDir:     targetDir,
+		version:       version,
+		pathsToRemove: pathsToRemove,
 	}
 }
 
@@ -85,17 +88,24 @@ func (m *Manager) checkVersion() (bool, error) {
 
 // extractAndReplace extracts embedded files and replaces existing ones
 func (m *Manager) extractAndReplace() error {
-	// Remove existing directory if it exists
-	if err := os.RemoveAll(m.targetDir); err != nil {
-		return fmt.Errorf("failed to remove existing target directory: %w", err)
-	}
-
-	// Create new directory
+	// Create target directory if it doesn't exist
 	if err := os.MkdirAll(m.targetDir, 0755); err != nil {
 		return fmt.Errorf("failed to create target directory: %w", err)
 	}
 
-	// Walk through embedded files and extract them
+	// First, remove all specified paths
+	for _, path := range m.pathsToRemove {
+		targetPath := filepath.Join(m.targetDir, path)
+		// Check if path exists in target
+		if _, err := os.Stat(targetPath); err == nil {
+			// Path exists, remove it
+			if err := os.RemoveAll(targetPath); err != nil {
+				return fmt.Errorf("failed to remove path %s: %w", targetPath, err)
+			}
+		}
+	}
+
+	// Process all files and create directories
 	err := fs.WalkDir(m.embeddedFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -109,6 +119,7 @@ func (m *Manager) extractAndReplace() error {
 		targetPath := filepath.Join(m.targetDir, path)
 
 		if d.IsDir() {
+			// Create directory
 			return os.MkdirAll(targetPath, 0755)
 		}
 
@@ -116,6 +127,12 @@ func (m *Manager) extractAndReplace() error {
 		data, err := fs.ReadFile(m.embeddedFS, path)
 		if err != nil {
 			return fmt.Errorf("failed to read embedded file %s: %w", path, err)
+		}
+
+		// Create parent directories if they don't exist
+		parentDir := filepath.Dir(targetPath)
+		if err := os.MkdirAll(parentDir, 0755); err != nil {
+			return fmt.Errorf("failed to create parent directory for %s: %w", targetPath, err)
 		}
 
 		// Write file
@@ -130,7 +147,7 @@ func (m *Manager) extractAndReplace() error {
 		return fmt.Errorf("failed to extract files: %w", err)
 	}
 
-	// Write version file
+	// Write version file as the last step
 	versionPath := filepath.Join(m.targetDir, VersionFile)
 	if err := os.WriteFile(versionPath, []byte(m.version), 0644); err != nil {
 		return fmt.Errorf("failed to write version file: %w", err)
