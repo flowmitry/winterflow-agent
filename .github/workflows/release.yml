@@ -49,7 +49,7 @@ jobs:
           SEMVER=${VERSION#v}
           
           # Common build flags
-          BUILD_FLAGS="-v -ldflags=\"-s -w -X winterflow-agent/internal/agent.version=${SEMVER}\""
+          BUILD_FLAGS="-v -ldflags=-s -w -X winterflow-agent/internal/agent.version=${SEMVER}"
           
           # Build for linux/amd64
           echo "Building for linux/amd64..."
