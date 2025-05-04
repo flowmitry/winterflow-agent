@@ -54,9 +54,9 @@ func main() {
 		return
 	}
 
-	ansibleManager := ansible.NewManager(GetAnsibleFS())
+	ansibleManager := ansible.NewManager(GetAnsibleFS(), *configPath)
 	if err := ansibleManager.SyncAnsibleFiles(); err != nil {
-		log.Fatalf("Failed to sync ansible files: %v", err)
+		log.Fatalf("Error syncing ansible files: %v", err)
 	}
 
 	// Set up signal handling
@@ -77,7 +77,6 @@ func main() {
 		os.Exit(0)
 	}()
 
-	// Load configuration
 	log.Printf("Loading configuration from %s", *configPath)
 	cfg, err := config.WaitUntilReady(*configPath)
 	if err != nil {

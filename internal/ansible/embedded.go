@@ -5,12 +5,8 @@ import (
 	"log"
 
 	"winterflow-agent/internal/agent"
+	"winterflow-agent/internal/config"
 	"winterflow-agent/pkg/embedded"
-)
-
-const (
-	// AnsibleDir is the name of the ansible directory
-	AnsibleDir = "ansible"
 )
 
 // Manager handles ansible-related operations
@@ -19,9 +15,14 @@ type Manager struct {
 }
 
 // NewManager creates a new Ansible manager
-func NewManager(embeddedFS fs.FS) *Manager {
+func NewManager(embeddedFS fs.FS, configPath string) *Manager {
+	cfg, err := config.LoadConfig(configPath)
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
 	return &Manager{
-		embeddedManager: embedded.NewManager(embeddedFS, AnsibleDir, agent.GetVersion(), []string{
+		embeddedManager: embedded.NewManager(embeddedFS, cfg.AnsiblePath, agent.GetVersion(), []string{
 			"inventory/defaults.yml",
 			"playbooks",
 			"roles",

@@ -13,6 +13,8 @@ const (
 	DefaultGRPCServerAddress = "localhost:8081"
 	// DefaultAPIBaseURL is the default HTTP API server URL for web interface
 	DefaultAPIBaseURL = "http://localhost:8080"
+	// DefaultAnsiblePath is the default path for Ansible files
+	DefaultAnsiblePath = "ansible"
 )
 
 // Config holds the application configuration
@@ -24,6 +26,8 @@ type Config struct {
 	GRPCServerAddress string `json:"grpc_server_address,omitempty"`
 	// APIBaseURL is the base HTTP API URL for web interface
 	APIBaseURL string `json:"api_base_url,omitempty"`
+	// AnsiblePath is the path where ansible files are stored
+	AnsiblePath string `json:"ansible_path,omitempty"`
 }
 
 // validateAndMergeFeatures ensures only supported features are used and merges with defaults
@@ -54,6 +58,7 @@ func LoadConfig(configPath string) (*Config, error) {
 		Features:          make(map[string]bool),
 		GRPCServerAddress: DefaultGRPCServerAddress,
 		APIBaseURL:        DefaultAPIBaseURL,
+		AnsiblePath:       DefaultAnsiblePath,
 	}
 
 	// Set default features
@@ -66,6 +71,12 @@ func LoadConfig(configPath string) (*Config, error) {
 			if err := json.Unmarshal(data, config); err == nil {
 				// Validate and merge features
 				config.Features = validateAndMergeFeatures(config.Features)
+
+				// Ensure AnsiblePath has a default if missing
+				if config.AnsiblePath == "" {
+					config.AnsiblePath = DefaultAnsiblePath
+				}
+
 				// If we have an API base URL in the config, use it
 				if config.APIBaseURL != "" {
 					return config, nil
@@ -97,6 +108,9 @@ func WaitUntilReady(configPath string) (*Config, error) {
 						if config.APIBaseURL == "" {
 							config.APIBaseURL = DefaultAPIBaseURL
 						}
+						if config.AnsiblePath == "" {
+							config.AnsiblePath = DefaultAnsiblePath
+						}
 						return &config, nil
 					}
 				}
@@ -118,6 +132,9 @@ func SaveConfig(config *Config, configPath string) error {
 	// Set default values if not provided
 	if config.APIBaseURL == "" {
 		config.APIBaseURL = DefaultAPIBaseURL
+	}
+	if config.AnsiblePath == "" {
+		config.AnsiblePath = DefaultAnsiblePath
 	}
 
 	// Validate and merge features
