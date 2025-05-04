@@ -2,6 +2,7 @@ package ansible
 
 import (
 	"io/fs"
+	"log"
 
 	"winterflow-agent/internal/agent"
 	"winterflow-agent/pkg/embedded"
@@ -31,5 +32,6 @@ func NewManager(embeddedFS fs.FS) *Manager {
 
 // SyncAnsibleFiles ensures the ansible directory is up to date with the embedded files
 func (m *Manager) SyncAnsibleFiles() error {
+	log.Printf("Syncing ansible files")
 	return m.embeddedManager.SyncFiles()
 }
