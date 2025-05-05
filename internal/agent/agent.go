@@ -3,8 +3,8 @@ package agent
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
+	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/grpc/client"

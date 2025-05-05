@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 	"sync"
 	"time"
+	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/winterflow/grpc/pb"
 

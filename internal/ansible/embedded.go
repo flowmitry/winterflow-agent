@@ -2,7 +2,7 @@ package ansible
 
 import (
 	"io/fs"
-	"log"
+	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/agent"
 	"winterflow-agent/internal/config"

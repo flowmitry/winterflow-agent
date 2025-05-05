@@ -6,11 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/agent"
 	"winterflow-agent/internal/ansible"

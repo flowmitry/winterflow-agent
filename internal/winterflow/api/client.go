@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"time"
+	log "winterflow-agent/pkg/log"
 )
 
 // Client represents an HTTP client for registration API

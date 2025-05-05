@@ -13,6 +13,20 @@
 [[GO shared libraries and packages]]:
 Create a package in pkg if you need to create some shared component.
 
+[[Usage of packages]]:
+- Use only standard library for GO;
+- Use custom logging package (pkg/log) for all logging:
+  - Import as: log "winterflow-agent/pkg/log"
+  - Use structured logging methods: Debug, Info, Warn, Error
+  - Use Printf for compatibility with existing code
+  - Use Fatalf/Fatal for fatal errors
+  - All logs are JSON formatted and include timestamps
+  - Log levels: Debug, Info, Warn, Error
+  - Include relevant context in log messages
+  - Use consistent log message format: [LEVEL] message
+  - Include error details when logging errors
+  - Use proper log levels for different types of messages
+
 
 [[Adding New Capabilities]]:
 To add a new capability to the system, follow these steps:
