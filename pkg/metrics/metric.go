@@ -43,7 +43,6 @@ func NewMetricsFactory(startTime time.Time) *MetricFactory {
 			NewAgentUptimeMetric(startTime),
 			NewAgentMemoryMetric(),
 			NewAgentGoroutinesMetric(),
-			NewSystemCpuCoresMetric(),
 			NewSystemLoadavgMetric(),
 			NewSystemMemoryAvailableMetric(),
 			NewSystemDiskAvailableMetric("/"),
@@ -54,14 +53,14 @@ func NewMetricsFactory(startTime time.Time) *MetricFactory {
 // NewSystemInfoFactory returns a factory filled with system-wide metrics.
 // These metrics focus on the overall system state and resources.
 // The list can be extended later without touching the calling code.
+//
+// NOTE: The following metrics have been moved to capabilities:
+// - NewSystemUptimeMetric()
+// - NewSystemMemoryTotalMetric()
+// - NewSystemDiskTotalMetric("/")
 func NewSystemInfoFactory(startTime time.Time) *MetricFactory {
 	return &MetricFactory{
-		metrics: []Metric{
-			NewSystemUptimeMetric(),
-			NewSystemCpuCoresMetric(),
-			NewSystemMemoryTotalMetric(),
-			NewSystemDiskTotalMetric("/"),
-		},
+		metrics: []Metric{},
 	}
 }
 

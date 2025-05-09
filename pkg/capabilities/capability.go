@@ -11,8 +11,11 @@ const (
 	CapabilityDocker        = "docker"
 	CapabilityDockerCompose = "docker-compose"
 	CapabilityDockerSwarm   = "docker-swarm"
-	CapabilityKubernetes    = "kubernetes"
-	CapabilityGit           = "git"
+	// System info capabilities
+	SystemCapabilityCpuCores    = "system_cpu_cores"
+	CapabilitySystemUptime      = "system_uptime"
+	CapabilitySystemMemoryTotal = "system_memory_total"
+	CapabilitySystemDiskTotal   = "system_disk_total"
 )
 
 // Capability represents a system capability that can be detected
@@ -53,8 +56,11 @@ func NewCapabilityFactory() *CapabilityFactory {
 			NewDockerCapability(),
 			NewDockerComposeCapability(),
 			NewDockerSwarmCapability(),
-			NewKubernetesCapability(),
-			NewGitCapability(),
+			// System info capabilities
+			NewSystemCpuCoresCapability(),
+			NewSystemUptimeCapability(),
+			NewSystemMemoryTotalCapability(),
+			NewSystemDiskTotalCapability("/"),
 		},
 	}
 }

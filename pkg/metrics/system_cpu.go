@@ -7,23 +7,6 @@ import (
 	"strings"
 )
 
-// SystemCpuCoresMetric reports the number of logical CPU cores available on the host.
-// Counting cores rather than percentages avoids sampling races and provides
-// a stable value that can be useful when analyzing CPU metrics relative to
-// usage and load.
-type SystemCpuCoresMetric struct{}
-
-// NewSystemCpuCoresMetric returns a new SystemCpuCoresMetric.
-func NewSystemCpuCoresMetric() *SystemCpuCoresMetric { return &SystemCpuCoresMetric{} }
-
-// Name implements Metric.
-func (m *SystemCpuCoresMetric) Name() string { return "system_cpu_cores" }
-
-// Value implements Metric.
-func (m *SystemCpuCoresMetric) Value() string {
-	return strconv.Itoa(runtime.NumCPU())
-}
-
 // SystemCpuUsageMetric reports the percentage of CPU utilized since the last reading.
 // Only supported on Linux; returns empty string on other platforms.
 type SystemCpuUsageMetric struct {
