@@ -235,15 +235,16 @@ func (c *Client) SetRegistered(registered bool) {
 }
 
 // RegisterAgent registers the agent with the server
-func (c *Client) RegisterAgent(version string, capabilities map[string]string, features map[string]bool, serverID, serverToken string) (*pb.RegisterAgentResponseV1, error) {
+func (c *Client) RegisterAgent(version string, capabilities map[string]string, features map[string]bool, serverID, serverToken string, metrics map[string]string) (*pb.RegisterAgentResponseV1, error) {
 	log.Printf("Starting agent registration process")
 
 	req := &pb.RegisterAgentRequestV1{
 		Version:      version,
-		Capabilities: capabilities,
-		Features:     features,
 		ServerId:     serverID,
 		ServerToken:  serverToken,
+		Metrics:      metrics,
+		Capabilities: capabilities,
+		Features:     features,
 	}
 
 	for {
@@ -339,7 +340,7 @@ func (c *Client) RegisterAgent(version string, capabilities map[string]string, f
 }
 
 // StartHeartbeatStream starts a bidirectional stream for heartbeat communication
-func (c *Client) StartHeartbeatStream(serverID, accessToken string, metricsProvider func() map[string]string, version string, capabilities map[string]string, features map[string]bool, serverToken string) error {
+func (c *Client) StartHeartbeatStream(serverID, accessToken string, systemInfoProvider func() map[string]string, metricsProvider func() map[string]string, version string, capabilities map[string]string, features map[string]bool, serverToken string) error {
 	log.Printf("Starting heartbeat stream with server ID: %s", serverID)
 	log.Printf("Current registration state: %v", c.IsRegistered())
 
@@ -497,7 +498,7 @@ func (c *Client) StartHeartbeatStream(serverID, accessToken string, metricsProvi
 				case <-reregisterCh:
 					log.Printf("Re-registering agent due to token expiration or agent not found")
 					stream.CloseSend()
-					resp, err := c.RegisterAgent(version, capabilities, features, serverID, serverToken)
+					resp, err := c.RegisterAgent(version, capabilities, features, serverID, serverToken, systemInfoProvider())
 					if err != nil {
 						log.Printf("Failed to re-register agent: %v", err)
 						ticker.Stop()

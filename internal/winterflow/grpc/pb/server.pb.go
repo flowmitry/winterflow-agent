@@ -90,10 +90,11 @@ func (ResponseCode) EnumDescriptor() ([]byte, []int) {
 type RegisterAgentRequestV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
-	Capabilities  map[string]string      `protobuf:"bytes,2,rep,name=capabilities,proto3" json:"capabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Features      map[string]bool        `protobuf:"bytes,3,rep,name=features,proto3" json:"features,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	ServerId      string                 `protobuf:"bytes,4,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	ServerToken   string                 `protobuf:"bytes,5,opt,name=server_token,json=serverToken,proto3" json:"server_token,omitempty"`
+	ServerId      string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	ServerToken   string                 `protobuf:"bytes,3,opt,name=server_token,json=serverToken,proto3" json:"server_token,omitempty"`
+	Capabilities  map[string]string      `protobuf:"bytes,4,rep,name=capabilities,proto3" json:"capabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Features      map[string]bool        `protobuf:"bytes,5,rep,name=features,proto3" json:"features,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	Metrics       map[string]string      `protobuf:"bytes,6,rep,name=metrics,proto3" json:"metrics,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -135,6 +136,20 @@ func (x *RegisterAgentRequestV1) GetVersion() string {
 	return ""
 }
 
+func (x *RegisterAgentRequestV1) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *RegisterAgentRequestV1) GetServerToken() string {
+	if x != nil {
+		return x.ServerToken
+	}
+	return ""
+}
+
 func (x *RegisterAgentRequestV1) GetCapabilities() map[string]string {
 	if x != nil {
 		return x.Capabilities
@@ -149,18 +164,11 @@ func (x *RegisterAgentRequestV1) GetFeatures() map[string]bool {
 	return nil
 }
 
-func (x *RegisterAgentRequestV1) GetServerId() string {
+func (x *RegisterAgentRequestV1) GetMetrics() map[string]string {
 	if x != nil {
-		return x.ServerId
+		return x.Metrics
 	}
-	return ""
-}
-
-func (x *RegisterAgentRequestV1) GetServerToken() string {
-	if x != nil {
-		return x.ServerToken
-	}
-	return ""
+	return nil
 }
 
 type RegisterAgentResponseV1 struct {
@@ -356,19 +364,23 @@ var File_internal_winterflow_grpc_pb_server_proto protoreflect.FileDescriptor
 
 const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\n" +
-	"(internal/winterflow/grpc/pb/server.proto\x12\x02pb\"\x88\x03\n" +
+	"(internal/winterflow/grpc/pb/server.proto\x12\x02pb\"\x87\x04\n" +
 	"\x16RegisterAgentRequestV1\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\tR\aversion\x12P\n" +
-	"\fcapabilities\x18\x02 \x03(\v2,.pb.RegisterAgentRequestV1.CapabilitiesEntryR\fcapabilities\x12D\n" +
-	"\bfeatures\x18\x03 \x03(\v2(.pb.RegisterAgentRequestV1.FeaturesEntryR\bfeatures\x12\x1b\n" +
-	"\tserver_id\x18\x04 \x01(\tR\bserverId\x12!\n" +
-	"\fserver_token\x18\x05 \x01(\tR\vserverToken\x1a?\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12\x1b\n" +
+	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12!\n" +
+	"\fserver_token\x18\x03 \x01(\tR\vserverToken\x12P\n" +
+	"\fcapabilities\x18\x04 \x03(\v2,.pb.RegisterAgentRequestV1.CapabilitiesEntryR\fcapabilities\x12D\n" +
+	"\bfeatures\x18\x05 \x03(\v2(.pb.RegisterAgentRequestV1.FeaturesEntryR\bfeatures\x12A\n" +
+	"\ametrics\x18\x06 \x03(\v2'.pb.RegisterAgentRequestV1.MetricsEntryR\ametrics\x1a?\n" +
 	"\x11CapabilitiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a;\n" +
 	"\rFeaturesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xa7\x01\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\x1a:\n" +
+	"\fMetricsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa7\x01\n" +
 	"\x17RegisterAgentResponseV1\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12!\n" +
@@ -411,7 +423,7 @@ func file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP() []byte {
 }
 
 var file_internal_winterflow_grpc_pb_server_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_internal_winterflow_grpc_pb_server_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_internal_winterflow_grpc_pb_server_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_internal_winterflow_grpc_pb_server_proto_goTypes = []any{
 	(ResponseCode)(0),                // 0: pb.ResponseCode
 	(*RegisterAgentRequestV1)(nil),   // 1: pb.RegisterAgentRequestV1
@@ -420,23 +432,25 @@ var file_internal_winterflow_grpc_pb_server_proto_goTypes = []any{
 	(*AgentHeartbeatResponseV1)(nil), // 4: pb.AgentHeartbeatResponseV1
 	nil,                              // 5: pb.RegisterAgentRequestV1.CapabilitiesEntry
 	nil,                              // 6: pb.RegisterAgentRequestV1.FeaturesEntry
-	nil,                              // 7: pb.AgentHeartbeatV1.MetricsEntry
+	nil,                              // 7: pb.RegisterAgentRequestV1.MetricsEntry
+	nil,                              // 8: pb.AgentHeartbeatV1.MetricsEntry
 }
 var file_internal_winterflow_grpc_pb_server_proto_depIdxs = []int32{
 	5, // 0: pb.RegisterAgentRequestV1.capabilities:type_name -> pb.RegisterAgentRequestV1.CapabilitiesEntry
 	6, // 1: pb.RegisterAgentRequestV1.features:type_name -> pb.RegisterAgentRequestV1.FeaturesEntry
-	0, // 2: pb.RegisterAgentResponseV1.response_code:type_name -> pb.ResponseCode
-	7, // 3: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
-	0, // 4: pb.AgentHeartbeatResponseV1.response_code:type_name -> pb.ResponseCode
-	1, // 5: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
-	3, // 6: pb.AgentService.AgentStreamV1:input_type -> pb.AgentHeartbeatV1
-	2, // 7: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
-	4, // 8: pb.AgentService.AgentStreamV1:output_type -> pb.AgentHeartbeatResponseV1
-	7, // [7:9] is the sub-list for method output_type
-	5, // [5:7] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	7, // 2: pb.RegisterAgentRequestV1.metrics:type_name -> pb.RegisterAgentRequestV1.MetricsEntry
+	0, // 3: pb.RegisterAgentResponseV1.response_code:type_name -> pb.ResponseCode
+	8, // 4: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
+	0, // 5: pb.AgentHeartbeatResponseV1.response_code:type_name -> pb.ResponseCode
+	1, // 6: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
+	3, // 7: pb.AgentService.AgentStreamV1:input_type -> pb.AgentHeartbeatV1
+	2, // 8: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
+	4, // 9: pb.AgentService.AgentStreamV1:output_type -> pb.AgentHeartbeatResponseV1
+	8, // [8:10] is the sub-list for method output_type
+	6, // [6:8] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_internal_winterflow_grpc_pb_server_proto_init() }
@@ -450,7 +464,7 @@ func file_internal_winterflow_grpc_pb_server_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_winterflow_grpc_pb_server_proto_rawDesc), len(file_internal_winterflow_grpc_pb_server_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

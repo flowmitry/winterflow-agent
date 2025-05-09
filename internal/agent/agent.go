@@ -6,7 +6,6 @@ import (
 	"time"
 	log "winterflow-agent/pkg/log"
 
-	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/grpc/client"
 	"winterflow-agent/pkg/backoff"
 	"winterflow-agent/pkg/metrics"
@@ -14,14 +13,15 @@ import (
 
 // Agent represents the application agent
 type Agent struct {
-	client         *client.Client
-	config         *config.Config
-	startTime      time.Time
-	metricsFactory *metrics.MetricFactory
+	client            *client.Client
+	config            *Config
+	startTime         time.Time
+	metricsFactory    *metrics.MetricFactory
+	systemInfoFactory *metrics.MetricFactory
 }
 
 // NewAgent creates a new agent instance
-func NewAgent(config *config.Config) (*Agent, error) {
+func NewAgent(config *Config) (*Agent, error) {
 	c, err := client.NewClient(config.GRPCServerAddress)
 	if err != nil {
 		return nil, err
@@ -30,10 +30,11 @@ func NewAgent(config *config.Config) (*Agent, error) {
 	start := time.Now()
 
 	return &Agent{
-		client:         c,
-		config:         config,
-		startTime:      start,
-		metricsFactory: metrics.NewMetricFactory(start),
+		client:            c,
+		config:            config,
+		startTime:         start,
+		metricsFactory:    metrics.NewMetricsFactory(start),
+		systemInfoFactory: metrics.NewSystemInfoFactory(start),
 	}, nil
 }
 
@@ -43,7 +44,7 @@ func (a *Agent) Register() (string, error) {
 	capabilities := GetSystemCapabilities().ToMap()
 
 	log.Printf("Registering agent with server")
-	resp, err := a.client.RegisterAgent(GetVersion(), capabilities, a.config.Features, a.config.ServerID, a.config.ServerToken)
+	resp, err := a.client.RegisterAgent(GetVersion(), capabilities, a.config.Features, a.config.ServerID, a.config.ServerToken, a.collectSystemInfo())
 	if err != nil {
 		return "", err
 	}
@@ -64,10 +65,14 @@ func (a *Agent) collectMetrics() map[string]string {
 	return a.metricsFactory.Collect()
 }
 
+// collectSystemInfo collects system information for heartbeat
+func (a *Agent) collectSystemInfo() map[string]string {
+	return a.systemInfoFactory.Collect()
+}
+
 // StartHeartbeat starts the heartbeat stream
 func (a *Agent) StartHeartbeat(accessToken string) error {
 	log.Printf("Collecting system metrics for heartbeat")
-	metricsProvider := a.collectMetrics
 
 	log.Printf("Getting system capabilities for heartbeat")
 	capabilities := GetSystemCapabilities().ToMap()
@@ -76,7 +81,8 @@ func (a *Agent) StartHeartbeat(accessToken string) error {
 	return a.client.StartHeartbeatStream(
 		a.config.ServerID,
 		accessToken,
-		metricsProvider,
+		a.collectSystemInfo,
+		a.collectMetrics,
 		GetVersion(),
 		capabilities,
 		a.config.Features,

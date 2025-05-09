@@ -34,22 +34,33 @@ type MetricFactory struct {
 	metrics []Metric
 }
 
-// NewMetricFactory returns a factory filled with the core runtime metrics. The
-// list can be extended later without touching the calling code.
-func NewMetricFactory(startTime time.Time) *MetricFactory {
+// NewMetricFactory returns a factory filled with agent-specific runtime metrics.
+// These metrics focus on the agent's internal state and performance.
+// The list can be extended later without touching the calling code.
+func NewMetricsFactory(startTime time.Time) *MetricFactory {
 	return &MetricFactory{
 		metrics: []Metric{
 			NewAgentUptimeMetric(startTime),
 			NewAgentMemoryMetric(),
 			NewAgentGoroutinesMetric(),
-			NewSystemCpuUsageMetric(),
 			NewSystemCpuCoresMetric(),
 			NewSystemLoadavgMetric(),
-			NewSystemUptimeMetric(),
-			NewSystemMemoryTotalMetric(),
 			NewSystemMemoryAvailableMetric(),
-			NewSystemDiskTotalMetric("/"),
 			NewSystemDiskAvailableMetric("/"),
+		},
+	}
+}
+
+// NewSystemInfoFactory returns a factory filled with system-wide metrics.
+// These metrics focus on the overall system state and resources.
+// The list can be extended later without touching the calling code.
+func NewSystemInfoFactory(startTime time.Time) *MetricFactory {
+	return &MetricFactory{
+		metrics: []Metric{
+			NewSystemUptimeMetric(),
+			NewSystemCpuCoresMetric(),
+			NewSystemMemoryTotalMetric(),
+			NewSystemDiskTotalMetric("/"),
 		},
 	}
 }
