@@ -57,5 +57,11 @@ func readMemInfo(key string) (string, bool) {
 			}
 		}
 	}
+
+	// Check for errors that occurred during scanning
+	if err := scanner.Err(); err != nil {
+		return "", false
+	}
+
 	return "", false
 }

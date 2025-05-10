@@ -1,9 +1,5 @@
 package capabilities
 
-import (
-	"runtime"
-)
-
 // Capability names
 const (
 	CapabilityAnsible       = "ansible"
@@ -35,14 +31,6 @@ type Capability interface {
 type SystemInfo struct {
 	OS   string
 	Arch string
-}
-
-// GetSystemInfo returns the current system information
-func GetSystemInfo() SystemInfo {
-	return SystemInfo{
-		OS:   runtime.GOOS,
-		Arch: runtime.GOARCH,
-	}
 }
 
 // CapabilityFactory creates and returns all available capabilities
