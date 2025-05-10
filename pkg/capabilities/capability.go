@@ -40,22 +40,31 @@ type CapabilityFactory struct {
 
 // NewCapabilityFactory creates a new capability factory
 func NewCapabilityFactory() *CapabilityFactory {
+	allCapabilities := []Capability{
+		NewAnsibleCapability(),
+		NewPythonCapability(),
+		NewDockerCapability(),
+		NewDockerComposeCapability(),
+		NewDockerSwarmCapability(),
+		// System info capabilities
+		NewSystemCpuCoresCapability(),
+		NewSystemUptimeCapability(),
+		NewSystemMemoryTotalCapability(),
+		NewSystemDiskTotalCapability("/"),
+		// OS capabilities
+		NewSystemOSCapability(),
+		NewSystemOSArchCapability(),
+	}
+
+	availableCapabilities := []Capability{}
+	for _, capability := range allCapabilities {
+		if capability.IsAvailable() {
+			availableCapabilities = append(availableCapabilities, capability)
+		}
+	}
+
 	return &CapabilityFactory{
-		capabilities: []Capability{
-			NewAnsibleCapability(),
-			NewPythonCapability(),
-			NewDockerCapability(),
-			NewDockerComposeCapability(),
-			NewDockerSwarmCapability(),
-			// System info capabilities
-			NewSystemCpuCoresCapability(),
-			NewSystemUptimeCapability(),
-			NewSystemMemoryTotalCapability(),
-			NewSystemDiskTotalCapability("/"),
-			// OS capabilities
-			NewSystemOSCapability(),
-			NewSystemOSArchCapability(),
-		},
+		capabilities: availableCapabilities,
 	}
 }
 
@@ -72,4 +81,12 @@ func (f *CapabilityFactory) GetCapabilityByName(name string) Capability {
 		}
 	}
 	return nil
+}
+
+func (f *CapabilityFactory) ToMap() map[string]string {
+	result := make(map[string]string)
+	for _, capability := range f.capabilities {
+		result[capability.Name()] = capability.Value()
+	}
+	return result
 }

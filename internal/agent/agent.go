@@ -41,7 +41,7 @@ func NewAgent(config *Config) (*Agent, error) {
 // Register registers the agent with the server
 func (a *Agent) Register() (string, error) {
 	log.Printf("Getting system capabilities")
-	capabilities := GetSystemCapabilities().ToMap()
+	capabilities := GetCapabilities().ToMap()
 
 	log.Printf("Registering agent with server")
 	resp, err := a.client.RegisterAgent(GetVersion(), capabilities, a.config.Features, a.config.ServerID, a.config.ServerToken, a.collectSystemInfo())
@@ -75,7 +75,7 @@ func (a *Agent) StartHeartbeat(accessToken string) error {
 	log.Printf("Collecting system metrics for heartbeat")
 
 	log.Printf("Getting system capabilities for heartbeat")
-	capabilities := GetSystemCapabilities().ToMap()
+	capabilities := GetCapabilities().ToMap()
 
 	log.Printf("Starting heartbeat stream with server")
 	return a.client.StartHeartbeatStream(
