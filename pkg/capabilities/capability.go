@@ -16,6 +16,9 @@ const (
 	CapabilitySystemUptime      = "system_uptime"
 	CapabilitySystemMemoryTotal = "system_memory_total"
 	CapabilitySystemDiskTotal   = "system_disk_total"
+	// OS capabilities
+	CapabilityOS     = "os"
+	CapabilityOSArch = "os_arch"
 )
 
 // Capability represents a system capability that can be detected
@@ -61,6 +64,9 @@ func NewCapabilityFactory() *CapabilityFactory {
 			NewSystemUptimeCapability(),
 			NewSystemMemoryTotalCapability(),
 			NewSystemDiskTotalCapability("/"),
+			// OS capabilities
+			NewSystemOSCapability(),
+			NewSystemOSArchCapability(),
 		},
 	}
 }

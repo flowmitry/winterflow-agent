@@ -23,18 +23,18 @@ type SystemCapabilities struct {
 // GetSystemCapabilities returns the current system capabilities
 func GetSystemCapabilities() SystemCapabilities {
 	factory := capabilities.NewCapabilityFactory()
-	sysInfo := capabilities.GetSystemInfo()
 
-	// Initialize with system info
-	result := SystemCapabilities{
-		OS:     sysInfo.OS,
-		OSArch: sysInfo.Arch,
-	}
+	// Initialize empty result
+	result := SystemCapabilities{}
 
 	// Get all capabilities
 	for _, c := range factory.GetAllCapabilities() {
 		if c.IsAvailable() {
 			switch c.Name() {
+			case capabilities.CapabilityOS:
+				result.OS = c.Version()
+			case capabilities.CapabilityOSArch:
+				result.OSArch = c.Version()
 			case capabilities.CapabilityAnsible:
 				result.Ansible = c.Version()
 			case capabilities.CapabilityPython:
