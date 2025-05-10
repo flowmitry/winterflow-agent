@@ -22,8 +22,8 @@ func (c *PythonCapability) Name() string {
 	return CapabilityPython
 }
 
-// Version returns the version of the capability
-func (c *PythonCapability) Version() string {
+// Value returns the value of the capability
+func (c *PythonCapability) Value() string {
 	return c.version
 }
 

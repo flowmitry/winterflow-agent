@@ -22,8 +22,8 @@ func (c *DockerComposeCapability) Name() string {
 	return CapabilityDockerCompose
 }
 
-// Version returns the version of the capability
-func (c *DockerComposeCapability) Version() string {
+// Value returns the value of the capability
+func (c *DockerComposeCapability) Value() string {
 	return c.version
 }
 

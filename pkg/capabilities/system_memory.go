@@ -22,8 +22,8 @@ func (c *SystemMemoryTotalCapability) Name() string {
 	return CapabilitySystemMemoryTotal
 }
 
-// Version implements Capability: reads total memory from /proc/meminfo.
-func (c *SystemMemoryTotalCapability) Version() string {
+// Value implements Capability: reads total memory from /proc/meminfo.
+func (c *SystemMemoryTotalCapability) Value() string {
 	total, _ := readMemInfo("MemTotal")
 	return total
 }

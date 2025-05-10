@@ -23,8 +23,8 @@ func (c *SystemOSCapability) Name() string {
 	return CapabilityOS
 }
 
-// Version implements Capability.
-func (c *SystemOSCapability) Version() string {
+// Value implements Capability.
+func (c *SystemOSCapability) Value() string {
 	return c.osType
 }
 
@@ -55,8 +55,8 @@ func (c *SystemOSArchCapability) Name() string {
 	return CapabilityOSArch
 }
 
-// Version implements Capability.
-func (c *SystemOSArchCapability) Version() string {
+// Value implements Capability.
+func (c *SystemOSArchCapability) Value() string {
 	return c.osCapability.GetArch()
 }
 

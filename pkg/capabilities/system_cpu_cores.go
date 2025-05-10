@@ -18,8 +18,8 @@ func (c *SystemCpuCoresCapability) Name() string {
 	return SystemCapabilityCpuCores
 }
 
-// Version returns the number of CPU cores as a string
-func (c *SystemCpuCoresCapability) Version() string {
+// Value returns the number of CPU cores as a string
+func (c *SystemCpuCoresCapability) Value() string {
 	return strconv.Itoa(runtime.NumCPU())
 }
 

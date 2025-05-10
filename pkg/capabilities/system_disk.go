@@ -23,8 +23,8 @@ func (c *SystemDiskTotalCapability) Name() string {
 	return CapabilitySystemDiskTotal
 }
 
-// Version implements Capability: returns total disk space in bytes.
-func (c *SystemDiskTotalCapability) Version() string {
+// Value implements Capability: returns total disk space in bytes.
+func (c *SystemDiskTotalCapability) Value() string {
 	total, _ := statfsBytes(c.path, func(s *syscall.Statfs_t) uint64 { return s.Blocks * uint64(s.Bsize) })
 	return strconv.FormatUint(total, 10)
 }

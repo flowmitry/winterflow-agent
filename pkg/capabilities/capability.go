@@ -25,8 +25,8 @@ const (
 type Capability interface {
 	// Name returns the name of the capability
 	Name() string
-	// Version returns the version of the capability
-	Version() string
+	// Value returns the value of the capability
+	Value() string
 	// IsAvailable returns whether the capability is available
 	IsAvailable() bool
 }

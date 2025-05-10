@@ -21,8 +21,8 @@ func (c *SystemUptimeCapability) Name() string {
 	return CapabilitySystemUptime
 }
 
-// Version implements Capability: reads seconds since boot from /proc/uptime.
-func (c *SystemUptimeCapability) Version() string {
+// Value implements Capability: reads seconds since boot from /proc/uptime.
+func (c *SystemUptimeCapability) Value() string {
 	if runtime.GOOS != "linux" {
 		return ""
 	}

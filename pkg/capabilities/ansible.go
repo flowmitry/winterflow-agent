@@ -22,8 +22,8 @@ func (c *AnsibleCapability) Name() string {
 	return CapabilityAnsible
 }
 
-// Version returns the version of the capability
-func (c *AnsibleCapability) Version() string {
+// Value returns the value of the capability
+func (c *AnsibleCapability) Value() string {
 	return c.version
 }
 

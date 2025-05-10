@@ -22,8 +22,8 @@ func (c *DockerSwarmCapability) Name() string {
 	return CapabilityDockerSwarm
 }
 
-// Version returns the version of the capability
-func (c *DockerSwarmCapability) Version() string {
+// Value returns the value of the capability
+func (c *DockerSwarmCapability) Value() string {
 	return c.version
 }
 

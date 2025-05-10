@@ -32,30 +32,30 @@ func GetSystemCapabilities() SystemCapabilities {
 		if c.IsAvailable() {
 			switch c.Name() {
 			case capabilities.CapabilityOS:
-				result.OS = c.Version()
+				result.OS = c.Value()
 			case capabilities.CapabilityOSArch:
-				result.OSArch = c.Version()
+				result.OSArch = c.Value()
 			case capabilities.CapabilityAnsible:
-				result.Ansible = c.Version()
+				result.Ansible = c.Value()
 			case capabilities.CapabilityPython:
-				result.Python = c.Version()
+				result.Python = c.Value()
 			case capabilities.CapabilityDocker:
-				result.Docker = c.Version()
+				result.Docker = c.Value()
 			case capabilities.CapabilityDockerCompose:
-				result.DockerCompose = c.Version()
+				result.DockerCompose = c.Value()
 			case capabilities.CapabilityDockerSwarm:
-				result.DockerSwarm = c.Version()
+				result.DockerSwarm = c.Value()
 			case capabilities.CapabilitySystemUptime:
-				result.SystemUptime = c.Version()
+				result.SystemUptime = c.Value()
 			case capabilities.CapabilitySystemMemoryTotal:
-				result.SystemMemoryTotal = c.Version()
+				result.SystemMemoryTotal = c.Value()
 			case capabilities.CapabilitySystemDiskTotal:
-				result.SystemDiskTotal = c.Version()
+				result.SystemDiskTotal = c.Value()
 			// These capabilities are not implemented yet
 			case "kubernetes":
-				result.Kubernetes = c.Version()
+				result.Kubernetes = c.Value()
 			case "git":
-				result.Git = c.Version()
+				result.Git = c.Value()
 			}
 		}
 	}
