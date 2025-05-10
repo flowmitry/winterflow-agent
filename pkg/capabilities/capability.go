@@ -72,9 +72,9 @@ func (f *CapabilityFactory) GetAllCapabilities() []Capability {
 
 // GetCapabilityByName returns a capability by its name
 func (f *CapabilityFactory) GetCapabilityByName(name string) Capability {
-	for _, cap := range f.capabilities {
-		if cap.Name() == name {
-			return cap
+	for _, capability := range f.capabilities {
+		if capability.Name() == name {
+			return capability
 		}
 	}
 	return nil
