@@ -11,10 +11,30 @@ type PythonCapability struct {
 }
 
 // NewPythonCapability creates a new Python capability
+// Returns nil if Python is not available
 func NewPythonCapability() *PythonCapability {
-	return &PythonCapability{
-		version: "3.10", // Default version
+	capability := &PythonCapability{
+		version: "",
 	}
+
+	// Check if Python is available
+	cmd := exec.Command("python3", "--version")
+	output, err := cmd.Output()
+	if err != nil {
+		return capability
+	}
+
+	// Parse version from output
+	versionStr := string(output)
+	if strings.Contains(versionStr, "Python") {
+		// Extract version from output
+		parts := strings.Split(versionStr, " ")
+		if len(parts) > 1 {
+			capability.version = strings.TrimSpace(parts[1])
+		}
+		return capability
+	}
+	return capability
 }
 
 // Name returns the name of the capability
@@ -25,25 +45,4 @@ func (c *PythonCapability) Name() string {
 // Value returns the value of the capability
 func (c *PythonCapability) Value() string {
 	return c.version
-}
-
-// IsAvailable checks if Python is available on the system
-func (c *PythonCapability) IsAvailable() bool {
-	cmd := exec.Command("python3", "--version")
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-
-	// Parse version from output
-	versionStr := string(output)
-	if strings.Contains(versionStr, "Python") {
-		// Extract version from output
-		parts := strings.Split(versionStr, " ")
-		if len(parts) > 1 {
-			c.version = parts[1]
-		}
-		return true
-	}
-	return false
 }

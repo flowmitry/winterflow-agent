@@ -22,8 +22,3 @@ func (c *SystemCpuCoresCapability) Name() string {
 func (c *SystemCpuCoresCapability) Value() string {
 	return strconv.Itoa(runtime.NumCPU())
 }
-
-// IsAvailable always returns true since CPU cores are always available
-func (c *SystemCpuCoresCapability) IsAvailable() bool {
-	return true
-}

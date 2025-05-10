@@ -12,7 +12,11 @@ import (
 type SystemUptimeCapability struct{}
 
 // NewSystemUptimeCapability returns a new SystemUptimeCapability.
+// Returns nil if the OS is not Linux, as the implementation reads from /proc/uptime which is only available on Linux.
 func NewSystemUptimeCapability() *SystemUptimeCapability {
+	if runtime.GOOS != "linux" {
+		return nil
+	}
 	return &SystemUptimeCapability{}
 }
 
@@ -40,9 +44,4 @@ func (c *SystemUptimeCapability) Value() string {
 	}
 	secs := int64(f)
 	return strconv.FormatInt(secs, 10)
-}
-
-// IsAvailable implements Capability.
-func (c *SystemUptimeCapability) IsAvailable() bool {
-	return runtime.GOOS == "linux"
 }

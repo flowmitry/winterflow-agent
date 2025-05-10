@@ -28,11 +28,6 @@ func (c *SystemOSCapability) Value() string {
 	return c.osType
 }
 
-// IsAvailable implements Capability.
-func (c *SystemOSCapability) IsAvailable() bool {
-	return true
-}
-
 // GetArch returns the OS architecture.
 func (c *SystemOSCapability) GetArch() string {
 	return c.arch
@@ -58,9 +53,4 @@ func (c *SystemOSArchCapability) Name() string {
 // Value implements Capability.
 func (c *SystemOSArchCapability) Value() string {
 	return c.osCapability.GetArch()
-}
-
-// IsAvailable implements Capability.
-func (c *SystemOSArchCapability) IsAvailable() bool {
-	return true
 }

@@ -11,10 +11,31 @@ type DockerCapability struct {
 }
 
 // NewDockerCapability creates a new Docker capability
+// Returns nil if Docker is not available
 func NewDockerCapability() *DockerCapability {
-	return &DockerCapability{
-		version: "20.10", // Default version
+	capability := &DockerCapability{
+		version: "",
 	}
+
+	// Check if Docker is available
+	cmd := exec.Command("docker", "--version")
+	output, err := cmd.Output()
+	if err != nil {
+		return capability
+	}
+
+	// Parse version from output
+	versionStr := string(output)
+	if strings.Contains(versionStr, "Docker version") {
+		// Extract version from output
+		parts := strings.Split(versionStr, " ")
+		if len(parts) > 2 {
+			// Remove trailing comma if present
+			capability.version = strings.TrimSuffix(parts[2], ",")
+		}
+		return capability
+	}
+	return capability
 }
 
 // Name returns the name of the capability
@@ -25,25 +46,4 @@ func (c *DockerCapability) Name() string {
 // Value returns the value of the capability
 func (c *DockerCapability) Value() string {
 	return c.version
-}
-
-// IsAvailable checks if Docker is available on the system
-func (c *DockerCapability) IsAvailable() bool {
-	cmd := exec.Command("docker", "--version")
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-
-	// Parse version from output
-	versionStr := string(output)
-	if strings.Contains(versionStr, "Docker version") {
-		// Extract version from output
-		parts := strings.Split(versionStr, " ")
-		if len(parts) > 2 {
-			c.version = parts[2]
-		}
-		return true
-	}
-	return false
 }

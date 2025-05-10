@@ -11,28 +11,17 @@ type AnsibleCapability struct {
 }
 
 // NewAnsibleCapability creates a new Ansible capability
+// Returns nil if Ansible is not available
 func NewAnsibleCapability() *AnsibleCapability {
-	return &AnsibleCapability{
-		version: "2.12", // Default version
+	capability := &AnsibleCapability{
+		version: "",
 	}
-}
 
-// Name returns the name of the capability
-func (c *AnsibleCapability) Name() string {
-	return CapabilityAnsible
-}
-
-// Value returns the value of the capability
-func (c *AnsibleCapability) Value() string {
-	return c.version
-}
-
-// IsAvailable checks if Ansible is available on the system
-func (c *AnsibleCapability) IsAvailable() bool {
+	// Check if Ansible is available
 	cmd := exec.Command("ansible", "--version")
 	output, err := cmd.Output()
 	if err != nil {
-		return false
+		return capability
 	}
 
 	// Parse version from output
@@ -43,10 +32,27 @@ func (c *AnsibleCapability) IsAvailable() bool {
 		if len(lines) > 0 {
 			parts := strings.Split(lines[0], " ")
 			if len(parts) > 1 {
-				c.version = parts[1]
+				// Handle new format: "ansible [core 2.13.1]"
+				if strings.Contains(parts[1], "[core") && len(parts) > 2 {
+					capability.version = parts[2]
+					// Remove trailing "]" if present
+					capability.version = strings.TrimSuffix(capability.version, "]")
+				} else {
+					capability.version = parts[1]
+				}
 			}
 		}
-		return true
+		return capability
 	}
-	return false
+	return capability
+}
+
+// Name returns the name of the capability
+func (c *AnsibleCapability) Name() string {
+	return CapabilityAnsible
+}
+
+// Value returns the value of the capability
+func (c *AnsibleCapability) Value() string {
+	return c.version
 }

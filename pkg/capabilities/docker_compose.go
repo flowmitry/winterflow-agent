@@ -11,10 +11,30 @@ type DockerComposeCapability struct {
 }
 
 // NewDockerComposeCapability creates a new Docker Compose capability
+// Returns nil if Docker Compose is not available
 func NewDockerComposeCapability() *DockerComposeCapability {
-	return &DockerComposeCapability{
-		version: "2.1", // Default version
+	capability := &DockerComposeCapability{
+		version: "",
 	}
+
+	// Check if Docker Compose is available
+	cmd := exec.Command("docker-compose", "--version")
+	output, err := cmd.Output()
+	if err != nil {
+		return capability
+	}
+
+	// Parse version from output
+	versionStr := string(output)
+	if strings.Contains(versionStr, "Docker Compose version") {
+		// Extract version from output
+		parts := strings.Split(versionStr, " ")
+		if len(parts) > 3 {
+			capability.version = parts[3]
+		}
+		return capability
+	}
+	return capability
 }
 
 // Name returns the name of the capability
@@ -25,25 +45,4 @@ func (c *DockerComposeCapability) Name() string {
 // Value returns the value of the capability
 func (c *DockerComposeCapability) Value() string {
 	return c.version
-}
-
-// IsAvailable checks if Docker Compose is available on the system
-func (c *DockerComposeCapability) IsAvailable() bool {
-	cmd := exec.Command("docker-compose", "--version")
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-
-	// Parse version from output
-	versionStr := string(output)
-	if strings.Contains(versionStr, "Docker Compose version") {
-		// Extract version from output
-		parts := strings.Split(versionStr, " ")
-		if len(parts) > 3 {
-			c.version = parts[3]
-		}
-		return true
-	}
-	return false
 }

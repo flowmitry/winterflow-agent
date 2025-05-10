@@ -13,7 +13,11 @@ import (
 type SystemMemoryTotalCapability struct{}
 
 // NewSystemMemoryTotalCapability returns a new SystemMemoryTotalCapability.
+// Returns nil if the OS is not Linux, as the implementation reads from /proc/meminfo which is only available on Linux.
 func NewSystemMemoryTotalCapability() *SystemMemoryTotalCapability {
+	if runtime.GOOS != "linux" {
+		return nil
+	}
 	return &SystemMemoryTotalCapability{}
 }
 
@@ -26,11 +30,6 @@ func (c *SystemMemoryTotalCapability) Name() string {
 func (c *SystemMemoryTotalCapability) Value() string {
 	total, _ := readMemInfo("MemTotal")
 	return total
-}
-
-// IsAvailable implements Capability.
-func (c *SystemMemoryTotalCapability) IsAvailable() bool {
-	return runtime.GOOS == "linux"
 }
 
 // readMemInfo helper to parse /proc/meminfo

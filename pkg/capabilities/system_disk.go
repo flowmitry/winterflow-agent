@@ -14,7 +14,11 @@ type SystemDiskTotalCapability struct {
 }
 
 // NewSystemDiskTotalCapability returns a new SystemDiskTotalCapability.
+// Returns nil if the OS is Windows, as the implementation uses syscall.Statfs which is not available on Windows.
 func NewSystemDiskTotalCapability(path string) *SystemDiskTotalCapability {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
 	return &SystemDiskTotalCapability{path: path}
 }
 
@@ -27,11 +31,6 @@ func (c *SystemDiskTotalCapability) Name() string {
 func (c *SystemDiskTotalCapability) Value() string {
 	total, _ := statfsBytes(c.path, func(s *syscall.Statfs_t) uint64 { return s.Blocks * uint64(s.Bsize) })
 	return strconv.FormatUint(total, 10)
-}
-
-// IsAvailable implements Capability.
-func (c *SystemDiskTotalCapability) IsAvailable() bool {
-	return runtime.GOOS != "windows"
 }
 
 // helper to compute bytes using statfs, returns 0 on failure
