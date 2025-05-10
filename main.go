@@ -17,7 +17,7 @@ import (
 	"winterflow-agent/internal/winterflow/api"
 )
 
-//go:embed ansible/inventory/defaults.yml ansible/playbooks/** ansible/roles/** ansible/ansible.cfg
+//go:embed ansible/inventory/** ansible/playbooks/** ansible/roles/** all:ansible/apps/** ansible/ansible.cfg
 var ansibleFS embed.FS
 
 func main() {
