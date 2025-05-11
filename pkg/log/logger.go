@@ -63,3 +63,9 @@ func Fatal(args ...any) {
 	GetLog().Error(fmt.Sprint(args...))
 	os.Exit(1)
 }
+
+// Errorf creates an error with a formatted message.
+// This is a drop-in replacement for fmt.Errorf.
+func Errorf(format string, args ...any) error {
+	return fmt.Errorf(format, args...)
+}

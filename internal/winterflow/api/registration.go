@@ -22,7 +22,7 @@ func RegisterAgent(configPath string) error {
 	// Load config to get server URL
 	cfg, err := agent.LoadConfig(configPath)
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %v", err)
+		return log.Errorf("failed to load configuration: %v", err)
 	}
 
 	client := NewClient(cfg.APIBaseURL)
@@ -43,14 +43,14 @@ func RegisterAgent(configPath string) error {
 				// Parse the structured error for 400 responses
 				var regErr RegistrationError
 				if err := json.Unmarshal([]byte(apiErr.Body), &regErr); err == nil {
-					return fmt.Errorf("registration failed: %s", regErr.Data.Error)
+					return log.Errorf("registration failed: %s", regErr.Data.Error)
 				}
 			}
 			// For other status codes, show a generic error
-			return fmt.Errorf("server error: HTTP %d - please try again later", apiErr.StatusCode)
+			return log.Errorf("server error: HTTP %d - please try again later", apiErr.StatusCode)
 		}
 		// For non-API errors (network issues, etc)
-		return fmt.Errorf("connection error: %v", err)
+		return log.Errorf("connection error: %v", err)
 	}
 
 	// Save server_id to config immediately if it's new
@@ -104,10 +104,10 @@ func RegisterAgent(configPath string) error {
 					return RegisterAgent(configPath)
 				}
 				// For other status codes, show a generic error
-				return fmt.Errorf("server error: HTTP %d - please try again later", apiErr.StatusCode)
+				return log.Errorf("server error: HTTP %d - please try again later", apiErr.StatusCode)
 			}
 			// For non-API errors
-			return fmt.Errorf("connection error: %v", err)
+			return log.Errorf("connection error: %v", err)
 		}
 
 		switch statusResp.Data.Status {
@@ -115,7 +115,7 @@ func RegisterAgent(configPath string) error {
 			// Update the configuration with the token
 			cfg.ServerToken = resp.Data.Token
 			if err := agent.SaveConfig(cfg, configPath); err != nil {
-				return fmt.Errorf("failed to save configuration: %v", err)
+				return log.Errorf("failed to save configuration: %v", err)
 			}
 
 			fmt.Println("\n=== Registration Successful ===")

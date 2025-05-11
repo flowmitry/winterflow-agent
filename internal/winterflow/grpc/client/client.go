@@ -53,7 +53,7 @@ func (c *Client) setupConnection() error {
 		grpc.WithTimeout(c.connectionTimeout),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create gRPC client: %v", err)
+		return log.Errorf("failed to create gRPC client: %v", err)
 	}
 
 	c.conn = clientConn
@@ -87,7 +87,7 @@ func NewClient(serverAddress string) (*Client, error) {
 	if err := client.waitForConnectionReady(); err != nil {
 		client.conn.Close()
 		cancel()
-		return nil, fmt.Errorf("failed to establish initial connection: %v", err)
+		return nil, log.Errorf("failed to establish initial connection: %v", err)
 	}
 
 	return client, nil
@@ -135,7 +135,7 @@ func (c *Client) waitForConnectionReady() error {
 		// Check for context cancellation first
 		select {
 		case <-c.ctx.Done():
-			return fmt.Errorf("connection cancelled: %v", c.ctx.Err())
+			return log.Errorf("connection cancelled: %v", c.ctx.Err())
 		default:
 			// Continue with normal operation
 		}
@@ -153,7 +153,7 @@ func (c *Client) waitForConnectionReady() error {
 			return nil
 		}
 		if state == connectivity.Shutdown {
-			return fmt.Errorf("connection is shutdown")
+			return log.Errorf("connection is shutdown")
 		}
 		if state == connectivity.TransientFailure {
 			log.Printf("Connection attempt failed, retrying with exponential backoff")
@@ -169,7 +169,7 @@ func (c *Client) waitForConnectionReady() error {
 			case <-c.ctx.Done():
 				// Context cancelled, abort reconnection
 				timer.Stop()
-				return fmt.Errorf("connection cancelled during reconnection: %v", c.ctx.Err())
+				return log.Errorf("connection cancelled during reconnection: %v", c.ctx.Err())
 			}
 
 			// Trigger another connection attempt
@@ -179,7 +179,7 @@ func (c *Client) waitForConnectionReady() error {
 
 		select {
 		case <-c.ctx.Done():
-			return fmt.Errorf("connection cancelled: %v", c.ctx.Err())
+			return log.Errorf("connection cancelled: %v", c.ctx.Err())
 		case <-time.After(100 * time.Millisecond):
 			continue
 		}
@@ -195,13 +195,13 @@ func (c *Client) waitForReady() error {
 		return nil
 	}
 	if state == connectivity.Shutdown {
-		return fmt.Errorf("connection is shutdown")
+		return log.Errorf("connection is shutdown")
 	}
 	if state == connectivity.TransientFailure {
-		return fmt.Errorf("connection is in transient failure: server may be unavailable at %s",
+		return log.Errorf("connection is in transient failure: server may be unavailable at %s",
 			c.conn.Target())
 	}
-	return fmt.Errorf("connection is not ready: %v", state)
+	return log.Errorf("connection is not ready: %v", state)
 }
 
 // IsRegistered returns whether the agent is currently registered

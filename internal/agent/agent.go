@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"time"
 	log "winterflow-agent/pkg/log"
 
@@ -50,7 +49,7 @@ func (a *Agent) Register() (string, error) {
 	}
 
 	if resp.Base.ResponseCode != 1 { // RESPONSE_CODE_SUCCESS = 1
-		return "", fmt.Errorf("registration failed: %s", resp.Base.Message)
+		return "", log.Errorf("registration failed: %s", resp.Base.Message)
 	}
 
 	// Store the access token in the client
@@ -118,7 +117,7 @@ func (a *Agent) RegisterWithRetry(ctx context.Context) (string, error) {
 		case <-time.After(delay):
 			continue
 		case <-ctx.Done():
-			return "", fmt.Errorf("registration cancelled: %v", ctx.Err())
+			return "", log.Errorf("registration cancelled: %v", ctx.Err())
 		}
 	}
 }
@@ -129,14 +128,14 @@ func (a *Agent) Run(ctx context.Context) error {
 	log.Printf("Registering agent with server: %s", a.config.GRPCServerAddress)
 	accessToken, err := a.RegisterWithRetry(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to register agent: %v", err)
+		return log.Errorf("failed to register agent: %v", err)
 	}
 	log.Printf("Agent registered successfully with access token: %s", accessToken)
 
 	// Start heartbeat stream
 	log.Printf("Starting heartbeat stream")
 	if err := a.StartHeartbeat(accessToken); err != nil {
-		return fmt.Errorf("failed to start heartbeat stream: %v", err)
+		return log.Errorf("failed to start heartbeat stream: %v", err)
 	}
 	log.Printf("Heartbeat stream started successfully")
 
