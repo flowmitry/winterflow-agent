@@ -534,7 +534,7 @@ func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider 
 
 					appResp := &pb.GetAppResponseV1{
 						Base: baseResp,
-						App: &pb.AppResponseV1{
+						App: &pb.AppV1{
 							AppId: appRequest.AppId,
 							// Other fields would be populated here
 						},
