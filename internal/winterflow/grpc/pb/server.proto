@@ -80,12 +80,13 @@ message GetAppRequestV1 {
   string app_id = 2;
 }
 
-message AppResponseV1 {
+message AppV1 {
   // UUID
   string app_id = 1;
   bytes config = 2;
   bytes variables = 3;
-  repeated AppFileV1 files = 4;
+  bytes secrets = 4;
+  repeated AppFileV1 files = 5;
 }
 
 message AppFileV1 {
@@ -96,7 +97,17 @@ message AppFileV1 {
 
 message GetAppResponseV1 {
   BaseResponse base = 1;
-  AppResponseV1 app = 2;
+  AppV1 app = 2;
+}
+
+message CreateAppRequestV1 {
+  BaseCommand base = 1;
+  AppV1 app = 2;
+}
+
+message CreateAppResponseV1 {
+  BaseResponse base = 1;
+  AppV1 app = 2;
 }
 
 // Command messages for bidirectional streaming
@@ -104,6 +115,7 @@ message ServerCommand {
   oneof command {
     HeartbeatResponseV1 heartbeat_response_v1 = 1;
     GetAppRequestV1 get_app_request_v1 = 2;
+    CreateAppRequestV1 create_app_request_v1 = 3;
   }
 }
 
@@ -111,6 +123,7 @@ message AgentMessage {
   oneof message {
     AgentHeartbeatV1 heartbeat_v1 = 1;
     GetAppResponseV1 get_app_response_v1 = 2;
+    CreateAppResponseV1 create_app_response_v1 = 3;
   }
 }
 
