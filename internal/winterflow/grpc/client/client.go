@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -17,23 +16,8 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
-
 	"winterflow-agent/pkg/backoff"
 )
-
-const (
-	// Default reconnection parameters
-	defaultReconnectInterval        = 5 * time.Second
-	defaultMaximumReconnectInterval = 320 * time.Second
-	defaultConnectionTimeout        = 30 * time.Second
-	heartbeatInterval               = 5 * time.Second // unified heartbeat cadence
-)
-
-// ErrUnrecoverable is returned by RegisterAgent when the server indicates that
-// the agent must not retry the registration (e.g. wrong server-token pairing
-// or duplicate agent).
-var ErrUnrecoverable = errors.New("unrecoverable error. check your server ID and token")
-var ErrUnrecoverableAgentAlreadyConnected = errors.New("unrecoverable error: agent already connected")
 
 // Client represents a gRPC client for agent communication
 type Client struct {
@@ -87,11 +71,11 @@ func NewClient(serverAddress string) (*Client, error) {
 		ctx:               ctx,
 		cancel:            cancel,
 		serverAddress:     serverAddress,
-		connectionTimeout: defaultConnectionTimeout,
+		connectionTimeout: DefaultConnectionTimeout,
 		streamCleanup:     make(chan struct{}),
 		isRegistered:      true,
 		regMutex:          sync.RWMutex{},
-		backoffStrategy:   backoff.New(defaultReconnectInterval, defaultMaximumReconnectInterval),
+		backoffStrategy:   backoff.New(DefaultReconnectInterval, DefaultMaximumReconnectInterval),
 	}
 
 	if err := client.setupConnection(); err != nil {
@@ -235,14 +219,17 @@ func (c *Client) SetRegistered(registered bool) {
 }
 
 // RegisterAgent registers the agent with the server
-func (c *Client) RegisterAgent(version string, capabilities map[string]string, features map[string]bool, serverID, serverToken string, metrics map[string]string) (*pb.RegisterAgentResponseV1, error) {
+func (c *Client) RegisterAgent(capabilities map[string]string, features map[string]bool, serverID, serverToken string) (*pb.RegisterAgentResponseV1, error) {
 	log.Printf("Starting agent registration process")
 
+	// Create a unique message ID
+	messageID := GenerateUUID()
+
 	req := &pb.RegisterAgentRequestV1{
-		Version:      version,
+		MessageId:    messageID,
+		Timestamp:    TimestampNow(),
 		ServerId:     serverID,
 		ServerToken:  serverToken,
-		Metrics:      metrics,
 		Capabilities: capabilities,
 		Features:     features,
 	}
@@ -313,12 +300,12 @@ func (c *Client) RegisterAgent(version string, capabilities map[string]string, f
 		}
 
 		// Handle application-level response codes
-		if resp.ResponseCode != pb.ResponseCode_RESPONSE_CODE_SUCCESS {
-			switch resp.ResponseCode {
+		if resp.Base.ResponseCode != pb.ResponseCode_RESPONSE_CODE_SUCCESS {
+			switch resp.Base.ResponseCode {
 			case pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
 				return nil, ErrUnrecoverableAgentAlreadyConnected
 			default:
-				log.Printf("Registration failed with response code %v, retrying", resp.ResponseCode)
+				log.Printf("Registration failed with response code %v, retrying", resp.Base.ResponseCode)
 				timer := time.NewTimer(c.getNextReconnectInterval())
 				select {
 				case <-timer.C:
@@ -339,8 +326,8 @@ func (c *Client) RegisterAgent(version string, capabilities map[string]string, f
 	}
 }
 
-// StartHeartbeatStream starts a bidirectional stream for heartbeat communication
-func (c *Client) StartHeartbeatStream(serverID, accessToken string, systemInfoProvider func() map[string]string, metricsProvider func() map[string]string, version string, capabilities map[string]string, features map[string]bool, serverToken string) error {
+// StartAgentStream starts a bidirectional stream
+func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider func() map[string]string, capabilities map[string]string, features map[string]bool, serverToken string) error {
 	log.Printf("Starting heartbeat stream with server ID: %s", serverID)
 	log.Printf("Current registration state: %v", c.IsRegistered())
 
@@ -375,7 +362,7 @@ func (c *Client) StartHeartbeatStream(serverID, accessToken string, systemInfoPr
 			}
 
 			log.Printf("Creating heartbeat stream")
-			stream, err := c.client.AgentStreamV1(c.ctx)
+			stream, err := c.client.AgentStream(c.ctx)
 			if err != nil {
 				log.Printf("Failed to create heartbeat stream: %v", err)
 				if err := c.reconnect(); err != nil {
@@ -389,13 +376,25 @@ func (c *Client) StartHeartbeatStream(serverID, accessToken string, systemInfoPr
 			log.Printf("Heartbeat stream established successfully")
 
 			// Send initial heartbeat
-			heartbeat := &pb.AgentHeartbeatV1{
+			baseMsg := &pb.BaseMessage{
+				MessageId:   GenerateUUID(),
+				Timestamp:   TimestampNow(),
 				ServerId:    serverID,
 				AccessToken: accessToken,
-				Metrics:     metricsProvider(),
 			}
 
-			if err := stream.Send(heartbeat); err != nil {
+			heartbeat := &pb.AgentHeartbeatV1{
+				Base:    baseMsg,
+				Metrics: metricsProvider(),
+			}
+
+			agentMsg := &pb.AgentMessage{
+				Message: &pb.AgentMessage_HeartbeatV1{
+					HeartbeatV1: heartbeat,
+				},
+			}
+
+			if err := stream.Send(agentMsg); err != nil {
 				log.Printf("Failed to send initial heartbeat: %v", err)
 				if err := c.reconnect(); err != nil {
 					log.Printf("Failed to reconnect, will retry: %v", err)
@@ -411,43 +410,51 @@ func (c *Client) StartHeartbeatStream(serverID, accessToken string, systemInfoPr
 			streamDone := make(chan struct{})
 			reregisterCh := make(chan struct{})
 			fatalErrorCh := make(chan error)
+			appRequestCh := make(chan *pb.GetAppRequestV1)
 
 			// Start goroutine to receive responses
 			go func() {
 				defer close(streamDone)
 				for {
-					response, err := stream.Recv()
+					serverCmd, err := stream.Recv()
 					if err != nil {
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Printf("Connection unavailable or stream closed: %v", err)
 							return
 						}
-						log.Printf("Error receiving heartbeat response: %v", err)
+						log.Printf("Error receiving server command: %v", err)
 						continue
 					}
 
-					// Handle response codes
-					switch response.ResponseCode {
-					case pb.ResponseCode_RESPONSE_CODE_AGENT_NOT_FOUND:
-						log.Printf("Agent not found, triggering re-registration")
-						select {
-						case reregisterCh <- struct{}{}:
-						default:
-						}
-						return
+					// Handle different command types
+					switch cmd := serverCmd.Command.(type) {
+					case *pb.ServerCommand_HeartbeatResponseV1:
+						response := cmd.HeartbeatResponseV1.Base
 
-					case pb.ResponseCode_RESPONSE_CODE_SERVER_NOT_FOUND,
-						pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
-						log.Printf("Received response code %v, triggering re-registration", response.ResponseCode)
-						select {
-						case reregisterCh <- struct{}{}:
-						default:
-						}
-						return
+						// Handle response codes
+						switch response.ResponseCode {
+						case pb.ResponseCode_RESPONSE_CODE_AGENT_NOT_FOUND:
+							log.Printf("Agent not found, triggering re-registration")
+							select {
+							case reregisterCh <- struct{}{}:
+							default:
+							}
+							return
 
-					default:
-						if !response.Success {
-							log.Printf("Heartbeat failed: %s", response.Message)
+						case pb.ResponseCode_RESPONSE_CODE_SERVER_NOT_FOUND,
+							pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
+							log.Printf("Received response code %v, triggering re-registration", response.ResponseCode)
+							select {
+							case reregisterCh <- struct{}{}:
+							default:
+							}
+							return
+
+						case pb.ResponseCode_RESPONSE_CODE_SUCCESS:
+							log.Printf("Heartbeat response received: %s", response.Message)
+
+						default:
+							log.Printf("Heartbeat failed with code %v: %s", response.ResponseCode, response.Message)
 							if strings.Contains(response.Message, "token expired") ||
 								strings.Contains(response.Message, "Invalid token") {
 								log.Printf("Token expired or invalid, triggering re-registration")
@@ -457,15 +464,25 @@ func (c *Client) StartHeartbeatStream(serverID, accessToken string, systemInfoPr
 								}
 								return
 							}
-						} else {
-							log.Printf("Heartbeat response received: %s", response.Message)
 						}
+
+					case *pb.ServerCommand_GetAppRequestV1:
+						log.Printf("Received app request: %s", cmd.GetAppRequestV1.Base.MessageId)
+						// Forward the request to be handled by the main loop
+						select {
+						case appRequestCh <- cmd.GetAppRequestV1:
+						default:
+							log.Printf("Warning: App request channel full, dropping request")
+						}
+
+					default:
+						log.Printf("Received unknown command type")
 					}
 				}
 			}()
 
 			// Start periodic heartbeat sender
-			ticker := time.NewTicker(heartbeatInterval)
+			ticker := time.NewTicker(HeartbeatInterval)
 
 			for {
 				select {
@@ -475,13 +492,25 @@ func (c *Client) StartHeartbeatStream(serverID, accessToken string, systemInfoPr
 						return
 					}
 
-					heartbeat := &pb.AgentHeartbeatV1{
+					baseMsg := &pb.BaseMessage{
+						MessageId:   GenerateUUID(),
+						Timestamp:   TimestampNow(),
 						ServerId:    serverID,
 						AccessToken: accessToken,
-						Metrics:     metricsProvider(),
 					}
 
-					if err := stream.Send(heartbeat); err != nil {
+					heartbeat := &pb.AgentHeartbeatV1{
+						Base:    baseMsg,
+						Metrics: metricsProvider(),
+					}
+
+					agentMsg := &pb.AgentMessage{
+						Message: &pb.AgentMessage_HeartbeatV1{
+							HeartbeatV1: heartbeat,
+						},
+					}
+
+					if err := stream.Send(agentMsg); err != nil {
 						log.Printf("Error sending heartbeat: %v", err)
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							return
@@ -489,6 +518,39 @@ func (c *Client) StartHeartbeatStream(serverID, accessToken string, systemInfoPr
 						continue
 					}
 					log.Printf("Periodic heartbeat sent successfully")
+
+				case appRequest := <-appRequestCh:
+					log.Printf("Processing app request for app ID: %s", appRequest.AppId)
+
+					// Here you would implement the logic to retrieve the app
+					// For now, we'll just send a dummy response
+					baseResp := &pb.BaseResponse{
+						MessageId:    GenerateUUID(),
+						Timestamp:    TimestampNow(),
+						ResponseCode: pb.ResponseCode_RESPONSE_CODE_SUCCESS,
+						Message:      "App retrieved successfully",
+						ServerId:     serverID,
+					}
+
+					appResp := &pb.GetAppResponseV1{
+						Base: baseResp,
+						App: &pb.AppResponseV1{
+							AppId: appRequest.AppId,
+							// Other fields would be populated here
+						},
+					}
+
+					agentMsg := &pb.AgentMessage{
+						Message: &pb.AgentMessage_GetAppResponseV1{
+							GetAppResponseV1: appResp,
+						},
+					}
+
+					if err := stream.Send(agentMsg); err != nil {
+						log.Printf("Error sending app response: %v", err)
+						continue
+					}
+					log.Printf("App response sent successfully")
 
 				case <-streamDone:
 					log.Printf("Stream receiver stopped, recreating stream")
@@ -498,7 +560,7 @@ func (c *Client) StartHeartbeatStream(serverID, accessToken string, systemInfoPr
 				case <-reregisterCh:
 					log.Printf("Re-registering agent due to token expiration or agent not found")
 					stream.CloseSend()
-					resp, err := c.RegisterAgent(version, capabilities, features, serverID, serverToken, systemInfoProvider())
+					resp, err := c.RegisterAgent(capabilities, features, serverID, serverToken)
 					if err != nil {
 						log.Printf("Failed to re-register agent: %v", err)
 						ticker.Stop()

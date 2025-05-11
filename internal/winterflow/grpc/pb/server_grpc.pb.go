@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	AgentService_RegisterAgentV1_FullMethodName = "/pb.AgentService/RegisterAgentV1"
-	AgentService_AgentStreamV1_FullMethodName   = "/pb.AgentService/AgentStreamV1"
+	AgentService_AgentStream_FullMethodName     = "/pb.AgentService/AgentStream"
 )
 
 // AgentServiceClient is the client API for AgentService service.
@@ -31,8 +31,8 @@ const (
 type AgentServiceClient interface {
 	// Register an agent
 	RegisterAgentV1(ctx context.Context, in *RegisterAgentRequestV1, opts ...grpc.CallOption) (*RegisterAgentResponseV1, error)
-	// Bidirectional streaming for agent communication
-	AgentStreamV1(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AgentHeartbeatV1, AgentHeartbeatResponseV1], error)
+	// Bidirectional streaming
+	AgentStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AgentMessage, ServerCommand], error)
 }
 
 type agentServiceClient struct {
@@ -53,18 +53,18 @@ func (c *agentServiceClient) RegisterAgentV1(ctx context.Context, in *RegisterAg
 	return out, nil
 }
 
-func (c *agentServiceClient) AgentStreamV1(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AgentHeartbeatV1, AgentHeartbeatResponseV1], error) {
+func (c *agentServiceClient) AgentStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AgentMessage, ServerCommand], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &AgentService_ServiceDesc.Streams[0], AgentService_AgentStreamV1_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &AgentService_ServiceDesc.Streams[0], AgentService_AgentStream_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[AgentHeartbeatV1, AgentHeartbeatResponseV1]{ClientStream: stream}
+	x := &grpc.GenericClientStream[AgentMessage, ServerCommand]{ClientStream: stream}
 	return x, nil
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type AgentService_AgentStreamV1Client = grpc.BidiStreamingClient[AgentHeartbeatV1, AgentHeartbeatResponseV1]
+type AgentService_AgentStreamClient = grpc.BidiStreamingClient[AgentMessage, ServerCommand]
 
 // AgentServiceServer is the server API for AgentService service.
 // All implementations must embed UnimplementedAgentServiceServer
@@ -74,8 +74,8 @@ type AgentService_AgentStreamV1Client = grpc.BidiStreamingClient[AgentHeartbeatV
 type AgentServiceServer interface {
 	// Register an agent
 	RegisterAgentV1(context.Context, *RegisterAgentRequestV1) (*RegisterAgentResponseV1, error)
-	// Bidirectional streaming for agent communication
-	AgentStreamV1(grpc.BidiStreamingServer[AgentHeartbeatV1, AgentHeartbeatResponseV1]) error
+	// Bidirectional streaming
+	AgentStream(grpc.BidiStreamingServer[AgentMessage, ServerCommand]) error
 	mustEmbedUnimplementedAgentServiceServer()
 }
 
@@ -89,8 +89,8 @@ type UnimplementedAgentServiceServer struct{}
 func (UnimplementedAgentServiceServer) RegisterAgentV1(context.Context, *RegisterAgentRequestV1) (*RegisterAgentResponseV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterAgentV1 not implemented")
 }
-func (UnimplementedAgentServiceServer) AgentStreamV1(grpc.BidiStreamingServer[AgentHeartbeatV1, AgentHeartbeatResponseV1]) error {
-	return status.Errorf(codes.Unimplemented, "method AgentStreamV1 not implemented")
+func (UnimplementedAgentServiceServer) AgentStream(grpc.BidiStreamingServer[AgentMessage, ServerCommand]) error {
+	return status.Errorf(codes.Unimplemented, "method AgentStream not implemented")
 }
 func (UnimplementedAgentServiceServer) mustEmbedUnimplementedAgentServiceServer() {}
 func (UnimplementedAgentServiceServer) testEmbeddedByValue()                      {}
@@ -131,12 +131,12 @@ func _AgentService_RegisterAgentV1_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AgentService_AgentStreamV1_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(AgentServiceServer).AgentStreamV1(&grpc.GenericServerStream[AgentHeartbeatV1, AgentHeartbeatResponseV1]{ServerStream: stream})
+func _AgentService_AgentStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(AgentServiceServer).AgentStream(&grpc.GenericServerStream[AgentMessage, ServerCommand]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type AgentService_AgentStreamV1Server = grpc.BidiStreamingServer[AgentHeartbeatV1, AgentHeartbeatResponseV1]
+type AgentService_AgentStreamServer = grpc.BidiStreamingServer[AgentMessage, ServerCommand]
 
 // AgentService_ServiceDesc is the grpc.ServiceDesc for AgentService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -152,8 +152,8 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "AgentStreamV1",
-			Handler:       _AgentService_AgentStreamV1_Handler,
+			StreamName:    "AgentStream",
+			Handler:       _AgentService_AgentStream_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

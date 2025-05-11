@@ -3,6 +3,7 @@ syntax = "proto3";
 package pb;
 
 option go_package = "winterflow-agent/internal/winterflow/grpc/pb";
+import "google/protobuf/timestamp.proto";
 
 
 // Response codes for all responses
@@ -17,34 +18,100 @@ enum ResponseCode {
   RESPONSE_CODE_AGENT_ALREADY_CONNECTED = 7;
 }
 
+message BaseMessage {
+  // UUID
+  string message_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  // UUID
+  string server_id = 3;
+  string access_token = 4;
+}
+
+message BaseCommand {
+  // UUID
+  string message_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  // UUID
+  string server_id = 3;
+}
+
+message BaseResponse {
+  // UUID
+  string message_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  ResponseCode response_code = 3;
+  string message = 4;
+  // UUID
+  string server_id = 5;
+}
+
+
 // Agent registration messages
 message RegisterAgentRequestV1 {
-  string version = 1;
-  string server_id = 2;
-  string server_token = 3;
-  map<string, string> capabilities = 4;
-  map<string, bool> features = 5;
-  map<string, string> metrics = 6;
+  // UUID
+  string message_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  // UUID
+  string server_id = 3;
+  string server_token = 4;
+  map<string, string> capabilities = 5;
+  map<string, bool> features = 6;
 }
 
 message RegisterAgentResponseV1 {
-  bool success = 1;
-  string message = 2;
-  string access_token = 3;
-  ResponseCode response_code = 4;
-}
-
-// Agent heartbeat and status messages
-message AgentHeartbeatV1 {
-  string server_id = 1;
+  BaseResponse base = 1;
   string access_token = 2;
-  map<string, string> metrics = 3;
 }
 
-message AgentHeartbeatResponseV1 {
-  bool success = 1;
-  string message = 2;
-  ResponseCode response_code = 3;
+// Agent heartbeat message
+message AgentHeartbeatV1 {
+  BaseMessage base = 1;
+  map<string, string> metrics = 2;
+}
+
+message HeartbeatResponseV1 {
+  BaseResponse base = 1;
+}
+
+// App retrieval messages
+message GetAppRequestV1 {
+  BaseCommand base = 1;
+  // UUID
+  string app_id = 2;
+}
+
+message AppResponseV1 {
+  // UUID
+  string app_id = 1;
+  bytes config = 2;
+  bytes variables = 3;
+  repeated AppFileV1 files = 4;
+}
+
+message AppFileV1 {
+  string name = 1;
+  bytes content = 2;
+  string hash = 3;
+}
+
+message GetAppResponseV1 {
+  BaseResponse base = 1;
+  AppResponseV1 app = 2;
+}
+
+// Command messages for bidirectional streaming
+message ServerCommand {
+  oneof command {
+    HeartbeatResponseV1 heartbeat_response_v1 = 1;
+    GetAppRequestV1 get_app_request_v1 = 2;
+  }
+}
+
+message AgentMessage {
+  oneof message {
+    AgentHeartbeatV1 heartbeat_v1 = 1;
+    GetAppResponseV1 get_app_response_v1 = 2;
+  }
 }
 
 // Agent service definition
@@ -52,6 +119,6 @@ service AgentService {
   // Register an agent
   rpc RegisterAgentV1(RegisterAgentRequestV1) returns (RegisterAgentResponseV1) {}
 
-  // Bidirectional streaming for agent communication
-  rpc AgentStreamV1(stream AgentHeartbeatV1) returns (stream AgentHeartbeatResponseV1) {}
+  // Bidirectional streaming
+  rpc AgentStream(stream AgentMessage) returns (stream ServerCommand) {}
 }

@@ -44,13 +44,13 @@ func (a *Agent) Register() (string, error) {
 	capabilities := GetCapabilities().ToMap()
 
 	log.Printf("Registering agent with server")
-	resp, err := a.client.RegisterAgent(GetVersion(), capabilities, a.config.Features, a.config.ServerID, a.config.ServerToken, a.collectSystemInfo())
+	resp, err := a.client.RegisterAgent(capabilities, a.config.Features, a.config.ServerID, a.config.ServerToken)
 	if err != nil {
 		return "", err
 	}
 
-	if !resp.Success {
-		return "", fmt.Errorf("registration failed: %s", resp.Message)
+	if resp.Base.ResponseCode != 1 { // RESPONSE_CODE_SUCCESS = 1
+		return "", fmt.Errorf("registration failed: %s", resp.Base.Message)
 	}
 
 	// Store the access token in the client
@@ -78,12 +78,10 @@ func (a *Agent) StartHeartbeat(accessToken string) error {
 	capabilities := GetCapabilities().ToMap()
 
 	log.Printf("Starting heartbeat stream with server")
-	return a.client.StartHeartbeatStream(
+	return a.client.StartAgentStream(
 		a.config.ServerID,
 		accessToken,
-		a.collectSystemInfo,
 		a.collectMetrics,
-		GetVersion(),
 		capabilities,
 		a.config.Features,
 		a.config.ServerToken,
