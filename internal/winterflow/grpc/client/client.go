@@ -475,8 +475,13 @@ func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider 
 							log.Printf("Warning: App request channel full, dropping request")
 						}
 
+					case *pb.ServerCommand_CreateAppRequestV1:
+						log.Printf("Received create app request: %s", cmd.CreateAppRequestV1.Base.MessageId)
+						// Add handling for create app request if needed
+
 					default:
-						log.Printf("Received unknown command type")
+						// Log details about the unknown command type
+						log.Printf("Received unknown command type: %T", cmd)
 					}
 				}
 			}()
