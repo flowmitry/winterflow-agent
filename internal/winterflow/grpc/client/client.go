@@ -577,7 +577,7 @@ func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider 
 					log.Printf("App response sent successfully")
 
 				case createAppRequest := <-createAppRequestCh:
-					agentMsg, err := HandleCreateAppRequest(c.commandBus, createAppRequest, serverID)
+					agentMsg, err := handleCreateAppRequest(c.commandBus, createAppRequest, serverID)
 					if err != nil {
 						log.Error("Error creating app response: %v", err)
 						continue

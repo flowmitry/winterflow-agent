@@ -7,6 +7,7 @@ import (
 	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/grpc/pb"
 	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/yaml"
 )
 
 // CreateAppHandler handles the CreateAppCommand
@@ -68,14 +69,41 @@ func (h *CreateAppHandler) Handle(cmd CreateAppCommand) error {
 
 		// Create inventory files
 		varsFile := filepath.Join(inventoryDir, "vars.yml")
-		if err := os.WriteFile(varsFile, cmd.Request.App.Variables, 0644); err != nil {
+		varsJSON, err := ReplaceIDsWithNames(cmd.Request.App.Config, cmd.Request.App.Variables)
+		if err != nil {
+			log.Printf("Error replacing IDs with NAMEs: %v", err)
+			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+			responseMessage = fmt.Sprintf("Error replacing IDs with NAMEs: %v", err)
+		}
+
+		// Convert Variables from JSON to YAML using variable names from config
+		varsYAML, err := yaml.JSONToYAML(varsJSON)
+		if err != nil {
+			log.Printf("Error converting variables to YAML: %v", err)
+			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+			responseMessage = fmt.Sprintf("Error converting variables to YAML: %v", err)
+		} else if err := os.WriteFile(varsFile, varsYAML, 0644); err != nil {
 			log.Printf("Error creating vars file: %v", err)
 			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 			responseMessage = fmt.Sprintf("Error creating vars file: %v", err)
 		}
 
 		secretsFile := filepath.Join(inventoryDir, "secrets.yml")
-		if err := os.WriteFile(secretsFile, cmd.Request.App.Secrets, 0644); err != nil {
+
+		secretsJSON, err := ReplaceIDsWithNames(cmd.Request.App.Config, cmd.Request.App.Secrets)
+		if err != nil {
+			log.Printf("Error replacing IDs with NAMEs: %v", err)
+			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+			responseMessage = fmt.Sprintf("Error replacing IDs with NAMEs: %v", err)
+		}
+
+		// Convert Secrets from JSON to YAML using variable names from config
+		secretsYAML, err := yaml.JSONToYAML(secretsJSON)
+		if err != nil {
+			log.Printf("Error converting secrets to YAML: %v", err)
+			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+			responseMessage = fmt.Sprintf("Error converting secrets to YAML: %v", err)
+		} else if err := os.WriteFile(secretsFile, secretsYAML, 0644); err != nil {
 			log.Printf("Error creating secrets file: %v", err)
 			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 			responseMessage = fmt.Sprintf("Error creating secrets file: %v", err)

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"time"
+	"winterflow-agent/internal/winterflow/grpc/pb"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -30,4 +31,14 @@ func GenerateUUID() string {
 // TimestampNow returns the current time as a protobuf Timestamp
 func TimestampNow() *timestamppb.Timestamp {
 	return timestamppb.Now()
+}
+
+func createBaseResponse(messageID string, serverID string, code pb.ResponseCode, message string) pb.BaseResponse {
+	return pb.BaseResponse{
+		MessageId:    messageID,
+		Timestamp:    TimestampNow(),
+		ResponseCode: code,
+		Message:      message,
+		ServerId:     serverID,
+	}
 }
