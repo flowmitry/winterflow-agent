@@ -27,7 +27,7 @@ func NewManager(embeddedFS fs.FS, configPath string) *Manager {
 			"playbooks",
 			"roles",
 			"ansible.cfg",
-			"apps/README.md",
+			"apps_roles/README.md",
 		}),
 	}
 }

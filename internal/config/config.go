@@ -15,8 +15,8 @@ const (
 	DefaultAPIBaseURL = "http://localhost:8080"
 	// DefaultAnsiblePath is the default path for Ansible files
 	DefaultAnsiblePath = "ansible"
-	// DefaultAnsibleAppsPath is the default path for Ansible application files
-	DefaultAnsibleAppsPath = "ansible/apps"
+	// DefaultAnsibleAppsRolesPath is the default path for Ansible application files
+	DefaultAnsibleAppsRolesPath = "ansible/apps_roles"
 	// DefaultAppsPath is the default path for application files
 	DefaultAppsPath = "apps"
 )
@@ -53,7 +53,7 @@ func applyDefaults(cfg *Config) {
 		cfg.AppsPath = DefaultAppsPath
 	}
 	if cfg.AnsibleAppsPath == "" {
-		cfg.AnsibleAppsPath = DefaultAnsibleAppsPath
+		cfg.AnsibleAppsPath = DefaultAnsibleAppsRolesPath
 	}
 }
 
@@ -163,7 +163,7 @@ func SaveConfig(config *Config, configPath string) error {
 	return nil
 }
 
-// GetAnsibleAppsPath returns the default path for Ansible application files
-func GetAnsibleAppsPath() string {
-	return DefaultAnsibleAppsPath
+// GetAnsibleAppsRolesPath returns the default path for Ansible application files
+func GetAnsibleAppsRolesPath() string {
+	return DefaultAnsibleAppsRolesPath
 }

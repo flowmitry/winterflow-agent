@@ -21,7 +21,5 @@ The following directories and files are part of the WinterFlow Agent's directory
 * `/opt/winterflow/ansible/inventory` - This directory holds the main Ansible inventory.
 * `/opt/winterflow/ansible/playbooks` - This directory holds the main Ansible playbooks.
 * `/opt/winterflow/ansible/roles` - This directory holds the main Ansible roles.
-* `/opt/winterflow/ansible/apps/` - This directory contains roles for applications along with their configurations.
-* `/opt/winterflow/ansible/apps/configs` - This directory contains configuration files for applications.
-* `/opt/winterflow/ansible/apps/inventory` - This directory stores application-specific variables and secrets.
-* `/opt/winterflow/ansible/apps/roles` - This directory stores roles for applications.
+* `/opt/winterflow/ansible/apps_roles/` - This directory contains roles for applications along with their
+  configurations.

@@ -24,7 +24,7 @@ func (h *CreateAppHandler) Handle(cmd CreateAppCommand) error {
 	var responseMessage string = "App created successfully"
 
 	// Create the required directories
-	rolesDir := filepath.Join(config.GetAnsibleAppsPath(), appID)
+	rolesDir := filepath.Join(config.GetAnsibleAppsRolesPath(), appID)
 	rolesDefaultsDir := filepath.Join(rolesDir, "defaults")
 	rolesVarsDir := filepath.Join(rolesDir, "vars")
 	rolesTemplatesDir := filepath.Join(rolesDir, "templates")
