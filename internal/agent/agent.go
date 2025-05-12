@@ -5,6 +5,7 @@ import (
 	"time"
 	log "winterflow-agent/pkg/log"
 
+	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/grpc/client"
 	"winterflow-agent/pkg/backoff"
 	"winterflow-agent/pkg/metrics"
@@ -13,14 +14,14 @@ import (
 // Agent represents the application agent
 type Agent struct {
 	client            *client.Client
-	config            *Config
+	config            *config.Config
 	startTime         time.Time
 	metricsFactory    *metrics.MetricFactory
 	systemInfoFactory *metrics.MetricFactory
 }
 
 // NewAgent creates a new agent instance
-func NewAgent(config *Config) (*Agent, error) {
+func NewAgent(config *config.Config) (*Agent, error) {
 	c, err := client.NewClient(config.GRPCServerAddress)
 	if err != nil {
 		return nil, err

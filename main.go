@@ -14,6 +14,7 @@ import (
 
 	"winterflow-agent/internal/agent"
 	"winterflow-agent/internal/ansible"
+	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/api"
 )
 
@@ -77,7 +78,7 @@ func main() {
 	}()
 
 	log.Printf("Loading configuration from %s", *configPath)
-	cfg, err := agent.WaitUntilReady(*configPath)
+	cfg, err := config.WaitUntilReady(*configPath)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}

@@ -6,7 +6,7 @@ import (
 	"time"
 	log "winterflow-agent/pkg/log"
 
-	"winterflow-agent/internal/agent"
+	"winterflow-agent/internal/config"
 )
 
 // RegistrationError represents a structured error response from the server
@@ -20,7 +20,7 @@ type RegistrationError struct {
 // RegisterAgent handles the agent registration process
 func RegisterAgent(configPath string) error {
 	// Load config to get server URL
-	cfg, err := agent.LoadConfig(configPath)
+	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		return log.Errorf("failed to load configuration: %v", err)
 	}
@@ -56,7 +56,7 @@ func RegisterAgent(configPath string) error {
 	// Save server_id to config immediately if it's new
 	if existingServerID == "" && resp.Data.ServerID != "" {
 		cfg.ServerID = resp.Data.ServerID
-		if err := agent.SaveConfig(cfg, configPath); err != nil {
+		if err := config.SaveConfig(cfg, configPath); err != nil {
 			log.Printf("[WARN] Failed to save server_id to config: %v", err)
 		} else {
 			log.Printf("[DEBUG] Saved new server_id to config: %s", resp.Data.ServerID)
@@ -114,7 +114,7 @@ func RegisterAgent(configPath string) error {
 		case "registered":
 			// Update the configuration with the token
 			cfg.ServerToken = resp.Data.Token
-			if err := agent.SaveConfig(cfg, configPath); err != nil {
+			if err := config.SaveConfig(cfg, configPath); err != nil {
 				return log.Errorf("failed to save configuration: %v", err)
 			}
 
