@@ -2,9 +2,10 @@
 requests/
 agent*
 custom/
-apps/
 ansible/vault_pass.txt
 ansible/version.txt
+ansible/apps/*
+!ansible/apps/README.md
 
 # Binaries for programs and plugins
 *.exe
