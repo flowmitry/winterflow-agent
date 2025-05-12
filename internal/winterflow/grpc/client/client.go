@@ -4,15 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+	"winterflow-agent/internal/winterflow/handlers"
 	log "winterflow-agent/pkg/log"
 
-	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/grpc/pb"
+	"winterflow-agent/pkg/cqrs"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -46,6 +45,9 @@ type Client struct {
 	// Registration state
 	isRegistered bool
 	regMutex     sync.RWMutex
+
+	// Command bus for CQRS
+	commandBus cqrs.CommandBus
 }
 
 // setupConnection creates a new gRPC connection and client
@@ -70,6 +72,13 @@ func NewClient(serverAddress string) (*Client, error) {
 
 	log.Printf("Creating new gRPC client for %s", serverAddress)
 
+	// Create command bus and register handlers
+	commandBus := cqrs.NewCommandBus()
+	if err := handlers.RegisterHandlers(commandBus); err != nil {
+		cancel()
+		return nil, log.Errorf("failed to register create app handler: %v", err)
+	}
+
 	client := &Client{
 		ctx:               ctx,
 		cancel:            cancel,
@@ -79,6 +88,7 @@ func NewClient(serverAddress string) (*Client, error) {
 		isRegistered:      true,
 		regMutex:          sync.RWMutex{},
 		backoffStrategy:   backoff.New(DefaultReconnectInterval, DefaultMaximumReconnectInterval),
+		commandBus:        commandBus,
 	}
 
 	if err := client.setupConnection(); err != nil {
@@ -567,99 +577,17 @@ func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider 
 					log.Printf("App response sent successfully")
 
 				case createAppRequest := <-createAppRequestCh:
-					log.Printf("Processing create app request for app ID: %s", createAppRequest.App.AppId)
-
-					// Create the directory structure and files
-					appID := createAppRequest.App.AppId
-					var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
-					var responseMessage string = "App created successfully"
-
-					// Create the required directories
-					configDir := filepath.Join(config.GetAnsibleAppsPath(), "configs")
-					rolesDir := filepath.Join(config.GetAnsibleAppsPath(), "roles", appID)
-					inventoryDir := filepath.Join(config.GetAnsibleAppsPath(), "inventory", appID)
-
-					// Create directories if they don't exist
-					if err := os.MkdirAll(configDir, 0755); err != nil {
-						log.Printf("Error creating config directory: %v", err)
-						responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-						responseMessage = fmt.Sprintf("Error creating config directory: %v", err)
-					}
-
-					if err := os.MkdirAll(rolesDir, 0755); err != nil {
-						log.Printf("Error creating roles directory: %v", err)
-						responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-						responseMessage = fmt.Sprintf("Error creating roles directory: %v", err)
-					}
-
-					if err := os.MkdirAll(inventoryDir, 0755); err != nil {
-						log.Printf("Error creating inventory directory: %v", err)
-						responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-						responseMessage = fmt.Sprintf("Error creating inventory directory: %v", err)
-					}
-
-					// Create the files
-					if responseCode == pb.ResponseCode_RESPONSE_CODE_SUCCESS {
-						// Create config file
-						configFile := filepath.Join(configDir, appID+".json")
-						if err := os.WriteFile(configFile, createAppRequest.App.Config, 0644); err != nil {
-							log.Printf("Error creating config file: %v", err)
-							responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-							responseMessage = fmt.Sprintf("Error creating config file: %v", err)
-						}
-
-						// Create role files
-						for _, file := range createAppRequest.App.Files {
-							roleFile := filepath.Join(rolesDir, file.Name+".j2")
-							if err := os.WriteFile(roleFile, file.Content, 0644); err != nil {
-								log.Printf("Error creating role file %s: %v", file.Name, err)
-								responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-								responseMessage = fmt.Sprintf("Error creating role file %s: %v", file.Name, err)
-								break
-							}
-						}
-
-						// Create inventory files
-						varsFile := filepath.Join(inventoryDir, "vars.yml")
-						if err := os.WriteFile(varsFile, createAppRequest.App.Variables, 0644); err != nil {
-							log.Printf("Error creating vars file: %v", err)
-							responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-							responseMessage = fmt.Sprintf("Error creating vars file: %v", err)
-						}
-
-						secretsFile := filepath.Join(inventoryDir, "secrets.yml")
-						if err := os.WriteFile(secretsFile, createAppRequest.App.Secrets, 0644); err != nil {
-							log.Printf("Error creating secrets file: %v", err)
-							responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-							responseMessage = fmt.Sprintf("Error creating secrets file: %v", err)
-						}
-					}
-
-					// Send response
-					baseResp := &pb.BaseResponse{
-						MessageId:    GenerateUUID(),
-						Timestamp:    TimestampNow(),
-						ResponseCode: responseCode,
-						Message:      responseMessage,
-						ServerId:     serverID,
-					}
-
-					createAppResp := &pb.CreateAppResponseV1{
-						Base: baseResp,
-						App:  createAppRequest.App,
-					}
-
-					agentMsg := &pb.AgentMessage{
-						Message: &pb.AgentMessage_CreateAppResponseV1{
-							CreateAppResponseV1: createAppResp,
-						},
+					agentMsg, err := HandleCreateAppRequest(c.commandBus, createAppRequest, serverID)
+					if err != nil {
+						log.Error("Error creating app response: %v", err)
+						continue
 					}
 
 					if err := stream.Send(agentMsg); err != nil {
-						log.Printf("Error sending create app response: %v", err)
+						log.Warn("Error sending create app response: %v", err)
 						continue
 					}
-					log.Printf("Create app response sent successfully")
+					log.Info("Create app response sent successfully")
 
 				case <-streamDone:
 					log.Printf("Stream receiver stopped, recreating stream")
