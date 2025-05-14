@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sync"
 )
 
 // ErrQueryBusShuttingDown is returned when a query is dispatched to a bus that is shutting down.
@@ -12,90 +11,69 @@ var ErrQueryBusShuttingDown = errors.New("query bus is shutting down")
 
 // DefaultQueryBus is a simple implementation of the QueryBus interface.
 type DefaultQueryBus struct {
-	handlers       map[string]interface{}
-	mutex          sync.RWMutex
-	isShuttingDown bool
-	activeQueries  sync.WaitGroup
+	*Bus
 }
 
 // NewQueryBus creates a new DefaultQueryBus.
 func NewQueryBus() *DefaultQueryBus {
 	return &DefaultQueryBus{
-		handlers: make(map[string]interface{}),
+		Bus: NewBus("query"),
 	}
+}
+
+// validateQueryHandler checks if the handler implements QueryHandler[Q, R] and returns the query name.
+func validateQueryHandler(handler interface{}, queryType reflect.Type) (string, error) {
+	// Check if the query type implements Query
+	queryInstance := reflect.New(queryType).Elem().Interface()
+	query, ok := queryInstance.(Query)
+	if !ok {
+		return "", fmt.Errorf("parameter type %s does not implement Query interface", queryType)
+	}
+
+	// Get the handler type and check its Handle method
+	handlerType := reflect.TypeOf(handler)
+	handleMethod, _ := handlerType.MethodByName("Handle")
+	methodType := handleMethod.Type
+
+	// Check that Handle returns two values (result and error)
+	if methodType.NumOut() != 2 {
+		return "", fmt.Errorf("Handle method must return exactly two values (result and error)")
+	}
+
+	// Return the query name
+	return query.Name(), nil
 }
 
 // Register registers a query handler for a specific query type.
 // The handler must implement QueryHandler[Q, R] where Q is a Query type and R is the result type.
 func (b *DefaultQueryBus) Register(handler interface{}) error {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-
-	handlerType := reflect.TypeOf(handler)
-	if handlerType.Kind() != reflect.Ptr {
-		return fmt.Errorf("handler must be a pointer to a struct, got %T", handler)
-	}
-
-	// Check if the handler implements QueryHandler[Q, R]
-	if handlerType.NumMethod() == 0 {
-		return fmt.Errorf("handler %T does not implement any methods", handler)
-	}
-
 	// Find the Handle method
+	handlerType := reflect.TypeOf(handler)
 	handleMethod, exists := handlerType.MethodByName("Handle")
 	if !exists {
 		return fmt.Errorf("handler %T does not implement Handle method", handler)
 	}
 
-	// Check method signature
-	methodType := handleMethod.Type
-	if methodType.NumIn() != 2 { // receiver + query
-		return fmt.Errorf("Handle method must have exactly one parameter (the query)")
-	}
-
-	if methodType.NumOut() != 2 { // result + error
-		return fmt.Errorf("Handle method must return exactly two values (result and error)")
-	}
-
 	// Get the query type
-	queryType := methodType.In(1)
+	queryType := handleMethod.Type.In(1)
 
-	// Check if the query type implements Query
-	queryInstance := reflect.New(queryType).Elem().Interface()
-	query, ok := queryInstance.(Query)
-	if !ok {
-		return fmt.Errorf("parameter type %s does not implement Query interface", queryType)
-	}
-
-	// Register the handler with the query name
-	queryName := query.QueryName()
-	if _, exists := b.handlers[queryName]; exists {
-		return fmt.Errorf("handler for query %s already registered", queryName)
-	}
-
-	b.handlers[queryName] = handler
-	return nil
+	return b.Bus.Register(handler, queryType, validateQueryHandler)
 }
 
 // Dispatch sends a query to its appropriate handler and returns the result.
 func (b *DefaultQueryBus) Dispatch(query Query) (interface{}, error) {
-	b.mutex.RLock()
-	// Check if the bus is shutting down
-	if b.isShuttingDown {
-		b.mutex.RUnlock()
+	if b.IsShuttingDown() {
 		return nil, ErrQueryBusShuttingDown
 	}
 
-	handler, exists := b.handlers[query.QueryName()]
-	b.mutex.RUnlock()
-
+	handler, exists := b.GetHandler(query.Name())
 	if !exists {
-		return nil, fmt.Errorf("no handler registered for query %s", query.QueryName())
+		return nil, fmt.Errorf("no handler registered for query %s", query.Name())
 	}
 
 	// Increment the active queries counter
-	b.activeQueries.Add(1)
-	defer b.activeQueries.Done()
+	b.IncrementActiveCount()
+	defer b.DecrementActiveCount()
 
 	// Call the handler's Handle method with the query
 	handlerValue := reflect.ValueOf(handler)
@@ -110,18 +88,4 @@ func (b *DefaultQueryBus) Dispatch(query Query) (interface{}, error) {
 
 	// Return the result (first return value)
 	return results[0].Interface(), nil
-}
-
-// Shutdown initiates a graceful shutdown of the query bus.
-// New queries will be rejected, but existing queries will be allowed to complete.
-func (b *DefaultQueryBus) Shutdown() {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-	b.isShuttingDown = true
-}
-
-// WaitForCompletion waits for all active queries to complete.
-// This should be called after Shutdown to ensure all queries have finished processing.
-func (b *DefaultQueryBus) WaitForCompletion() {
-	b.activeQueries.Wait()
 }

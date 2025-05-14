@@ -11,7 +11,7 @@ type CreateUserCommand struct {
 	Email    string
 }
 
-func (c CreateUserCommand) CommandName() string {
+func (c CreateUserCommand) Name() string {
 	return "CreateUser"
 }
 
@@ -31,7 +31,7 @@ type GetUserQuery struct {
 	UserID string
 }
 
-func (q GetUserQuery) QueryName() string {
+func (q GetUserQuery) Name() string {
 	return "GetUser"
 }
 

@@ -4,94 +4,66 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sync"
 )
 
-// ErrBusShuttingDown is returned when a command is dispatched to a bus that is shutting down.
-var ErrBusShuttingDown = errors.New("command bus is shutting down")
+// ErrCommandBusShuttingDown is returned when a command is dispatched to a bus that is shutting down.
+var ErrCommandBusShuttingDown = errors.New("command bus is shutting down")
 
 // DefaultCommandBus is a simple implementation of the CommandBus interface.
 type DefaultCommandBus struct {
-	handlers       map[string]interface{}
-	mutex          sync.RWMutex
-	isShuttingDown bool
-	activeCommands sync.WaitGroup
+	*Bus
 }
 
 // NewCommandBus creates a new DefaultCommandBus.
 func NewCommandBus() *DefaultCommandBus {
 	return &DefaultCommandBus{
-		handlers: make(map[string]interface{}),
+		Bus: NewBus("command"),
 	}
+}
+
+// validateCommandHandler checks if the handler implements CommandHandler[C] and returns the command name.
+func validateCommandHandler(handler interface{}, cmdType reflect.Type) (string, error) {
+	// Check if the command type implements Command
+	cmdInstance := reflect.New(cmdType).Elem().Interface()
+	cmd, ok := cmdInstance.(Command)
+	if !ok {
+		return "", fmt.Errorf("parameter type %s does not implement Command interface", cmdType)
+	}
+
+	// Return the command name
+	return cmd.Name(), nil
 }
 
 // Register registers a command handler for a specific command type.
 // The handler must implement CommandHandler[C] where C is a Command type.
 func (b *DefaultCommandBus) Register(handler interface{}) error {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-
-	handlerType := reflect.TypeOf(handler)
-	if handlerType.Kind() != reflect.Ptr {
-		return fmt.Errorf("handler must be a pointer to a struct, got %T", handler)
-	}
-
-	// Check if the handler implements CommandHandler[C]
-	if handlerType.NumMethod() == 0 {
-		return fmt.Errorf("handler %T does not implement any methods", handler)
-	}
-
 	// Find the Handle method
+	handlerType := reflect.TypeOf(handler)
 	handleMethod, exists := handlerType.MethodByName("Handle")
 	if !exists {
 		return fmt.Errorf("handler %T does not implement Handle method", handler)
 	}
 
-	// Check method signature
-	methodType := handleMethod.Type
-	if methodType.NumIn() != 2 { // receiver + command
-		return fmt.Errorf("Handle method must have exactly one parameter (the command)")
-	}
-
 	// Get the command type
-	cmdType := methodType.In(1)
+	cmdType := handleMethod.Type.In(1)
 
-	// Check if the command type implements Command
-	cmdInstance := reflect.New(cmdType).Elem().Interface()
-	cmd, ok := cmdInstance.(Command)
-	if !ok {
-		return fmt.Errorf("parameter type %s does not implement Command interface", cmdType)
-	}
-
-	// Register the handler with the command name
-	cmdName := cmd.CommandName()
-	if _, exists := b.handlers[cmdName]; exists {
-		return fmt.Errorf("handler for command %s already registered", cmdName)
-	}
-
-	b.handlers[cmdName] = handler
-	return nil
+	return b.Bus.Register(handler, cmdType, validateCommandHandler)
 }
 
 // Dispatch sends a command to its appropriate handler.
 func (b *DefaultCommandBus) Dispatch(cmd Command) error {
-	b.mutex.RLock()
-	// Check if the bus is shutting down
-	if b.isShuttingDown {
-		b.mutex.RUnlock()
-		return ErrBusShuttingDown
+	if b.IsShuttingDown() {
+		return ErrCommandBusShuttingDown
 	}
 
-	handler, exists := b.handlers[cmd.CommandName()]
-	b.mutex.RUnlock()
-
+	handler, exists := b.GetHandler(cmd.Name())
 	if !exists {
-		return fmt.Errorf("no handler registered for command %s", cmd.CommandName())
+		return fmt.Errorf("no handler registered for command %s", cmd.Name())
 	}
 
 	// Increment the active commands counter
-	b.activeCommands.Add(1)
-	defer b.activeCommands.Done()
+	b.IncrementActiveCount()
+	defer b.DecrementActiveCount()
 
 	// Call the handler's Handle method with the command
 	handlerValue := reflect.ValueOf(handler)
@@ -105,18 +77,4 @@ func (b *DefaultCommandBus) Dispatch(cmd Command) error {
 	}
 
 	return nil
-}
-
-// Shutdown initiates a graceful shutdown of the command bus.
-// New commands will be rejected, but existing commands will be allowed to complete.
-func (b *DefaultCommandBus) Shutdown() {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-	b.isShuttingDown = true
-}
-
-// WaitForCompletion waits for all active commands to complete.
-// This should be called after Shutdown to ensure all commands have finished processing.
-func (b *DefaultCommandBus) WaitForCompletion() {
-	b.activeCommands.Wait()
 }

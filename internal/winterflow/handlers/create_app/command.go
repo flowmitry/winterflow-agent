@@ -9,7 +9,7 @@ type CreateAppCommand struct {
 	Request *pb.CreateAppRequestV1
 }
 
-// CommandName returns the name of the command
-func (c CreateAppCommand) CommandName() string {
+// Name returns the name of the command
+func (c CreateAppCommand) Name() string {
 	return "CreateApp"
 }
