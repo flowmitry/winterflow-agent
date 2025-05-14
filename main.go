@@ -100,8 +100,9 @@ func main() {
 		log.Fatalf("Agent failed: %v", err)
 	}
 
-	// Wait indefinitely
-	select {}
+	// Wait for context cancellation
+	<-ctx.Done()
+	log.Printf("Context canceled, shutting down agent...")
 }
 
 func GetAnsibleFS() fs.FS {

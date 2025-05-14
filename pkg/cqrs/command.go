@@ -6,19 +6,19 @@ package cqrs
 // Command represents a command that changes the state of the system.
 // Commands are named with verbs in imperative form (e.g., "CreateUser").
 type Command interface {
-    NameProvider
+	NameProvider
 }
 
 // CommandHandler defines the interface for handling commands.
 type CommandHandler[C Command] interface {
-    // Handle executes the command and returns an error if the command fails.
-    Handle(cmd C) error
+	// Handle executes the command and returns an error if the command fails.
+	Handle(cmd C) error
 }
 
 // CommandBus is responsible for dispatching commands to their handlers.
 type CommandBus interface {
-    ActionProvider
+	ActionProvider
 
-    // Dispatch sends a command to its appropriate handler.
-    Dispatch(cmd Command) error
+	// Dispatch sends a command to its appropriate handler.
+	Dispatch(cmd Command) error
 }
