@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/agent"
@@ -70,11 +69,16 @@ func main() {
 	go func() {
 		sig := <-sigChan
 		log.Printf("Received signal: %v", sig)
-		cancel() // Cancel the context to abort operations
-		// Give a short time for cleanup, then exit
-		time.Sleep(500 * time.Millisecond)
-		log.Printf("Shutting down agent")
-		os.Exit(0)
+		log.Printf("Initiating graceful shutdown...")
+
+		// Cancel the context to abort operations
+		cancel()
+
+		// The agent will be closed by the defer a.Close() statement
+		// which will handle graceful shutdown of the command bus
+
+		// We don't need to call os.Exit() here, as the main function will exit naturally
+		// after the agent is closed and all commands have completed
 	}()
 
 	log.Printf("Loading configuration from %s", *configPath)

@@ -20,4 +20,12 @@ type QueryBus interface {
 
 	// Register registers a query handler for a specific query type.
 	Register(handler interface{}) error
+
+	// Shutdown initiates a graceful shutdown of the query bus.
+	// New queries will be rejected, but existing queries will be allowed to complete.
+	Shutdown()
+
+	// WaitForCompletion waits for all active queries to complete.
+	// This should be called after Shutdown to ensure all queries have finished processing.
+	WaitForCompletion()
 }

@@ -1,15 +1,21 @@
 package cqrs
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
 )
 
+// ErrBusShuttingDown is returned when a command is dispatched to a bus that is shutting down.
+var ErrBusShuttingDown = errors.New("command bus is shutting down")
+
 // DefaultCommandBus is a simple implementation of the CommandBus interface.
 type DefaultCommandBus struct {
-	handlers map[string]interface{}
-	mutex    sync.RWMutex
+	handlers       map[string]interface{}
+	mutex          sync.RWMutex
+	isShuttingDown bool
+	activeCommands sync.WaitGroup
 }
 
 // NewCommandBus creates a new DefaultCommandBus.
@@ -70,12 +76,22 @@ func (b *DefaultCommandBus) Register(handler interface{}) error {
 // Dispatch sends a command to its appropriate handler.
 func (b *DefaultCommandBus) Dispatch(cmd Command) error {
 	b.mutex.RLock()
+	// Check if the bus is shutting down
+	if b.isShuttingDown {
+		b.mutex.RUnlock()
+		return ErrBusShuttingDown
+	}
+
 	handler, exists := b.handlers[cmd.CommandName()]
 	b.mutex.RUnlock()
 
 	if !exists {
 		return fmt.Errorf("no handler registered for command %s", cmd.CommandName())
 	}
+
+	// Increment the active commands counter
+	b.activeCommands.Add(1)
+	defer b.activeCommands.Done()
 
 	// Call the handler's Handle method with the command
 	handlerValue := reflect.ValueOf(handler)
@@ -89,4 +105,18 @@ func (b *DefaultCommandBus) Dispatch(cmd Command) error {
 	}
 
 	return nil
+}
+
+// Shutdown initiates a graceful shutdown of the command bus.
+// New commands will be rejected, but existing commands will be allowed to complete.
+func (b *DefaultCommandBus) Shutdown() {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	b.isShuttingDown = true
+}
+
+// WaitForCompletion waits for all active commands to complete.
+// This should be called after Shutdown to ensure all commands have finished processing.
+func (b *DefaultCommandBus) WaitForCompletion() {
+	b.activeCommands.Wait()
 }

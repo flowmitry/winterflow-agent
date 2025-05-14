@@ -126,9 +126,18 @@ func (c *Client) GetAccessToken() string {
 	return c.accessToken
 }
 
-// Close closes the client connection
+// Close closes the client connection and gracefully shuts down the command bus
 func (c *Client) Close() error {
+	// Initiate graceful shutdown of the command bus
+	c.commandBus.Shutdown()
+
+	// Cancel the context to stop any ongoing operations
 	c.cancel()
+
+	// Wait for all active commands to complete
+	c.commandBus.WaitForCompletion()
+
+	// Close the gRPC connection
 	return c.conn.Close()
 }
 

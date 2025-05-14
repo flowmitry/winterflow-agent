@@ -23,4 +23,12 @@ type CommandBus interface {
 
 	// Register registers a command handler for a specific command type.
 	Register(handler interface{}) error
+
+	// Shutdown initiates a graceful shutdown of the command bus.
+	// New commands will be rejected, but existing commands will be allowed to complete.
+	Shutdown()
+
+	// WaitForCompletion waits for all active commands to complete.
+	// This should be called after Shutdown to ensure all commands have finished processing.
+	WaitForCompletion()
 }

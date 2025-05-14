@@ -1,15 +1,21 @@
 package cqrs
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
 )
 
+// ErrQueryBusShuttingDown is returned when a query is dispatched to a bus that is shutting down.
+var ErrQueryBusShuttingDown = errors.New("query bus is shutting down")
+
 // DefaultQueryBus is a simple implementation of the QueryBus interface.
 type DefaultQueryBus struct {
-	handlers map[string]interface{}
-	mutex    sync.RWMutex
+	handlers       map[string]interface{}
+	mutex          sync.RWMutex
+	isShuttingDown bool
+	activeQueries  sync.WaitGroup
 }
 
 // NewQueryBus creates a new DefaultQueryBus.
@@ -74,12 +80,22 @@ func (b *DefaultQueryBus) Register(handler interface{}) error {
 // Dispatch sends a query to its appropriate handler and returns the result.
 func (b *DefaultQueryBus) Dispatch(query Query) (interface{}, error) {
 	b.mutex.RLock()
+	// Check if the bus is shutting down
+	if b.isShuttingDown {
+		b.mutex.RUnlock()
+		return nil, ErrQueryBusShuttingDown
+	}
+
 	handler, exists := b.handlers[query.QueryName()]
 	b.mutex.RUnlock()
 
 	if !exists {
 		return nil, fmt.Errorf("no handler registered for query %s", query.QueryName())
 	}
+
+	// Increment the active queries counter
+	b.activeQueries.Add(1)
+	defer b.activeQueries.Done()
 
 	// Call the handler's Handle method with the query
 	handlerValue := reflect.ValueOf(handler)
@@ -94,4 +110,18 @@ func (b *DefaultQueryBus) Dispatch(query Query) (interface{}, error) {
 
 	// Return the result (first return value)
 	return results[0].Interface(), nil
+}
+
+// Shutdown initiates a graceful shutdown of the query bus.
+// New queries will be rejected, but existing queries will be allowed to complete.
+func (b *DefaultQueryBus) Shutdown() {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	b.isShuttingDown = true
+}
+
+// WaitForCompletion waits for all active queries to complete.
+// This should be called after Shutdown to ensure all queries have finished processing.
+func (b *DefaultQueryBus) WaitForCompletion() {
+	b.activeQueries.Wait()
 }
