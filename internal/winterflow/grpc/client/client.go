@@ -46,8 +46,9 @@ type Client struct {
 	isRegistered bool
 	regMutex     sync.RWMutex
 
-	// Command bus for CQRS
+	// Command and Query buses for CQRS
 	commandBus cqrs.CommandBus
+	queryBus   cqrs.QueryBus
 }
 
 // setupConnection creates a new gRPC connection and client
@@ -74,9 +75,16 @@ func NewClient(serverAddress string) (*Client, error) {
 
 	// Create command bus and register handlers
 	commandBus := cqrs.NewCommandBus()
-	if err := handlers.RegisterHandlers(commandBus); err != nil {
+	if err := handlers.RegisterCommandHandlers(commandBus); err != nil {
 		cancel()
-		return nil, log.Errorf("failed to register create app handler: %v", err)
+		return nil, log.Errorf("failed to register command handlers: %v", err)
+	}
+
+	// Create query bus and register handlers
+	queryBus := cqrs.NewQueryBus()
+	if err := handlers.RegisterQueryHandlers(queryBus); err != nil {
+		cancel()
+		return nil, log.Errorf("failed to register query handlers: %v", err)
 	}
 
 	client := &Client{
@@ -89,6 +97,7 @@ func NewClient(serverAddress string) (*Client, error) {
 		regMutex:          sync.RWMutex{},
 		backoffStrategy:   backoff.New(DefaultReconnectInterval, DefaultMaximumReconnectInterval),
 		commandBus:        commandBus,
+		queryBus:          queryBus,
 	}
 
 	if err := client.setupConnection(); err != nil {
@@ -126,16 +135,18 @@ func (c *Client) GetAccessToken() string {
 	return c.accessToken
 }
 
-// Close closes the client connection and gracefully shuts down the command bus
+// Close closes the client connection and gracefully shuts down the command and query buses
 func (c *Client) Close() error {
-	// Initiate graceful shutdown of the command bus
+	// Initiate graceful shutdown of the command and query buses
 	c.commandBus.Shutdown()
+	c.queryBus.Shutdown()
 
 	// Cancel the context to stop any ongoing operations
 	c.cancel()
 
-	// Wait for all active commands to complete
+	// Wait for all active commands and queries to complete
 	c.commandBus.WaitForCompletion()
+	c.queryBus.WaitForCompletion()
 
 	// Close the gRPC connection
 	return c.conn.Close()
@@ -350,31 +361,31 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 
 // StartAgentStream starts a bidirectional stream
 func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider func() map[string]string, capabilities map[string]string, features map[string]bool, serverToken string) error {
-	log.Printf("Starting heartbeat stream with server ID: %s", serverID)
+	log.Printf("Starting Agent stream with server ID: %s", serverID)
 	log.Printf("Current registration state: %v", c.IsRegistered())
 
 	// Start goroutine to maintain the heartbeat stream
 	go func() {
-		log.Printf("Heartbeat stream goroutine started")
+		log.Printf("Agent stream goroutine started")
 	outerLoop:
 		for {
 			// Check if we should stop
 			select {
 			case <-c.streamCleanup:
-				log.Printf("Heartbeat stream cleanup requested")
+				log.Printf("Agent stream cleanup requested")
 				return
 			default:
 			}
 
 			// Check if agent is still registered
 			if !c.IsRegistered() {
-				log.Printf("Agent is not registered, stopping heartbeat stream")
+				log.Printf("Agent is not registered, stopping Agent stream")
 				return
 			}
 
 			// Ensure connection is ready before starting the stream
 			if err := c.waitForReady(); err != nil {
-				log.Printf("Connection not ready before starting heartbeat stream: %v", err)
+				log.Printf("Connection not ready before starting Agent stream: %v", err)
 				if err := c.reconnect(); err != nil {
 					log.Printf("Failed to reconnect, will retry: %v", err)
 					time.Sleep(c.getNextReconnectInterval())
@@ -383,10 +394,10 @@ func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider 
 				continue
 			}
 
-			log.Printf("Creating heartbeat stream")
+			log.Printf("Creating Agent stream")
 			stream, err := c.client.AgentStream(c.ctx)
 			if err != nil {
-				log.Printf("Failed to create heartbeat stream: %v", err)
+				log.Printf("Failed to create Agent stream: %v", err)
 				if err := c.reconnect(); err != nil {
 					log.Printf("Failed to reconnect, will retry: %v", err)
 					time.Sleep(c.getNextReconnectInterval())
@@ -395,7 +406,7 @@ func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider 
 				continue
 			}
 
-			log.Printf("Heartbeat stream established successfully")
+			log.Printf("Agent stream established successfully")
 
 			// Send initial heartbeat
 			baseMsg := &pb.BaseMessage{
@@ -553,40 +564,20 @@ func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider 
 					log.Printf("Periodic heartbeat sent successfully")
 
 				case appRequest := <-appRequestCh:
-					log.Printf("Processing app request for app ID: %s", appRequest.AppId)
-
-					// Here you would implement the logic to retrieve the app
-					// For now, we'll just send a dummy response
-					baseResp := &pb.BaseResponse{
-						MessageId:    GenerateUUID(),
-						Timestamp:    TimestampNow(),
-						ResponseCode: pb.ResponseCode_RESPONSE_CODE_SUCCESS,
-						Message:      "App retrieved successfully",
-						ServerId:     serverID,
-					}
-
-					appResp := &pb.GetAppResponseV1{
-						Base: baseResp,
-						App: &pb.AppV1{
-							AppId: appRequest.AppId,
-							// Other fields would be populated here
-						},
-					}
-
-					agentMsg := &pb.AgentMessage{
-						Message: &pb.AgentMessage_GetAppResponseV1{
-							GetAppResponseV1: appResp,
-						},
+					agentMsg, err := HandleGetAppQuery(c.queryBus, appRequest, serverID)
+					if err != nil {
+						log.Error("Error retrieving app response: %v", err)
+						continue
 					}
 
 					if err := stream.Send(agentMsg); err != nil {
-						log.Printf("Error sending app response: %v", err)
+						log.Warn("Error sending app response: %v", err)
 						continue
 					}
-					log.Printf("App response sent successfully")
+					log.Info("App response sent successfully")
 
 				case createAppRequest := <-createAppRequestCh:
-					agentMsg, err := handleCreateAppRequest(c.commandBus, createAppRequest, serverID)
+					agentMsg, err := HandleCreateAppRequest(c.commandBus, createAppRequest, serverID)
 					if err != nil {
 						log.Error("Error creating app response: %v", err)
 						continue

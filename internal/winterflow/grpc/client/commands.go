@@ -9,7 +9,7 @@ import (
 )
 
 // HandleCreateAppRequest handles the command dispatch and creates the appropriate response message
-func handleCreateAppRequest(commandBus cqrs.CommandBus, createAppRequest *pb.CreateAppRequestV1, serverID string) (*pb.AgentMessage, error) {
+func HandleCreateAppRequest(commandBus cqrs.CommandBus, createAppRequest *pb.CreateAppRequestV1, serverID string) (*pb.AgentMessage, error) {
 	log.Debug("Processing create app request for app ID: %s", createAppRequest.App.AppId)
 
 	// Create and dispatch the command

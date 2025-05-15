@@ -668,7 +668,6 @@ type AppFileV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Content       []byte                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
-	Hash          string                 `protobuf:"bytes,3,opt,name=hash,proto3" json:"hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -715,13 +714,6 @@ func (x *AppFileV1) GetContent() []byte {
 		return x.Content
 	}
 	return nil
-}
-
-func (x *AppFileV1) GetHash() string {
-	if x != nil {
-		return x.Hash
-	}
-	return ""
 }
 
 type GetAppResponseV1 struct {
@@ -1133,11 +1125,10 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x06config\x18\x02 \x01(\fR\x06config\x12\x1c\n" +
 	"\tvariables\x18\x03 \x01(\fR\tvariables\x12\x18\n" +
 	"\asecrets\x18\x04 \x01(\fR\asecrets\x12#\n" +
-	"\x05files\x18\x05 \x03(\v2\r.pb.AppFileV1R\x05files\"M\n" +
+	"\x05files\x18\x05 \x03(\v2\r.pb.AppFileV1R\x05files\"9\n" +
 	"\tAppFileV1\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\fR\acontent\x12\x12\n" +
-	"\x04hash\x18\x03 \x01(\tR\x04hash\"U\n" +
+	"\acontent\x18\x02 \x01(\fR\acontent\"U\n" +
 	"\x10GetAppResponseV1\x12$\n" +
 	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x1b\n" +
 	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"V\n" +
