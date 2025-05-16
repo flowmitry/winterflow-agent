@@ -11,12 +11,12 @@ import (
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/winterflow/grpc/pb"
+	"winterflow-agent/pkg/certs"
 	"winterflow-agent/pkg/cqrs"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"winterflow-agent/pkg/backoff"
 )
@@ -49,14 +49,43 @@ type Client struct {
 	// Command and Query buses for CQRS
 	commandBus cqrs.CommandBus
 	queryBus   cqrs.QueryBus
+
+	// Certificate paths
+	certPath string
+	keyPath  string
+	useTLS   bool
 }
 
 // setupConnection creates a new gRPC connection and client
 func (c *Client) setupConnection() error {
+	var opts []grpc.DialOption
+
+	// Add timeout option
+	opts = append(opts, grpc.WithTimeout(c.connectionTimeout))
+
+	// Always use TLS and fail if certificates don't exist
+	if c.certPath == "" || c.keyPath == "" {
+		return log.Errorf("TLS is required but certificate paths are not configured")
+	}
+
+	if !certs.CertificateExists(c.certPath) {
+		return log.Errorf("TLS is required but certificate does not exist at path: %s", c.certPath)
+	}
+
+	if !certs.CertificateExists(c.keyPath) {
+		return log.Errorf("TLS is required but key does not exist at path: %s", c.keyPath)
+	}
+
+	log.Printf("Setting up secure gRPC connection with TLS credentials")
+	creds, err := certs.LoadTLSCredentials(c.certPath, c.keyPath)
+	if err != nil {
+		return log.Errorf("Failed to load TLS credentials: %v", err)
+	}
+	opts = append(opts, grpc.WithTransportCredentials(creds))
+
 	clientConn, err := grpc.NewClient(
 		c.serverAddress,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithTimeout(c.connectionTimeout),
+		opts...,
 	)
 	if err != nil {
 		return log.Errorf("failed to create gRPC client: %v", err)
@@ -68,7 +97,7 @@ func (c *Client) setupConnection() error {
 }
 
 // NewClient creates a new gRPC client
-func NewClient(serverAddress string) (*Client, error) {
+func NewClient(serverAddress string, certPath, keyPath string) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	log.Printf("Creating new gRPC client for %s", serverAddress)
@@ -87,6 +116,21 @@ func NewClient(serverAddress string) (*Client, error) {
 		return nil, log.Errorf("failed to register query handlers: %v", err)
 	}
 
+	// Always use TLS and fail if certificates don't exist
+	if certPath == "" || keyPath == "" {
+		return nil, log.Errorf("TLS is required but certificate paths are not configured")
+	}
+
+	if !certs.CertificateExists(certPath) {
+		return nil, log.Errorf("TLS is required but certificate does not exist at path: %s", certPath)
+	}
+
+	if !certs.CertificateExists(keyPath) {
+		return nil, log.Errorf("TLS is required but key does not exist at path: %s", keyPath)
+	}
+
+	log.Printf("TLS enabled with certificate: %s", certPath)
+
 	client := &Client{
 		ctx:               ctx,
 		cancel:            cancel,
@@ -98,6 +142,9 @@ func NewClient(serverAddress string) (*Client, error) {
 		backoffStrategy:   backoff.New(DefaultReconnectInterval, DefaultMaximumReconnectInterval),
 		commandBus:        commandBus,
 		queryBus:          queryBus,
+		certPath:          certPath,
+		keyPath:           keyPath,
+		useTLS:            true, // Always use TLS
 	}
 
 	if err := client.setupConnection(); err != nil {
@@ -635,6 +682,19 @@ func (c *Client) reconnect() error {
 	if c.conn != nil {
 		log.Printf("Closing existing connection")
 		c.conn.Close()
+	}
+
+	// Always use TLS and fail if certificates don't exist
+	if c.certPath == "" || c.keyPath == "" {
+		return log.Errorf("TLS is required but certificate paths are not configured")
+	}
+
+	if !certs.CertificateExists(c.certPath) {
+		return log.Errorf("TLS is required but certificate does not exist at path: %s", c.certPath)
+	}
+
+	if !certs.CertificateExists(c.keyPath) {
+		return log.Errorf("TLS is required but key does not exist at path: %s", c.keyPath)
 	}
 
 	if err := c.setupConnection(); err != nil {

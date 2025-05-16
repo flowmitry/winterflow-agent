@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -11,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	log "winterflow-agent/pkg/log"
+
+	"google.golang.org/grpc/credentials"
 )
 
 // GeneratePrivateKey generates a new RSA private key and saves it to the specified path
@@ -137,4 +140,30 @@ func CreateCSR(certificateID string, privateKeyPath, csrPath string) (string, er
 
 	log.Printf("[DEBUG] Created CSR at: %s with Common Name: %s", csrPath, certificateID)
 	return csrBuffer.String(), nil
+}
+
+// LoadTLSCredentials loads TLS credentials from certificate and private key files
+func LoadTLSCredentials(certPath, keyPath string) (credentials.TransportCredentials, error) {
+	// Load certificate and private key
+	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load certificate and private key: %v", err)
+	}
+
+	// Create TLS configuration
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12, // Ensure minimum TLS version for security
+	}
+
+	// Create and return credentials
+	creds := credentials.NewTLS(tlsConfig)
+	log.Printf("[DEBUG] Loaded TLS credentials from certificate: %s and key: %s", certPath, keyPath)
+	return creds, nil
+}
+
+// CertificateExists checks if a certificate file exists
+func CertificateExists(certPath string) bool {
+	_, err := os.Stat(certPath)
+	return err == nil
 }
