@@ -3,10 +3,12 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"time"
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/config"
+	"winterflow-agent/pkg/certs"
 )
 
 // RegistrationError represents a structured error response from the server
@@ -34,8 +36,22 @@ func RegisterAgent(configPath string) error {
 		log.Printf("[DEBUG] Using existing server_id: %s", existingServerID)
 	}
 
-	// Request registration code
-	resp, err := client.RequestRegistrationCode(existingServerID)
+	// Generate agent private key
+	log.Printf("[DEBUG] Generating agent private key at: %s", cfg.AgentPrivateKeyPath)
+	if err := certs.GeneratePrivateKey(cfg.AgentPrivateKeyPath); err != nil {
+		return log.Errorf("failed to generate agent private key: %v", err)
+	}
+
+	// Create CSR
+	log.Printf("[DEBUG] Creating CSR at: %s", cfg.CSRPath)
+	certificateID := uuid.New().String()
+	csrData, err := certs.CreateCSR(certificateID, cfg.AgentPrivateKeyPath, cfg.CSRPath)
+	if err != nil {
+		return log.Errorf("failed to create CSR: %v", err)
+	}
+
+	// Request registration code and submit CSR
+	resp, err := client.RequestRegistrationCode(existingServerID, certificateID, csrData)
 	if err != nil {
 		// Check if it's an API error
 		if apiErr, ok := err.(*APIError); ok {
@@ -60,6 +76,14 @@ func RegisterAgent(configPath string) error {
 			log.Printf("[WARN] Failed to save server_id to config: %v", err)
 		} else {
 			log.Printf("[DEBUG] Saved new server_id to config: %s", resp.Data.ServerID)
+		}
+	}
+
+	// Save the certificate if it was returned
+	if resp.Data.CertificateData != "" {
+		log.Printf("[DEBUG] Saving certificate at: %s", cfg.CertificatePath)
+		if err := certs.SaveCertificate(resp.Data.CertificateData, cfg.CertificatePath); err != nil {
+			return log.Errorf("failed to save certificate: %v", err)
 		}
 	}
 

@@ -42,18 +42,21 @@ func (e *APIError) Error() string {
 
 // RegistrationRequest represents the request body for registration
 type RegistrationRequest struct {
-	Hostname string `json:"hostname"`
-	ServerID string `json:"server_id,omitempty"`
+	Hostname      string `json:"hostname"`
+	ServerID      string `json:"server_id"`
+	CertificateID string `json:"certificate_id"`
+	CSRData       string `json:"csr_data"`
 }
 
 // RegistrationResponse represents the response from registration API
 type RegistrationResponse struct {
 	Success bool `json:"success"`
 	Data    struct {
-		ServerID  string `json:"server_id"`
-		Code      string `json:"code"`
-		Token     string `json:"token"`
-		ExpiresAt string `json:"expires_at"`
+		ServerID        string `json:"server_id"`
+		Code            string `json:"code"`
+		Token           string `json:"token"`
+		ExpiresAt       string `json:"expires_at"`
+		CertificateData string `json:"certificate_data"`
 	} `json:"data"`
 }
 
@@ -66,15 +69,18 @@ type RegistrationStatusResponse struct {
 }
 
 // RequestRegistrationCode requests a registration code from the server
-func (c *Client) RequestRegistrationCode(serverID string) (*RegistrationResponse, error) {
+// If csrData and commonName are provided, it also submits a CSR and receives a signed certificate
+func (c *Client) RequestRegistrationCode(serverID string, csrData string, certificateID string) (*RegistrationResponse, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get hostname: %v", err)
 	}
 
 	reqBody := RegistrationRequest{
-		Hostname: hostname,
-		ServerID: serverID,
+		Hostname:      hostname,
+		ServerID:      serverID,
+		CertificateID: certificateID,
+		CSRData:       csrData,
 	}
 
 	jsonData, err := json.Marshal(reqBody)

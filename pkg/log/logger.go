@@ -67,5 +67,6 @@ func Fatal(args ...any) {
 // Errorf creates an error with a formatted message.
 // This is a drop-in replacement for fmt.Errorf.
 func Errorf(format string, args ...any) error {
+	Error(format, args...)
 	return fmt.Errorf(format, args...)
 }

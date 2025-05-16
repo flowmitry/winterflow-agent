@@ -19,6 +19,12 @@ const (
 	DefaultAnsibleAppsRolesPath = "ansible/apps_roles"
 	// DefaultAppsPath is the default path for application files
 	DefaultAppsPath = "apps"
+	// DefaultAgentPrivateKeyPath is the default path for the agent's private key
+	DefaultAgentPrivateKeyPath = "certs/agent.key"
+	// DefaultCSRPath is the default path for the Certificate Signing Request
+	DefaultCSRPath = "certs/agent.csr"
+	// DefaultCertificatePath is the default path for the signed certificate
+	DefaultCertificatePath = "certs/agent.crt"
 )
 
 // Config holds the application configuration
@@ -36,6 +42,12 @@ type Config struct {
 	AppsPath string `json:"apps_path,omitempty"`
 	// AnsibleAppsPath is the path where ansible application files are stored
 	AnsibleAppsPath string `json:"ansible_apps_path,omitempty"`
+	// AgentPrivateKeyPath is the path where the agent's private key is stored
+	AgentPrivateKeyPath string `json:"agent_private_key_path,omitempty"`
+	// CSRPath is the path where the Certificate Signing Request is stored
+	CSRPath string `json:"csr_path,omitempty"`
+	// CertificatePath is the path where the signed certificate is stored
+	CertificatePath string `json:"certificate_path,omitempty"`
 }
 
 // applyDefaults ensures that all necessary fields have default values if they are empty.
@@ -54,6 +66,15 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.AnsibleAppsPath == "" {
 		cfg.AnsibleAppsPath = DefaultAnsibleAppsRolesPath
+	}
+	if cfg.AgentPrivateKeyPath == "" {
+		cfg.AgentPrivateKeyPath = DefaultAgentPrivateKeyPath
+	}
+	if cfg.CSRPath == "" {
+		cfg.CSRPath = DefaultCSRPath
+	}
+	if cfg.CertificatePath == "" {
+		cfg.CertificatePath = DefaultCertificatePath
 	}
 }
 
