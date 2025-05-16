@@ -29,9 +29,8 @@ const (
 
 // Config holds the application configuration
 type Config struct {
-	ServerID    string          `json:"server_id"`
-	ServerToken string          `json:"server_token"`
-	Features    map[string]bool `json:"features"`
+	ServerID string          `json:"server_id"`
+	Features map[string]bool `json:"features"`
 	// GRPCServerAddress is the gRPC server address for agent communication
 	GRPCServerAddress string `json:"grpc_server_address,omitempty"`
 	// APIBaseURL is the base HTTP API URL for web interface
@@ -140,7 +139,7 @@ func WaitUntilReady(configPath string) (*Config, error) {
 				var config Config // Start with an empty config
 				if err := json.Unmarshal(data, &config); err == nil {
 					// Check if required fields are filled
-					if config.ServerID != "" && config.ServerToken != "" {
+					if config.ServerID != "" {
 						// All required fields are present, proceed
 						// Validate and merge features
 						config.Features = validateAndMergeFeatures(config.Features)

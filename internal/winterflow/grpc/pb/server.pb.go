@@ -94,7 +94,6 @@ type BaseMessage struct {
 	Timestamp *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// UUID
 	ServerId      string `protobuf:"bytes,3,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	AccessToken   string `protobuf:"bytes,4,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -146,13 +145,6 @@ func (x *BaseMessage) GetTimestamp() *timestamppb.Timestamp {
 func (x *BaseMessage) GetServerId() string {
 	if x != nil {
 		return x.ServerId
-	}
-	return ""
-}
-
-func (x *BaseMessage) GetAccessToken() string {
-	if x != nil {
-		return x.AccessToken
 	}
 	return ""
 }
@@ -305,9 +297,8 @@ type RegisterAgentRequestV1 struct {
 	Timestamp *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// UUID
 	ServerId      string            `protobuf:"bytes,3,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	ServerToken   string            `protobuf:"bytes,4,opt,name=server_token,json=serverToken,proto3" json:"server_token,omitempty"`
-	Capabilities  map[string]string `protobuf:"bytes,5,rep,name=capabilities,proto3" json:"capabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Features      map[string]bool   `protobuf:"bytes,6,rep,name=features,proto3" json:"features,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	Capabilities  map[string]string `protobuf:"bytes,4,rep,name=capabilities,proto3" json:"capabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Features      map[string]bool   `protobuf:"bytes,5,rep,name=features,proto3" json:"features,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -363,13 +354,6 @@ func (x *RegisterAgentRequestV1) GetServerId() string {
 	return ""
 }
 
-func (x *RegisterAgentRequestV1) GetServerToken() string {
-	if x != nil {
-		return x.ServerToken
-	}
-	return ""
-}
-
 func (x *RegisterAgentRequestV1) GetCapabilities() map[string]string {
 	if x != nil {
 		return x.Capabilities
@@ -387,7 +371,6 @@ func (x *RegisterAgentRequestV1) GetFeatures() map[string]bool {
 type RegisterAgentResponseV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
-	AccessToken   string                 `protobuf:"bytes,2,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -427,13 +410,6 @@ func (x *RegisterAgentResponseV1) GetBase() *BaseResponse {
 		return x.Base
 	}
 	return nil
-}
-
-func (x *RegisterAgentResponseV1) GetAccessToken() string {
-	if x != nil {
-		return x.AccessToken
-	}
-	return ""
 }
 
 // Agent heartbeat message
@@ -1073,13 +1049,12 @@ var File_internal_winterflow_grpc_pb_server_proto protoreflect.FileDescriptor
 
 const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\n" +
-	"(internal/winterflow/grpc/pb/server.proto\x12\x02pb\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa6\x01\n" +
+	"(internal/winterflow/grpc/pb/server.proto\x12\x02pb\x1a\x1fgoogle/protobuf/timestamp.proto\"\x83\x01\n" +
 	"\vBaseMessage\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1b\n" +
-	"\tserver_id\x18\x03 \x01(\tR\bserverId\x12!\n" +
-	"\faccess_token\x18\x04 \x01(\tR\vaccessToken\"\x83\x01\n" +
+	"\tserver_id\x18\x03 \x01(\tR\bserverId\"\x83\x01\n" +
 	"\vBaseCommand\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x128\n" +
@@ -1091,24 +1066,22 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x125\n" +
 	"\rresponse_code\x18\x03 \x01(\x0e2\x10.pb.ResponseCodeR\fresponseCode\x12\x18\n" +
 	"\amessage\x18\x04 \x01(\tR\amessage\x12\x1b\n" +
-	"\tserver_id\x18\x05 \x01(\tR\bserverId\"\xc7\x03\n" +
+	"\tserver_id\x18\x05 \x01(\tR\bserverId\"\xa4\x03\n" +
 	"\x16RegisterAgentRequestV1\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1b\n" +
-	"\tserver_id\x18\x03 \x01(\tR\bserverId\x12!\n" +
-	"\fserver_token\x18\x04 \x01(\tR\vserverToken\x12P\n" +
-	"\fcapabilities\x18\x05 \x03(\v2,.pb.RegisterAgentRequestV1.CapabilitiesEntryR\fcapabilities\x12D\n" +
-	"\bfeatures\x18\x06 \x03(\v2(.pb.RegisterAgentRequestV1.FeaturesEntryR\bfeatures\x1a?\n" +
+	"\tserver_id\x18\x03 \x01(\tR\bserverId\x12P\n" +
+	"\fcapabilities\x18\x04 \x03(\v2,.pb.RegisterAgentRequestV1.CapabilitiesEntryR\fcapabilities\x12D\n" +
+	"\bfeatures\x18\x05 \x03(\v2(.pb.RegisterAgentRequestV1.FeaturesEntryR\bfeatures\x1a?\n" +
 	"\x11CapabilitiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a;\n" +
 	"\rFeaturesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"b\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"?\n" +
 	"\x17RegisterAgentResponseV1\x12$\n" +
-	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12!\n" +
-	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\"\xb0\x01\n" +
+	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"\xb0\x01\n" +
 	"\x10AgentHeartbeatV1\x12#\n" +
 	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12;\n" +
 	"\ametrics\x18\x02 \x03(\v2!.pb.AgentHeartbeatV1.MetricsEntryR\ametrics\x1a:\n" +

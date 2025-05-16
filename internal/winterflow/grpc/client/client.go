@@ -299,7 +299,7 @@ func (c *Client) SetRegistered(registered bool) {
 }
 
 // RegisterAgent registers the agent with the server
-func (c *Client) RegisterAgent(capabilities map[string]string, features map[string]bool, serverID, serverToken string) (*pb.RegisterAgentResponseV1, error) {
+func (c *Client) RegisterAgent(capabilities map[string]string, features map[string]bool, serverID string) (*pb.RegisterAgentResponseV1, error) {
 	log.Printf("Starting agent registration process")
 
 	// Create a unique message ID
@@ -309,7 +309,6 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 		MessageId:    messageID,
 		Timestamp:    TimestampNow(),
 		ServerId:     serverID,
-		ServerToken:  serverToken,
 		Capabilities: capabilities,
 		Features:     features,
 	}
@@ -400,14 +399,13 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 		// Success path.
 		log.Printf("Registration successful, setting registered state")
 		c.SetRegistered(true)
-		c.accessToken = resp.AccessToken
 
 		return resp, nil
 	}
 }
 
 // StartAgentStream starts a bidirectional stream
-func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider func() map[string]string, capabilities map[string]string, features map[string]bool, serverToken string) error {
+func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[string]string, capabilities map[string]string, features map[string]bool) error {
 	log.Printf("Starting Agent stream with server ID: %s", serverID)
 	log.Printf("Current registration state: %v", c.IsRegistered())
 
@@ -457,10 +455,9 @@ func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider 
 
 			// Send initial heartbeat
 			baseMsg := &pb.BaseMessage{
-				MessageId:   GenerateUUID(),
-				Timestamp:   TimestampNow(),
-				ServerId:    serverID,
-				AccessToken: accessToken,
+				MessageId: GenerateUUID(),
+				Timestamp: TimestampNow(),
+				ServerId:  serverID,
 			}
 
 			heartbeat := &pb.AgentHeartbeatV1{
@@ -584,10 +581,9 @@ func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider 
 					}
 
 					baseMsg := &pb.BaseMessage{
-						MessageId:   GenerateUUID(),
-						Timestamp:   TimestampNow(),
-						ServerId:    serverID,
-						AccessToken: accessToken,
+						MessageId: GenerateUUID(),
+						Timestamp: TimestampNow(),
+						ServerId:  serverID,
 					}
 
 					heartbeat := &pb.AgentHeartbeatV1{
@@ -644,14 +640,13 @@ func (c *Client) StartAgentStream(serverID, accessToken string, metricsProvider 
 				case <-reregisterCh:
 					log.Printf("Re-registering agent due to token expiration or agent not found")
 					stream.CloseSend()
-					resp, err := c.RegisterAgent(capabilities, features, serverID, serverToken)
+					_, err := c.RegisterAgent(capabilities, features, serverID)
 					if err != nil {
 						log.Printf("Failed to re-register agent: %v", err)
 						ticker.Stop()
 						time.Sleep(c.getNextReconnectInterval())
 						continue outerLoop
 					}
-					accessToken = resp.AccessToken
 					log.Printf("Successfully re-registered agent with new token")
 					ticker.Stop()
 					continue outerLoop

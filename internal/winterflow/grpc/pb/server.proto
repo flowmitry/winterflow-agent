@@ -24,7 +24,6 @@ message BaseMessage {
   google.protobuf.Timestamp timestamp = 2;
   // UUID
   string server_id = 3;
-  string access_token = 4;
 }
 
 message BaseCommand {
@@ -53,14 +52,12 @@ message RegisterAgentRequestV1 {
   google.protobuf.Timestamp timestamp = 2;
   // UUID
   string server_id = 3;
-  string server_token = 4;
-  map<string, string> capabilities = 5;
-  map<string, bool> features = 6;
+  map<string, string> capabilities = 4;
+  map<string, bool> features = 5;
 }
 
 message RegisterAgentResponseV1 {
   BaseResponse base = 1;
-  string access_token = 2;
 }
 
 // Agent heartbeat message

@@ -54,7 +54,6 @@ type RegistrationResponse struct {
 	Data    struct {
 		ServerID        string `json:"server_id"`
 		Code            string `json:"code"`
-		Token           string `json:"token"`
 		ExpiresAt       string `json:"expires_at"`
 		CertificateData string `json:"certificate_data"`
 	} `json:"data"`
@@ -130,7 +129,7 @@ func (c *Client) RequestRegistrationCode(serverID string, csrData string, certif
 }
 
 // GetRegistrationStatus checks the registration status
-func (c *Client) GetRegistrationStatus(serverID, serverToken string) (*RegistrationStatusResponse, error) {
+func (c *Client) GetRegistrationStatus(serverID string) (*RegistrationStatusResponse, error) {
 	url := fmt.Sprintf("%s/api/v1/servers/get-registration-status?server_id=%s", c.baseURL, serverID)
 	log.Printf("[DEBUG] Checking registration status at: %s", url)
 
@@ -138,8 +137,6 @@ func (c *Client) GetRegistrationStatus(serverID, serverToken string) (*Registrat
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
-
-	req.Header.Set("X-Server-Token", serverToken)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

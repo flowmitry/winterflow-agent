@@ -117,7 +117,7 @@ func RegisterAgent(configPath string) error {
 
 	// Poll for registration status
 	for {
-		statusResp, err := client.GetRegistrationStatus(resp.Data.ServerID, resp.Data.Token)
+		statusResp, err := client.GetRegistrationStatus(resp.Data.ServerID)
 		if err != nil {
 			// Check if it's an API error
 			if apiErr, ok := err.(*APIError); ok {
@@ -136,12 +136,6 @@ func RegisterAgent(configPath string) error {
 
 		switch statusResp.Data.Status {
 		case "registered":
-			// Update the configuration with the token
-			cfg.ServerToken = resp.Data.Token
-			if err := config.SaveConfig(cfg, configPath); err != nil {
-				return log.Errorf("failed to save configuration: %v", err)
-			}
-
 			fmt.Println("\n=== Registration Successful ===")
 			fmt.Println("The agent has been successfully registered and configured.")
 			fmt.Println("\nNext steps:")

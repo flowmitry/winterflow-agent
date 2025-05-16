@@ -39,25 +39,22 @@ func NewAgent(config *config.Config) (*Agent, error) {
 }
 
 // Register registers the agent with the server
-func (a *Agent) Register() (string, error) {
+func (a *Agent) Register() error {
 	log.Printf("Getting system capabilities")
 	capabilities := GetCapabilities().ToMap()
 
 	log.Printf("Registering agent with server")
-	resp, err := a.client.RegisterAgent(capabilities, a.config.Features, a.config.ServerID, a.config.ServerToken)
+	resp, err := a.client.RegisterAgent(capabilities, a.config.Features, a.config.ServerID)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if resp.Base.ResponseCode != 1 { // RESPONSE_CODE_SUCCESS = 1
-		return "", log.Errorf("registration failed: %s", resp.Base.Message)
+		return log.Errorf("registration failed: %s", resp.Base.Message)
 	}
 
-	// Store the access token in the client
-	a.client.SetAccessToken(resp.AccessToken)
-
-	log.Printf("Agent registered successfully. Access token: %s", resp.AccessToken)
-	return resp.AccessToken, nil
+	log.Printf("Agent registered successfully")
+	return nil
 }
 
 // collectMetrics collects system metrics for heartbeat
@@ -71,7 +68,7 @@ func (a *Agent) collectSystemInfo() map[string]string {
 }
 
 // StartHeartbeat starts the heartbeat stream
-func (a *Agent) StartHeartbeat(accessToken string) error {
+func (a *Agent) StartHeartbeat() error {
 	log.Printf("Collecting system metrics for heartbeat")
 
 	log.Printf("Getting system capabilities for heartbeat")
@@ -80,11 +77,9 @@ func (a *Agent) StartHeartbeat(accessToken string) error {
 	log.Printf("Starting heartbeat stream with server")
 	return a.client.StartAgentStream(
 		a.config.ServerID,
-		accessToken,
 		a.collectMetrics,
 		capabilities,
 		a.config.Features,
-		a.config.ServerToken,
 	)
 }
 
@@ -96,19 +91,19 @@ func (a *Agent) Close() {
 }
 
 // RegisterWithRetry attempts to register the agent with retry logic
-func (a *Agent) RegisterWithRetry(ctx context.Context) (string, error) {
+func (a *Agent) RegisterWithRetry(ctx context.Context) error {
 	b := backoff.New(2*time.Second, 1*time.Minute)
 
 	for {
-		token, err := a.Register()
+		err := a.Register()
 		if err == nil {
 			b.Reset()
-			return token, nil
+			return nil
 		}
 
 		// Unrecoverable errors should bubble up to abort agent run.
 		if err == client.ErrUnrecoverable || err == client.ErrUnrecoverableAgentAlreadyConnected {
-			return "", err
+			return err
 		}
 
 		delay := b.Next()
@@ -118,7 +113,7 @@ func (a *Agent) RegisterWithRetry(ctx context.Context) (string, error) {
 		case <-time.After(delay):
 			continue
 		case <-ctx.Done():
-			return "", log.Errorf("registration cancelled: %v", ctx.Err())
+			return log.Errorf("registration cancelled: %v", ctx.Err())
 		}
 	}
 }
@@ -127,15 +122,15 @@ func (a *Agent) RegisterWithRetry(ctx context.Context) (string, error) {
 func (a *Agent) Run(ctx context.Context) error {
 	// Register the agent
 	log.Printf("Registering agent with server: %s", a.config.GRPCServerAddress)
-	accessToken, err := a.RegisterWithRetry(ctx)
+	err := a.RegisterWithRetry(ctx)
 	if err != nil {
 		return log.Errorf("failed to register agent: %v", err)
 	}
-	log.Printf("Agent registered successfully with access token: %s", accessToken)
+	log.Printf("Agent registered successfully")
 
 	// Start heartbeat stream
 	log.Printf("Starting heartbeat stream")
-	if err := a.StartHeartbeat(accessToken); err != nil {
+	if err := a.StartHeartbeat(); err != nil {
 		return log.Errorf("failed to start heartbeat stream: %v", err)
 	}
 	log.Printf("Heartbeat stream started successfully")
