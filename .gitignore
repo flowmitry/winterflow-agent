@@ -2,11 +2,12 @@
 requests/
 agent*
 custom/
-.certs/
 ansible/vault_pass.txt
 ansible/version.txt
 ansible/apps_roles/*
 !ansible/apps_roles/README.md
+.certs/*
+!.certs/ca.crt
 
 # Binaries for programs and plugins
 *.exe
