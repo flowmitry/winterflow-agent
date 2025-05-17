@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/agent"
@@ -77,8 +78,12 @@ func main() {
 		// The agent will be closed by the defer a.Close() statement
 		// which will handle graceful shutdown of the command bus
 
-		// We don't need to call os.Exit() here, as the main function will exit naturally
+		// The main function will exit naturally
 		// after the agent is closed and all commands have completed
+		// Having a timeout to quit if the agent stuck
+		time.Sleep(5 * time.Second)
+		log.Printf("Shutting down agent")
+		os.Exit(0)
 	}()
 
 	log.Printf("Loading configuration from %s", *configPath)
