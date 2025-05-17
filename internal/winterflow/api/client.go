@@ -70,7 +70,7 @@ type RegistrationStatusResponse struct {
 
 // RequestRegistrationCode requests a registration code from the server
 // If csrData and commonName are provided, it also submits a CSR and receives a signed certificate
-func (c *Client) RequestRegistrationCode(serverID string, csrData string, certificateID string) (*RegistrationResponse, error) {
+func (c *Client) RequestRegistrationCode(serverID string, certificateID string, csrData string) (*RegistrationResponse, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get hostname: %v", err)

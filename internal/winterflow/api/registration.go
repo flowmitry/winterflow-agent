@@ -73,18 +73,15 @@ func RegisterAgent(configPath string) error {
 	if existingServerID == "" && resp.Data.ServerID != "" {
 		cfg.ServerID = resp.Data.ServerID
 		if err := config.SaveConfig(cfg, configPath); err != nil {
-			log.Printf("[WARN] Failed to save server_id to config: %v", err)
+			log.Warn("[WARN] Failed to save server_id to config: %v", err)
 		} else {
 			log.Printf("[DEBUG] Saved new server_id to config: %s", resp.Data.ServerID)
 		}
 	}
 
-	// Save the certificate if it was returned
-	if resp.Data.CertificateData != "" {
-		log.Printf("[DEBUG] Saving certificate at: %s", cfg.CertificatePath)
-		if err := certs.SaveCertificate(resp.Data.CertificateData, cfg.CertificatePath); err != nil {
-			return log.Errorf("failed to save certificate: %v", err)
-		}
+	log.Printf("[DEBUG] Saving certificate at: %s", cfg.CertificatePath)
+	if err := certs.SaveCertificate(resp.Data.CertificateData, cfg.CertificatePath); err != nil {
+		return log.Errorf("failed to save certificate: %v", err)
 	}
 
 	// Format the code with a dash
