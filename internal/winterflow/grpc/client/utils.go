@@ -33,12 +33,12 @@ func TimestampNow() *timestamppb.Timestamp {
 	return timestamppb.Now()
 }
 
-func createBaseResponse(messageID string, serverID string, code pb.ResponseCode, message string) pb.BaseResponse {
+func createBaseResponse(messageID string, agentID string, code pb.ResponseCode, message string) pb.BaseResponse {
 	return pb.BaseResponse{
 		MessageId:    messageID,
 		Timestamp:    TimestampNow(),
 		ResponseCode: code,
 		Message:      message,
-		ServerId:     serverID,
+		AgentId:      agentID,
 	}
 }

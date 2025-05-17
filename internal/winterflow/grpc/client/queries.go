@@ -9,7 +9,7 @@ import (
 )
 
 // HandleGetAppQuery handles the query dispatch and creates the appropriate response message
-func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1, serverID string) (*pb.AgentMessage, error) {
+func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1, agentID string) (*pb.AgentMessage, error) {
 	log.Debug("Processing get app request for app ID: %s", getAppRequest.AppId)
 
 	// Create the query
@@ -36,7 +36,7 @@ func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1
 		}
 	}
 
-	baseResp := createBaseResponse(getAppRequest.Base.MessageId, serverID, responseCode, responseMessage)
+	baseResp := createBaseResponse(getAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	getAppResp := &pb.GetAppResponseV1{
 		Base: &baseResp,
 		App:  app,

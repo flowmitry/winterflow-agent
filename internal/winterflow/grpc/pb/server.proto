@@ -23,15 +23,7 @@ message BaseMessage {
   string message_id = 1;
   google.protobuf.Timestamp timestamp = 2;
   // UUID
-  string server_id = 3;
-}
-
-message BaseCommand {
-  // UUID
-  string message_id = 1;
-  google.protobuf.Timestamp timestamp = 2;
-  // UUID
-  string server_id = 3;
+  string agent_id = 3;
 }
 
 message BaseResponse {
@@ -41,19 +33,14 @@ message BaseResponse {
   ResponseCode response_code = 3;
   string message = 4;
   // UUID
-  string server_id = 5;
+  string agent_id = 5;
 }
-
 
 // Agent registration messages
 message RegisterAgentRequestV1 {
-  // UUID
-  string message_id = 1;
-  google.protobuf.Timestamp timestamp = 2;
-  // UUID
-  string server_id = 3;
-  map<string, string> capabilities = 4;
-  map<string, bool> features = 5;
+  BaseMessage base = 1;
+  map<string, string> capabilities = 2;
+  map<string, bool> features = 3;
 }
 
 message RegisterAgentResponseV1 {
@@ -72,7 +59,7 @@ message HeartbeatResponseV1 {
 
 // App retrieval messages
 message GetAppRequestV1 {
-  BaseCommand base = 1;
+  BaseMessage base = 1;
   // UUID
   string app_id = 2;
 }
@@ -97,7 +84,7 @@ message GetAppResponseV1 {
 }
 
 message CreateAppRequestV1 {
-  BaseCommand base = 1;
+  BaseMessage base = 1;
   AppV1 app = 2;
 }
 

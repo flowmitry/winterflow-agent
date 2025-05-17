@@ -327,16 +327,18 @@ func (c *Client) SetRegistered(registered bool) {
 }
 
 // RegisterAgent registers the agent with the server
-func (c *Client) RegisterAgent(capabilities map[string]string, features map[string]bool, serverID string) (*pb.RegisterAgentResponseV1, error) {
+func (c *Client) RegisterAgent(capabilities map[string]string, features map[string]bool, agentID string) (*pb.RegisterAgentResponseV1, error) {
 	log.Printf("Starting agent registration process")
 
 	// Create a unique message ID
 	messageID := GenerateUUID()
 
 	req := &pb.RegisterAgentRequestV1{
-		MessageId:    messageID,
-		Timestamp:    TimestampNow(),
-		ServerId:     serverID,
+		Base: &pb.BaseMessage{
+			MessageId: messageID,
+			Timestamp: TimestampNow(),
+			AgentId:   agentID,
+		},
 		Capabilities: capabilities,
 		Features:     features,
 	}
@@ -433,8 +435,8 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 }
 
 // StartAgentStream starts a bidirectional stream
-func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[string]string, capabilities map[string]string, features map[string]bool) error {
-	log.Printf("Starting Agent stream with server ID: %s", serverID)
+func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[string]string, capabilities map[string]string, features map[string]bool) error {
+	log.Printf("Starting Agent stream with server ID: %s", agentID)
 	log.Printf("Current registration state: %v", c.IsRegistered())
 
 	// Start goroutine to maintain the heartbeat stream
@@ -507,7 +509,7 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 			baseMsg := &pb.BaseMessage{
 				MessageId: GenerateUUID(),
 				Timestamp: TimestampNow(),
-				ServerId:  serverID,
+				AgentId:   agentID,
 			}
 
 			heartbeat := &pb.AgentHeartbeatV1{
@@ -635,7 +637,7 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 					baseMsg := &pb.BaseMessage{
 						MessageId: GenerateUUID(),
 						Timestamp: TimestampNow(),
-						ServerId:  serverID,
+						AgentId:   agentID,
 					}
 
 					heartbeat := &pb.AgentHeartbeatV1{
@@ -659,7 +661,7 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 					log.Printf("Periodic heartbeat sent successfully")
 
 				case appRequest := <-appRequestCh:
-					agentMsg, err := HandleGetAppQuery(c.queryBus, appRequest, serverID)
+					agentMsg, err := HandleGetAppQuery(c.queryBus, appRequest, agentID)
 					if err != nil {
 						log.Error("Error retrieving app response: %v", err)
 						continue
@@ -672,7 +674,7 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 					log.Info("App response sent successfully")
 
 				case createAppRequest := <-createAppRequestCh:
-					agentMsg, err := HandleCreateAppRequest(c.commandBus, createAppRequest, serverID)
+					agentMsg, err := HandleCreateAppRequest(c.commandBus, createAppRequest, agentID)
 					if err != nil {
 						log.Error("Error creating app response: %v", err)
 						continue
@@ -692,7 +694,7 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 				case <-reregisterCh:
 					log.Printf("Re-registering agent due to agent not found")
 					stream.CloseSend()
-					_, err := c.RegisterAgent(capabilities, features, serverID)
+					_, err := c.RegisterAgent(capabilities, features, agentID)
 					if err != nil {
 						log.Printf("Failed to re-register agent: %v", err)
 						ticker.Stop()

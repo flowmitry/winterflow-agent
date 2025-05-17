@@ -29,11 +29,11 @@ func RegisterAgent(configPath string) error {
 
 	client := NewClient(cfg.APIBaseURL)
 
-	// Try to load existing config to get server_id
-	var existingServerID string
-	if cfg.ServerID != "" {
-		existingServerID = cfg.ServerID
-		log.Printf("[DEBUG] Using existing server_id: %s", existingServerID)
+	// Try to load existing config to get agent_id
+	var existingAgentID string
+	if cfg.AgentID != "" {
+		existingAgentID = cfg.AgentID
+		log.Printf("[DEBUG] Using existing agent_id: %s", existingAgentID)
 	}
 
 	// Generate agent private key
@@ -51,7 +51,7 @@ func RegisterAgent(configPath string) error {
 	}
 
 	// Request registration code and submit CSR
-	resp, err := client.RequestRegistrationCode(existingServerID, csrData)
+	resp, err := client.RequestRegistrationCode(existingAgentID, csrData)
 	if err != nil {
 		// Check if it's an API error
 		if apiErr, ok := err.(*APIError); ok {
@@ -69,13 +69,13 @@ func RegisterAgent(configPath string) error {
 		return log.Errorf("connection error: %v", err)
 	}
 
-	// Save server_id to config immediately if it's new
-	if existingServerID == "" && resp.Data.ServerID != "" {
-		cfg.ServerID = resp.Data.ServerID
+	// Save agent_id to config immediately if it's new
+	if existingAgentID == "" && resp.Data.ServerID != "" {
+		cfg.AgentID = resp.Data.ServerID
 		if err := config.SaveConfig(cfg, configPath); err != nil {
-			log.Warn("[WARN] Failed to save server_id to config: %v", err)
+			log.Warn("[WARN] Failed to save agent_id to config: %v", err)
 		} else {
-			log.Printf("[DEBUG] Saved new server_id to config: %s", resp.Data.ServerID)
+			log.Printf("[DEBUG] Saved new agent_id to config: %s", resp.Data.ServerID)
 		}
 	}
 

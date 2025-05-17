@@ -93,7 +93,7 @@ type BaseMessage struct {
 	MessageId string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
 	Timestamp *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// UUID
-	ServerId      string `protobuf:"bytes,3,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	AgentId       string `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -142,71 +142,9 @@ func (x *BaseMessage) GetTimestamp() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *BaseMessage) GetServerId() string {
+func (x *BaseMessage) GetAgentId() string {
 	if x != nil {
-		return x.ServerId
-	}
-	return ""
-}
-
-type BaseCommand struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// UUID
-	MessageId string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	Timestamp *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// UUID
-	ServerId      string `protobuf:"bytes,3,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *BaseCommand) Reset() {
-	*x = BaseCommand{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BaseCommand) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BaseCommand) ProtoMessage() {}
-
-func (x *BaseCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BaseCommand.ProtoReflect.Descriptor instead.
-func (*BaseCommand) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *BaseCommand) GetMessageId() string {
-	if x != nil {
-		return x.MessageId
-	}
-	return ""
-}
-
-func (x *BaseCommand) GetTimestamp() *timestamppb.Timestamp {
-	if x != nil {
-		return x.Timestamp
-	}
-	return nil
-}
-
-func (x *BaseCommand) GetServerId() string {
-	if x != nil {
-		return x.ServerId
+		return x.AgentId
 	}
 	return ""
 }
@@ -219,14 +157,14 @@ type BaseResponse struct {
 	ResponseCode ResponseCode           `protobuf:"varint,3,opt,name=response_code,json=responseCode,proto3,enum=pb.ResponseCode" json:"response_code,omitempty"`
 	Message      string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
 	// UUID
-	ServerId      string `protobuf:"bytes,5,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	AgentId       string `protobuf:"bytes,5,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BaseResponse) Reset() {
 	*x = BaseResponse{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[2]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -238,7 +176,7 @@ func (x *BaseResponse) String() string {
 func (*BaseResponse) ProtoMessage() {}
 
 func (x *BaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[2]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -251,7 +189,7 @@ func (x *BaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BaseResponse.ProtoReflect.Descriptor instead.
 func (*BaseResponse) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{2}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *BaseResponse) GetMessageId() string {
@@ -282,30 +220,26 @@ func (x *BaseResponse) GetMessage() string {
 	return ""
 }
 
-func (x *BaseResponse) GetServerId() string {
+func (x *BaseResponse) GetAgentId() string {
 	if x != nil {
-		return x.ServerId
+		return x.AgentId
 	}
 	return ""
 }
 
 // Agent registration messages
 type RegisterAgentRequestV1 struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// UUID
-	MessageId string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	Timestamp *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// UUID
-	ServerId      string            `protobuf:"bytes,3,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	Capabilities  map[string]string `protobuf:"bytes,4,rep,name=capabilities,proto3" json:"capabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Features      map[string]bool   `protobuf:"bytes,5,rep,name=features,proto3" json:"features,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	Capabilities  map[string]string      `protobuf:"bytes,2,rep,name=capabilities,proto3" json:"capabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Features      map[string]bool        `protobuf:"bytes,3,rep,name=features,proto3" json:"features,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RegisterAgentRequestV1) Reset() {
 	*x = RegisterAgentRequestV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[3]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -317,7 +251,7 @@ func (x *RegisterAgentRequestV1) String() string {
 func (*RegisterAgentRequestV1) ProtoMessage() {}
 
 func (x *RegisterAgentRequestV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[3]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -330,28 +264,14 @@ func (x *RegisterAgentRequestV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterAgentRequestV1.ProtoReflect.Descriptor instead.
 func (*RegisterAgentRequestV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{3}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *RegisterAgentRequestV1) GetMessageId() string {
+func (x *RegisterAgentRequestV1) GetBase() *BaseMessage {
 	if x != nil {
-		return x.MessageId
-	}
-	return ""
-}
-
-func (x *RegisterAgentRequestV1) GetTimestamp() *timestamppb.Timestamp {
-	if x != nil {
-		return x.Timestamp
+		return x.Base
 	}
 	return nil
-}
-
-func (x *RegisterAgentRequestV1) GetServerId() string {
-	if x != nil {
-		return x.ServerId
-	}
-	return ""
 }
 
 func (x *RegisterAgentRequestV1) GetCapabilities() map[string]string {
@@ -377,7 +297,7 @@ type RegisterAgentResponseV1 struct {
 
 func (x *RegisterAgentResponseV1) Reset() {
 	*x = RegisterAgentResponseV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[4]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -389,7 +309,7 @@ func (x *RegisterAgentResponseV1) String() string {
 func (*RegisterAgentResponseV1) ProtoMessage() {}
 
 func (x *RegisterAgentResponseV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[4]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -402,7 +322,7 @@ func (x *RegisterAgentResponseV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterAgentResponseV1.ProtoReflect.Descriptor instead.
 func (*RegisterAgentResponseV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{4}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *RegisterAgentResponseV1) GetBase() *BaseResponse {
@@ -423,7 +343,7 @@ type AgentHeartbeatV1 struct {
 
 func (x *AgentHeartbeatV1) Reset() {
 	*x = AgentHeartbeatV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[5]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -435,7 +355,7 @@ func (x *AgentHeartbeatV1) String() string {
 func (*AgentHeartbeatV1) ProtoMessage() {}
 
 func (x *AgentHeartbeatV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[5]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -448,7 +368,7 @@ func (x *AgentHeartbeatV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentHeartbeatV1.ProtoReflect.Descriptor instead.
 func (*AgentHeartbeatV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{5}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *AgentHeartbeatV1) GetBase() *BaseMessage {
@@ -474,7 +394,7 @@ type HeartbeatResponseV1 struct {
 
 func (x *HeartbeatResponseV1) Reset() {
 	*x = HeartbeatResponseV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[6]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -486,7 +406,7 @@ func (x *HeartbeatResponseV1) String() string {
 func (*HeartbeatResponseV1) ProtoMessage() {}
 
 func (x *HeartbeatResponseV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[6]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -499,7 +419,7 @@ func (x *HeartbeatResponseV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatResponseV1.ProtoReflect.Descriptor instead.
 func (*HeartbeatResponseV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{6}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *HeartbeatResponseV1) GetBase() *BaseResponse {
@@ -512,7 +432,7 @@ func (x *HeartbeatResponseV1) GetBase() *BaseResponse {
 // App retrieval messages
 type GetAppRequestV1 struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Base  *BaseCommand           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	Base  *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
 	// UUID
 	AppId         string `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -521,7 +441,7 @@ type GetAppRequestV1 struct {
 
 func (x *GetAppRequestV1) Reset() {
 	*x = GetAppRequestV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[7]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -533,7 +453,7 @@ func (x *GetAppRequestV1) String() string {
 func (*GetAppRequestV1) ProtoMessage() {}
 
 func (x *GetAppRequestV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[7]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -546,10 +466,10 @@ func (x *GetAppRequestV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAppRequestV1.ProtoReflect.Descriptor instead.
 func (*GetAppRequestV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{7}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *GetAppRequestV1) GetBase() *BaseCommand {
+func (x *GetAppRequestV1) GetBase() *BaseMessage {
 	if x != nil {
 		return x.Base
 	}
@@ -577,7 +497,7 @@ type AppV1 struct {
 
 func (x *AppV1) Reset() {
 	*x = AppV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[8]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -589,7 +509,7 @@ func (x *AppV1) String() string {
 func (*AppV1) ProtoMessage() {}
 
 func (x *AppV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[8]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -602,7 +522,7 @@ func (x *AppV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppV1.ProtoReflect.Descriptor instead.
 func (*AppV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{8}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AppV1) GetAppId() string {
@@ -650,7 +570,7 @@ type AppFileV1 struct {
 
 func (x *AppFileV1) Reset() {
 	*x = AppFileV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[9]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -662,7 +582,7 @@ func (x *AppFileV1) String() string {
 func (*AppFileV1) ProtoMessage() {}
 
 func (x *AppFileV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[9]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -675,7 +595,7 @@ func (x *AppFileV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppFileV1.ProtoReflect.Descriptor instead.
 func (*AppFileV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{9}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *AppFileV1) GetName() string {
@@ -702,7 +622,7 @@ type GetAppResponseV1 struct {
 
 func (x *GetAppResponseV1) Reset() {
 	*x = GetAppResponseV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[10]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -714,7 +634,7 @@ func (x *GetAppResponseV1) String() string {
 func (*GetAppResponseV1) ProtoMessage() {}
 
 func (x *GetAppResponseV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[10]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -727,7 +647,7 @@ func (x *GetAppResponseV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAppResponseV1.ProtoReflect.Descriptor instead.
 func (*GetAppResponseV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{10}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetAppResponseV1) GetBase() *BaseResponse {
@@ -746,7 +666,7 @@ func (x *GetAppResponseV1) GetApp() *AppV1 {
 
 type CreateAppRequestV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Base          *BaseCommand           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	Base          *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
 	App           *AppV1                 `protobuf:"bytes,2,opt,name=app,proto3" json:"app,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -754,7 +674,7 @@ type CreateAppRequestV1 struct {
 
 func (x *CreateAppRequestV1) Reset() {
 	*x = CreateAppRequestV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[11]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -766,7 +686,7 @@ func (x *CreateAppRequestV1) String() string {
 func (*CreateAppRequestV1) ProtoMessage() {}
 
 func (x *CreateAppRequestV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[11]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -779,10 +699,10 @@ func (x *CreateAppRequestV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAppRequestV1.ProtoReflect.Descriptor instead.
 func (*CreateAppRequestV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{11}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *CreateAppRequestV1) GetBase() *BaseCommand {
+func (x *CreateAppRequestV1) GetBase() *BaseMessage {
 	if x != nil {
 		return x.Base
 	}
@@ -806,7 +726,7 @@ type CreateAppResponseV1 struct {
 
 func (x *CreateAppResponseV1) Reset() {
 	*x = CreateAppResponseV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[12]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -818,7 +738,7 @@ func (x *CreateAppResponseV1) String() string {
 func (*CreateAppResponseV1) ProtoMessage() {}
 
 func (x *CreateAppResponseV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[12]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -831,7 +751,7 @@ func (x *CreateAppResponseV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAppResponseV1.ProtoReflect.Descriptor instead.
 func (*CreateAppResponseV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{12}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreateAppResponseV1) GetBase() *BaseResponse {
@@ -863,7 +783,7 @@ type ServerCommand struct {
 
 func (x *ServerCommand) Reset() {
 	*x = ServerCommand{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[13]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -875,7 +795,7 @@ func (x *ServerCommand) String() string {
 func (*ServerCommand) ProtoMessage() {}
 
 func (x *ServerCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[13]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -888,7 +808,7 @@ func (x *ServerCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerCommand.ProtoReflect.Descriptor instead.
 func (*ServerCommand) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{13}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ServerCommand) GetCommand() isServerCommand_Command {
@@ -961,7 +881,7 @@ type AgentMessage struct {
 
 func (x *AgentMessage) Reset() {
 	*x = AgentMessage{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[14]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -973,7 +893,7 @@ func (x *AgentMessage) String() string {
 func (*AgentMessage) ProtoMessage() {}
 
 func (x *AgentMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[14]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -986,7 +906,7 @@ func (x *AgentMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentMessage.ProtoReflect.Descriptor instead.
 func (*AgentMessage) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{14}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AgentMessage) GetMessage() isAgentMessage_Message {
@@ -1049,31 +969,23 @@ var File_internal_winterflow_grpc_pb_server_proto protoreflect.FileDescriptor
 
 const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\n" +
-	"(internal/winterflow/grpc/pb/server.proto\x12\x02pb\x1a\x1fgoogle/protobuf/timestamp.proto\"\x83\x01\n" +
+	"(internal/winterflow/grpc/pb/server.proto\x12\x02pb\x1a\x1fgoogle/protobuf/timestamp.proto\"\x81\x01\n" +
 	"\vBaseMessage\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x128\n" +
-	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1b\n" +
-	"\tserver_id\x18\x03 \x01(\tR\bserverId\"\x83\x01\n" +
-	"\vBaseCommand\x12\x1d\n" +
-	"\n" +
-	"message_id\x18\x01 \x01(\tR\tmessageId\x128\n" +
-	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1b\n" +
-	"\tserver_id\x18\x03 \x01(\tR\bserverId\"\xd5\x01\n" +
+	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x19\n" +
+	"\bagent_id\x18\x03 \x01(\tR\aagentId\"\xd3\x01\n" +
 	"\fBaseResponse\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x125\n" +
 	"\rresponse_code\x18\x03 \x01(\x0e2\x10.pb.ResponseCodeR\fresponseCode\x12\x18\n" +
-	"\amessage\x18\x04 \x01(\tR\amessage\x12\x1b\n" +
-	"\tserver_id\x18\x05 \x01(\tR\bserverId\"\xa4\x03\n" +
-	"\x16RegisterAgentRequestV1\x12\x1d\n" +
-	"\n" +
-	"message_id\x18\x01 \x01(\tR\tmessageId\x128\n" +
-	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1b\n" +
-	"\tserver_id\x18\x03 \x01(\tR\bserverId\x12P\n" +
-	"\fcapabilities\x18\x04 \x03(\v2,.pb.RegisterAgentRequestV1.CapabilitiesEntryR\fcapabilities\x12D\n" +
-	"\bfeatures\x18\x05 \x03(\v2(.pb.RegisterAgentRequestV1.FeaturesEntryR\bfeatures\x1a?\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x12\x19\n" +
+	"\bagent_id\x18\x05 \x01(\tR\aagentId\"\xd3\x02\n" +
+	"\x16RegisterAgentRequestV1\x12#\n" +
+	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12P\n" +
+	"\fcapabilities\x18\x02 \x03(\v2,.pb.RegisterAgentRequestV1.CapabilitiesEntryR\fcapabilities\x12D\n" +
+	"\bfeatures\x18\x03 \x03(\v2(.pb.RegisterAgentRequestV1.FeaturesEntryR\bfeatures\x1a?\n" +
 	"\x11CapabilitiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a;\n" +
@@ -1091,7 +1003,7 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x13HeartbeatResponseV1\x12$\n" +
 	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"M\n" +
 	"\x0fGetAppRequestV1\x12#\n" +
-	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseCommandR\x04base\x12\x15\n" +
+	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x15\n" +
 	"\x06app_id\x18\x02 \x01(\tR\x05appId\"\x93\x01\n" +
 	"\x05AppV1\x12\x15\n" +
 	"\x06app_id\x18\x01 \x01(\tR\x05appId\x12\x16\n" +
@@ -1106,7 +1018,7 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x1b\n" +
 	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"V\n" +
 	"\x12CreateAppRequestV1\x12#\n" +
-	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseCommandR\x04base\x12\x1b\n" +
+	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x1b\n" +
 	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"X\n" +
 	"\x13CreateAppResponseV1\x12$\n" +
 	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x1b\n" +
@@ -1147,64 +1059,62 @@ func file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP() []byte {
 }
 
 var file_internal_winterflow_grpc_pb_server_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_internal_winterflow_grpc_pb_server_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_internal_winterflow_grpc_pb_server_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_internal_winterflow_grpc_pb_server_proto_goTypes = []any{
 	(ResponseCode)(0),               // 0: pb.ResponseCode
 	(*BaseMessage)(nil),             // 1: pb.BaseMessage
-	(*BaseCommand)(nil),             // 2: pb.BaseCommand
-	(*BaseResponse)(nil),            // 3: pb.BaseResponse
-	(*RegisterAgentRequestV1)(nil),  // 4: pb.RegisterAgentRequestV1
-	(*RegisterAgentResponseV1)(nil), // 5: pb.RegisterAgentResponseV1
-	(*AgentHeartbeatV1)(nil),        // 6: pb.AgentHeartbeatV1
-	(*HeartbeatResponseV1)(nil),     // 7: pb.HeartbeatResponseV1
-	(*GetAppRequestV1)(nil),         // 8: pb.GetAppRequestV1
-	(*AppV1)(nil),                   // 9: pb.AppV1
-	(*AppFileV1)(nil),               // 10: pb.AppFileV1
-	(*GetAppResponseV1)(nil),        // 11: pb.GetAppResponseV1
-	(*CreateAppRequestV1)(nil),      // 12: pb.CreateAppRequestV1
-	(*CreateAppResponseV1)(nil),     // 13: pb.CreateAppResponseV1
-	(*ServerCommand)(nil),           // 14: pb.ServerCommand
-	(*AgentMessage)(nil),            // 15: pb.AgentMessage
-	nil,                             // 16: pb.RegisterAgentRequestV1.CapabilitiesEntry
-	nil,                             // 17: pb.RegisterAgentRequestV1.FeaturesEntry
-	nil,                             // 18: pb.AgentHeartbeatV1.MetricsEntry
-	(*timestamppb.Timestamp)(nil),   // 19: google.protobuf.Timestamp
+	(*BaseResponse)(nil),            // 2: pb.BaseResponse
+	(*RegisterAgentRequestV1)(nil),  // 3: pb.RegisterAgentRequestV1
+	(*RegisterAgentResponseV1)(nil), // 4: pb.RegisterAgentResponseV1
+	(*AgentHeartbeatV1)(nil),        // 5: pb.AgentHeartbeatV1
+	(*HeartbeatResponseV1)(nil),     // 6: pb.HeartbeatResponseV1
+	(*GetAppRequestV1)(nil),         // 7: pb.GetAppRequestV1
+	(*AppV1)(nil),                   // 8: pb.AppV1
+	(*AppFileV1)(nil),               // 9: pb.AppFileV1
+	(*GetAppResponseV1)(nil),        // 10: pb.GetAppResponseV1
+	(*CreateAppRequestV1)(nil),      // 11: pb.CreateAppRequestV1
+	(*CreateAppResponseV1)(nil),     // 12: pb.CreateAppResponseV1
+	(*ServerCommand)(nil),           // 13: pb.ServerCommand
+	(*AgentMessage)(nil),            // 14: pb.AgentMessage
+	nil,                             // 15: pb.RegisterAgentRequestV1.CapabilitiesEntry
+	nil,                             // 16: pb.RegisterAgentRequestV1.FeaturesEntry
+	nil,                             // 17: pb.AgentHeartbeatV1.MetricsEntry
+	(*timestamppb.Timestamp)(nil),   // 18: google.protobuf.Timestamp
 }
 var file_internal_winterflow_grpc_pb_server_proto_depIdxs = []int32{
-	19, // 0: pb.BaseMessage.timestamp:type_name -> google.protobuf.Timestamp
-	19, // 1: pb.BaseCommand.timestamp:type_name -> google.protobuf.Timestamp
-	19, // 2: pb.BaseResponse.timestamp:type_name -> google.protobuf.Timestamp
-	0,  // 3: pb.BaseResponse.response_code:type_name -> pb.ResponseCode
-	19, // 4: pb.RegisterAgentRequestV1.timestamp:type_name -> google.protobuf.Timestamp
-	16, // 5: pb.RegisterAgentRequestV1.capabilities:type_name -> pb.RegisterAgentRequestV1.CapabilitiesEntry
-	17, // 6: pb.RegisterAgentRequestV1.features:type_name -> pb.RegisterAgentRequestV1.FeaturesEntry
-	3,  // 7: pb.RegisterAgentResponseV1.base:type_name -> pb.BaseResponse
-	1,  // 8: pb.AgentHeartbeatV1.base:type_name -> pb.BaseMessage
-	18, // 9: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
-	3,  // 10: pb.HeartbeatResponseV1.base:type_name -> pb.BaseResponse
-	2,  // 11: pb.GetAppRequestV1.base:type_name -> pb.BaseCommand
-	10, // 12: pb.AppV1.files:type_name -> pb.AppFileV1
-	3,  // 13: pb.GetAppResponseV1.base:type_name -> pb.BaseResponse
-	9,  // 14: pb.GetAppResponseV1.app:type_name -> pb.AppV1
-	2,  // 15: pb.CreateAppRequestV1.base:type_name -> pb.BaseCommand
-	9,  // 16: pb.CreateAppRequestV1.app:type_name -> pb.AppV1
-	3,  // 17: pb.CreateAppResponseV1.base:type_name -> pb.BaseResponse
-	9,  // 18: pb.CreateAppResponseV1.app:type_name -> pb.AppV1
-	7,  // 19: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
-	8,  // 20: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
-	12, // 21: pb.ServerCommand.create_app_request_v1:type_name -> pb.CreateAppRequestV1
-	6,  // 22: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
-	11, // 23: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
-	13, // 24: pb.AgentMessage.create_app_response_v1:type_name -> pb.CreateAppResponseV1
-	4,  // 25: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
-	15, // 26: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
-	5,  // 27: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
-	14, // 28: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
-	27, // [27:29] is the sub-list for method output_type
-	25, // [25:27] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	18, // 0: pb.BaseMessage.timestamp:type_name -> google.protobuf.Timestamp
+	18, // 1: pb.BaseResponse.timestamp:type_name -> google.protobuf.Timestamp
+	0,  // 2: pb.BaseResponse.response_code:type_name -> pb.ResponseCode
+	1,  // 3: pb.RegisterAgentRequestV1.base:type_name -> pb.BaseMessage
+	15, // 4: pb.RegisterAgentRequestV1.capabilities:type_name -> pb.RegisterAgentRequestV1.CapabilitiesEntry
+	16, // 5: pb.RegisterAgentRequestV1.features:type_name -> pb.RegisterAgentRequestV1.FeaturesEntry
+	2,  // 6: pb.RegisterAgentResponseV1.base:type_name -> pb.BaseResponse
+	1,  // 7: pb.AgentHeartbeatV1.base:type_name -> pb.BaseMessage
+	17, // 8: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
+	2,  // 9: pb.HeartbeatResponseV1.base:type_name -> pb.BaseResponse
+	1,  // 10: pb.GetAppRequestV1.base:type_name -> pb.BaseMessage
+	9,  // 11: pb.AppV1.files:type_name -> pb.AppFileV1
+	2,  // 12: pb.GetAppResponseV1.base:type_name -> pb.BaseResponse
+	8,  // 13: pb.GetAppResponseV1.app:type_name -> pb.AppV1
+	1,  // 14: pb.CreateAppRequestV1.base:type_name -> pb.BaseMessage
+	8,  // 15: pb.CreateAppRequestV1.app:type_name -> pb.AppV1
+	2,  // 16: pb.CreateAppResponseV1.base:type_name -> pb.BaseResponse
+	8,  // 17: pb.CreateAppResponseV1.app:type_name -> pb.AppV1
+	6,  // 18: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
+	7,  // 19: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
+	11, // 20: pb.ServerCommand.create_app_request_v1:type_name -> pb.CreateAppRequestV1
+	5,  // 21: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
+	10, // 22: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
+	12, // 23: pb.AgentMessage.create_app_response_v1:type_name -> pb.CreateAppResponseV1
+	3,  // 24: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
+	14, // 25: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
+	4,  // 26: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
+	13, // 27: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
+	26, // [26:28] is the sub-list for method output_type
+	24, // [24:26] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_internal_winterflow_grpc_pb_server_proto_init() }
@@ -1212,12 +1122,12 @@ func file_internal_winterflow_grpc_pb_server_proto_init() {
 	if File_internal_winterflow_grpc_pb_server_proto != nil {
 		return
 	}
-	file_internal_winterflow_grpc_pb_server_proto_msgTypes[13].OneofWrappers = []any{
+	file_internal_winterflow_grpc_pb_server_proto_msgTypes[12].OneofWrappers = []any{
 		(*ServerCommand_HeartbeatResponseV1)(nil),
 		(*ServerCommand_GetAppRequestV1)(nil),
 		(*ServerCommand_CreateAppRequestV1)(nil),
 	}
-	file_internal_winterflow_grpc_pb_server_proto_msgTypes[14].OneofWrappers = []any{
+	file_internal_winterflow_grpc_pb_server_proto_msgTypes[13].OneofWrappers = []any{
 		(*AgentMessage_HeartbeatV1)(nil),
 		(*AgentMessage_GetAppResponseV1)(nil),
 		(*AgentMessage_CreateAppResponseV1)(nil),
@@ -1228,7 +1138,7 @@ func file_internal_winterflow_grpc_pb_server_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_winterflow_grpc_pb_server_proto_rawDesc), len(file_internal_winterflow_grpc_pb_server_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   18,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

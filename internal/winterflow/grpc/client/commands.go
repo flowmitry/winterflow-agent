@@ -9,7 +9,7 @@ import (
 )
 
 // HandleCreateAppRequest handles the command dispatch and creates the appropriate response message
-func HandleCreateAppRequest(commandBus cqrs.CommandBus, createAppRequest *pb.CreateAppRequestV1, serverID string) (*pb.AgentMessage, error) {
+func HandleCreateAppRequest(commandBus cqrs.CommandBus, createAppRequest *pb.CreateAppRequestV1, agentID string) (*pb.AgentMessage, error) {
 	log.Debug("Processing create app request for app ID: %s", createAppRequest.App.AppId)
 
 	// Create and dispatch the command
@@ -25,7 +25,7 @@ func HandleCreateAppRequest(commandBus cqrs.CommandBus, createAppRequest *pb.Cre
 		responseMessage = fmt.Sprintf("Error creating app: %v", err)
 	}
 
-	baseResp := createBaseResponse(createAppRequest.Base.MessageId, serverID, responseCode, responseMessage)
+	baseResp := createBaseResponse(createAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	createAppResp := &pb.CreateAppResponseV1{
 		Base: &baseResp,
 		App:  createAppRequest.App,
