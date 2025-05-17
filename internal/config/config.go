@@ -20,11 +20,11 @@ const (
 	// DefaultAppsPath is the default path for application files
 	DefaultAppsPath = "apps"
 	// DefaultAgentPrivateKeyPath is the default path for the agent's private key
-	DefaultAgentPrivateKeyPath = "certs/agent.key"
+	DefaultAgentPrivateKeyPath = ".certs/agent.key"
 	// DefaultCSRPath is the default path for the Certificate Signing Request
-	DefaultCSRPath = "certs/agent.csr"
+	DefaultCSRPath = ".certs/agent.csr"
 	// DefaultCertificatePath is the default path for the signed certificate
-	DefaultCertificatePath = "certs/agent.crt"
+	DefaultCertificatePath = ".certs/agent.crt"
 )
 
 // Config holds the application configuration

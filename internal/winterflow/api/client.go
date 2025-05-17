@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -75,11 +76,14 @@ func (c *Client) RequestRegistrationCode(serverID string, csrData string, certif
 		return nil, fmt.Errorf("failed to get hostname: %v", err)
 	}
 
+	// Base64 encode the CSR data before sending
+	encodedCSRData := base64.StdEncoding.EncodeToString([]byte(csrData))
+
 	reqBody := RegistrationRequest{
 		Hostname:      hostname,
 		ServerID:      serverID,
 		CertificateID: certificateID,
-		CSRData:       csrData,
+		CSRData:       encodedCSRData,
 	}
 
 	jsonData, err := json.Marshal(reqBody)
@@ -123,6 +127,15 @@ func (c *Client) RequestRegistrationCode(serverID string, csrData string, certif
 	var response RegistrationResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %v, body: %s", err, string(body))
+	}
+
+	// Decode the certificate data from base64 if it exists
+	if response.Data.CertificateData != "" {
+		decodedCertData, err := base64.StdEncoding.DecodeString(response.Data.CertificateData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode certificate data: %v", err)
+		}
+		response.Data.CertificateData = string(decodedCertData)
 	}
 
 	return &response, nil

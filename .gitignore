@@ -2,6 +2,7 @@
 requests/
 agent*
 custom/
+.certs/
 ansible/vault_pass.txt
 ansible/version.txt
 ansible/apps_roles/*
