@@ -88,7 +88,7 @@ func main() {
 	}
 
 	// Create and initialize agent
-	log.Printf("Creating agent")
+	log.Debug("Creating agent")
 	a, err := agent.NewAgent(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)

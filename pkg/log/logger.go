@@ -49,7 +49,7 @@ func Error(msg string, args ...any) { GetLog().Error(msg, args...) }
 
 // Printf is a drop-in replacement for log.Printf using Info as the log level.
 func Printf(format string, args ...any) {
-	GetLog().Info(fmt.Sprintf(format, args...))
+	GetLog().Debug(fmt.Sprintf(format, args...))
 }
 
 // Fatalf logs a formatted message and exits.

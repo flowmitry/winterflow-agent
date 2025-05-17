@@ -24,7 +24,7 @@ type Agent struct {
 func NewAgent(config *config.Config) (*Agent, error) {
 	c, err := client.NewClient(config.GRPCServerAddress, config.CertificatePath, config.AgentPrivateKeyPath)
 	if err != nil {
-		return nil, err
+		return nil, log.Errorf("New GRPC client failed", err)
 	}
 
 	start := time.Now()
@@ -109,10 +109,13 @@ func (a *Agent) RegisterWithRetry(ctx context.Context) error {
 		delay := b.Next()
 		log.Printf("Registration failed: %v. Retrying in %s", err, delay)
 
+		// Use a timer so we can interrupt the wait
+		timer := time.NewTimer(delay)
 		select {
-		case <-time.After(delay):
+		case <-timer.C:
 			continue
 		case <-ctx.Done():
+			timer.Stop()
 			return log.Errorf("registration cancelled: %v", ctx.Err())
 		}
 	}

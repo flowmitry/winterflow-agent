@@ -206,12 +206,19 @@ func (c *Client) getNextReconnectInterval() time.Duration {
 
 // waitForConnectionReady waits for the connection to be ready with endless retries
 func (c *Client) waitForConnectionReady() error {
-	log.Printf("Waiting for connection to be ready")
+	log.Debug("Waiting for connection to be ready to server: %s", c.serverAddress)
 
 	// Start connection attempt
+	log.Debug("Initiating connection attempt to %s", c.serverAddress)
+	startTime := time.Now()
 	c.conn.Connect()
+	log.Debug("Connection attempt initiated, took %v", time.Since(startTime))
 
+	attemptCount := 0
 	for {
+		attemptCount++
+		log.Debug("Connection attempt #%d", attemptCount)
+
 		// Check for context cancellation first
 		select {
 		case <-c.ctx.Done():
@@ -221,30 +228,34 @@ func (c *Client) waitForConnectionReady() error {
 		}
 
 		state := c.conn.GetState()
-		log.Printf("Current connection state: %v", state)
+		log.Printf("Current connection state: %v (attempt #%d)", state, attemptCount)
 
-		if state == connectivity.Ready {
-			log.Printf("Connection is ready")
+		// Log detailed information based on connection state
+		switch state {
+		case connectivity.Ready:
+			log.Printf("Connection is ready after %d attempts (total time: %v)", attemptCount, time.Since(startTime))
 			// Reset the backoff sequence because the connection has been
 			// successfully re-established. This prevents the next transient
 			// failure from starting with an unnecessarily long delay and keeps
 			// the reconnection behaviour predictable and responsive.
 			c.backoffStrategy.Reset()
 			return nil
-		}
-		if state == connectivity.Shutdown {
-			return log.Errorf("connection is shutdown")
-		}
-		if state == connectivity.TransientFailure {
-			log.Printf("Connection attempt failed, retrying with exponential backoff")
+
+		case connectivity.Shutdown:
+			return log.Errorf("connection is shutdown after %d attempts (total time: %v)", attemptCount, time.Since(startTime))
+
+		case connectivity.TransientFailure:
+			log.Printf("Connection attempt #%d failed with TransientFailure, retrying with exponential backoff", attemptCount)
+
 			// Wait before retrying using exponential backoff
 			nextInterval := c.getNextReconnectInterval()
-			log.Printf("Waiting %v before next connection attempt", nextInterval)
+			log.Printf("Waiting %v before next connection attempt (attempt #%d)", nextInterval, attemptCount+1)
 
 			// Use a timer so we can interrupt the wait
 			timer := time.NewTimer(nextInterval)
 			select {
 			case <-timer.C:
+				log.Debug("Backoff timer expired, proceeding with next connection attempt")
 				// Timer expired, continue with next attempt
 			case <-c.ctx.Done():
 				// Context cancelled, abort reconnection
@@ -253,14 +264,28 @@ func (c *Client) waitForConnectionReady() error {
 			}
 
 			// Trigger another connection attempt
+			log.Debug("Initiating new connection attempt #%d after backoff", attemptCount+1)
 			c.conn.Connect()
 			continue
+
+		case connectivity.Connecting:
+			log.Debug("Connection is in CONNECTING state (attempt #%d, elapsed time: %v)", attemptCount, time.Since(startTime))
+
+		case connectivity.Idle:
+			log.Debug("Connection is in IDLE state (attempt #%d, elapsed time: %v)", attemptCount, time.Since(startTime))
+
+		default:
+			log.Debug("Connection is in unknown state: %v (attempt #%d, elapsed time: %v)", state, attemptCount, time.Since(startTime))
 		}
 
+		// Use a timer so we can interrupt the wait
+		log.Debug("Waiting 100ms before checking connection state again")
+		timer := time.NewTimer(100 * time.Millisecond)
 		select {
 		case <-c.ctx.Done():
+			timer.Stop()
 			return log.Errorf("connection cancelled: %v", c.ctx.Err())
-		case <-time.After(100 * time.Millisecond):
+		case <-timer.C:
 			continue
 		}
 	}
@@ -268,20 +293,34 @@ func (c *Client) waitForConnectionReady() error {
 
 // waitForReady waits for the connection to be ready
 func (c *Client) waitForReady() error {
-	state := c.conn.GetState()
-	log.Printf("Checking connection state: %v", state)
+	log.Debug("Checking if connection to %s is ready", c.serverAddress)
+	startTime := time.Now()
 
-	if state == connectivity.Ready {
+	state := c.conn.GetState()
+	log.Printf("Current connection state to %s: %v (checked in %v)", c.serverAddress, state, time.Since(startTime))
+
+	switch state {
+	case connectivity.Ready:
+		log.Debug("Connection to %s is ready", c.serverAddress)
 		return nil
+
+	case connectivity.Shutdown:
+		return log.Errorf("Connection to %s is shutdown", c.serverAddress)
+
+	case connectivity.TransientFailure:
+		target := c.conn.Target()
+		return log.Errorf("Connection to %s is in transient failure: server may be unavailable at %s",
+			c.serverAddress, target)
+
+	case connectivity.Connecting:
+		return log.Errorf("Connection to %s is still connecting", c.serverAddress)
+
+	case connectivity.Idle:
+		return log.Errorf("Connection to %s is idle and not ready", c.serverAddress)
+
+	default:
+		return log.Errorf("Connection to %s is not ready: %v (unknown state)", c.serverAddress, state)
 	}
-	if state == connectivity.Shutdown {
-		return log.Errorf("connection is shutdown")
-	}
-	if state == connectivity.TransientFailure {
-		return log.Errorf("connection is in transient failure: server may be unavailable at %s",
-			c.conn.Target())
-	}
-	return log.Errorf("connection is not ready: %v", state)
 }
 
 // IsRegistered returns whether the agent is currently registered
@@ -433,7 +472,18 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 				log.Printf("Connection not ready before starting Agent stream: %v", err)
 				if err := c.reconnect(); err != nil {
 					log.Printf("Failed to reconnect, will retry: %v", err)
-					time.Sleep(c.getNextReconnectInterval())
+
+					// Use a timer so we can interrupt the wait
+					timer := time.NewTimer(c.getNextReconnectInterval())
+					select {
+					case <-timer.C:
+						// Timer expired, continue with next attempt
+					case <-c.ctx.Done():
+						// Context cancelled, abort reconnection
+						timer.Stop()
+						log.Printf("Stream cancelled during reconnection: %v", c.ctx.Err())
+						return
+					}
 					continue
 				}
 				continue
@@ -445,7 +495,18 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 				log.Printf("Failed to create Agent stream: %v", err)
 				if err := c.reconnect(); err != nil {
 					log.Printf("Failed to reconnect, will retry: %v", err)
-					time.Sleep(c.getNextReconnectInterval())
+
+					// Use a timer so we can interrupt the wait
+					timer := time.NewTimer(c.getNextReconnectInterval())
+					select {
+					case <-timer.C:
+						// Timer expired, continue with next attempt
+					case <-c.ctx.Done():
+						// Context cancelled, abort reconnection
+						timer.Stop()
+						log.Printf("Stream cancelled during reconnection: %v", c.ctx.Err())
+						return
+					}
 					continue
 				}
 				continue
@@ -475,7 +536,18 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 				log.Printf("Failed to send initial heartbeat: %v", err)
 				if err := c.reconnect(); err != nil {
 					log.Printf("Failed to reconnect, will retry: %v", err)
-					time.Sleep(c.getNextReconnectInterval())
+
+					// Use a timer so we can interrupt the wait
+					timer := time.NewTimer(c.getNextReconnectInterval())
+					select {
+					case <-timer.C:
+						// Timer expired, continue with next attempt
+					case <-c.ctx.Done():
+						// Context cancelled, abort reconnection
+						timer.Stop()
+						log.Printf("Stream cancelled during reconnection: %v", c.ctx.Err())
+						return
+					}
 					continue
 				}
 				continue
@@ -644,7 +716,18 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 					if err != nil {
 						log.Printf("Failed to re-register agent: %v", err)
 						ticker.Stop()
-						time.Sleep(c.getNextReconnectInterval())
+
+						// Use a timer so we can interrupt the wait
+						timer := time.NewTimer(c.getNextReconnectInterval())
+						select {
+						case <-timer.C:
+							// Timer expired, continue with next attempt
+						case <-c.ctx.Done():
+							// Context cancelled, abort reconnection
+							timer.Stop()
+							log.Printf("Stream cancelled during re-registration: %v", c.ctx.Err())
+							return
+						}
 						continue outerLoop
 					}
 					log.Printf("Successfully re-registered agent with new token")
@@ -672,14 +755,20 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 // reconnect attempts to reconnect to the server
 func (c *Client) reconnect() error {
 	log.Printf("Attempting to reconnect to %s", c.serverAddress)
+	startTime := time.Now()
 
 	// Close existing connection if it exists
 	if c.conn != nil {
-		log.Printf("Closing existing connection")
+		log.Debug("Closing existing connection to %s", c.serverAddress)
+		closeStartTime := time.Now()
 		c.conn.Close()
+		log.Debug("Existing connection closed in %v", time.Since(closeStartTime))
+	} else {
+		log.Debug("No existing connection to close")
 	}
 
 	// Always use TLS and fail if certificates don't exist
+	log.Debug("Verifying TLS certificates before reconnection")
 	if c.certPath == "" || c.keyPath == "" {
 		return log.Errorf("TLS is required but certificate paths are not configured")
 	}
@@ -691,20 +780,31 @@ func (c *Client) reconnect() error {
 	if !certs.CertificateExists(c.keyPath) {
 		return log.Errorf("TLS is required but key does not exist at path: %s", c.keyPath)
 	}
+	log.Debug("TLS certificates verified successfully")
 
+	// Setup new connection
+	log.Debug("Setting up new connection to %s", c.serverAddress)
+	setupStartTime := time.Now()
 	if err := c.setupConnection(); err != nil {
-		return err
+		return log.Errorf("Failed to setup connection: %v (took %v)", err, time.Since(setupStartTime))
 	}
+	log.Debug("Connection setup completed in %v", time.Since(setupStartTime))
 
 	// Wait for the connection to be ready with endless retries
+	log.Debug("Waiting for connection to be ready")
+	waitStartTime := time.Now()
 	if err := c.waitForConnectionReady(); err != nil {
+		closeStartTime := time.Now()
 		c.conn.Close()
-		return fmt.Errorf("failed to establish connection: %v", err)
+		log.Debug("Connection closed in %v after failed wait", time.Since(closeStartTime))
+		return fmt.Errorf("failed to establish connection: %v (waited for %v)", err, time.Since(waitStartTime))
 	}
+	log.Debug("Connection ready after waiting %v", time.Since(waitStartTime))
 
 	// Reset the backoff sequence after a successful reconnection.
 	c.backoffStrategy.Reset()
+	log.Debug("Backoff strategy reset after successful reconnection")
 
-	log.Printf("Successfully reconnected to %s", c.serverAddress)
+	log.Printf("Successfully reconnected to %s (total time: %v)", c.serverAddress, time.Since(startTime))
 	return nil
 }
