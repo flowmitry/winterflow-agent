@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 	"sync"
 	"time"
 	"winterflow-agent/internal/winterflow/handlers"
@@ -35,9 +34,6 @@ type Client struct {
 	// Exponential back-off helper for reconnection attempts to keep the code
 	// DRY and easier to maintain.
 	backoffStrategy *backoff.Backoff
-
-	// Access token storage
-	accessToken string
 
 	// Stream cleanup
 	streamCleanup chan struct{}
@@ -170,16 +166,6 @@ func (c *Client) SetReconnectParameters(initialInterval, maxInterval time.Durati
 // SetConnectionTimeout sets the connection timeout
 func (c *Client) SetConnectionTimeout(timeout time.Duration) {
 	c.connectionTimeout = timeout
-}
-
-// SetAccessToken sets the access token for the client
-func (c *Client) SetAccessToken(token string) {
-	c.accessToken = token
-}
-
-// GetAccessToken returns the current access token
-func (c *Client) GetAccessToken() string {
-	return c.accessToken
 }
 
 // Close closes the client connection and gracefully shuts down the command and query buses
@@ -604,16 +590,7 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 							log.Printf("Heartbeat response received: %s", response.Message)
 
 						default:
-							log.Printf("Heartbeat failed with code %v: %s", response.ResponseCode, response.Message)
-							if strings.Contains(response.Message, "token expired") ||
-								strings.Contains(response.Message, "Invalid token") {
-								log.Printf("Token expired or invalid, triggering re-registration")
-								select {
-								case reregisterCh <- struct{}{}:
-								default:
-								}
-								return
-							}
+							log.Error("Heartbeat failed with code %v: %s", response.ResponseCode, response.Message)
 						}
 
 					case *pb.ServerCommand_GetAppRequestV1:
@@ -710,7 +687,7 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 					continue outerLoop
 
 				case <-reregisterCh:
-					log.Printf("Re-registering agent due to token expiration or agent not found")
+					log.Printf("Re-registering agent due to agent not found")
 					stream.CloseSend()
 					_, err := c.RegisterAgent(capabilities, features, serverID)
 					if err != nil {
@@ -730,7 +707,7 @@ func (c *Client) StartAgentStream(serverID string, metricsProvider func() map[st
 						}
 						continue outerLoop
 					}
-					log.Printf("Successfully re-registered agent with new token")
+					log.Printf("Successfully re-registered agent")
 					ticker.Stop()
 					continue outerLoop
 
