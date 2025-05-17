@@ -1,10 +1,12 @@
 # Build configuration
 BINARY_NAME=agent
 VERSION=$(shell date +'%Y.%m.%d')
+GRPC_ADDR=127.0.0.1:8081
+API_URL=http://127.0.0.1:8080
 BUILD_DIR=.
 
 # Go build flags
-LDFLAGS=-X winterflow-agent/internal/agent.version=${VERSION}
+LDFLAGS=-X winterflow-agent/internal/agent.version=${VERSION} -X winterflow-agent/internal/config/config.DefaultGRPCServerAddress=${GRPC_ADDR} -X winterflow-agent/internal/config/config.DefaultAPIBaseURL=${API_URL}
 BUILD_FLAGS=-v -ldflags="${LDFLAGS}"
 
 .PHONY: all clean grpc build run install-tools ansible-version
@@ -43,3 +45,8 @@ grpc:
 install-tools:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+
+generate-certs:
+	openssl genrsa -out agent.key 4096
+	openssl req -new -key agent.key -out agent.csr
+	# openssl req -x509 -new -nodes -key .certs/agent.key -sha256 -days 36500 -out .certs/agent.crt

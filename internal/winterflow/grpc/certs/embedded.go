@@ -1,4 +1,4 @@
-package ansible
+package certs
 
 import (
 	"io/fs"
@@ -22,18 +22,14 @@ func NewManager(embeddedFS fs.FS, configPath string) *Manager {
 	}
 
 	return &Manager{
-		embeddedManager: embedded.NewManager(embeddedFS, cfg.AnsiblePath, agent.GetVersion(), []string{
-			"inventory/defaults.yml",
-			"playbooks",
-			"roles",
-			"ansible.cfg",
-			"apps_roles/README.md",
+		embeddedManager: embedded.NewManager(embeddedFS, cfg.CertificatesPath, agent.GetVersion(), []string{
+			"ca.crt",
 		}),
 	}
 }
 
-// SyncFiles ensures the ansible directory is up to date with the embedded files
+// SyncFiles synchronizes the certificate files using the embeddedManager's SyncFiles method.
 func (m *Manager) SyncFiles() error {
-	log.Printf("Syncing ansible files")
+	log.Printf("Syncing certificates")
 	return m.embeddedManager.SyncFiles()
 }

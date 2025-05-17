@@ -8,23 +8,31 @@ import (
 	log "winterflow-agent/pkg/log"
 )
 
-const (
+var (
 	// DefaultGRPCServerAddress is the default gRPC server address for agent communication
-	DefaultGRPCServerAddress = "localhost:8081"
+	DefaultGRPCServerAddress = "server.winterflow.io"
 	// DefaultAPIBaseURL is the default HTTP API server URL for web interface
-	DefaultAPIBaseURL = "http://localhost:8080"
+	DefaultAPIBaseURL = "https://api.winterflow.io"
+)
+
+const (
 	// DefaultAnsiblePath is the default path for Ansible files
 	DefaultAnsiblePath = "ansible"
 	// DefaultAnsibleAppsRolesPath is the default path for Ansible application files
 	DefaultAnsibleAppsRolesPath = "ansible/apps_roles"
 	// DefaultAppsPath is the default path for application files
 	DefaultAppsPath = "apps"
+
+	// DefaultCertificatesPath is the default directory path for storing certificates.
+	DefaultCertificatesPath = ".certs"
 	// DefaultAgentPrivateKeyPath is the default path for the agent's private key
 	DefaultAgentPrivateKeyPath = ".certs/agent.key"
 	// DefaultCSRPath is the default path for the Certificate Signing Request
 	DefaultCSRPath = ".certs/agent.csr"
 	// DefaultCertificatePath is the default path for the signed certificate
 	DefaultCertificatePath = ".certs/agent.crt"
+	// DefaultCACertificatePath is the default filesystem path for the trusted Certificate Authority (CA) certificate.
+	DefaultCACertificatePath = ".certs/ca.crt"
 )
 
 // Config holds the application configuration
@@ -41,8 +49,12 @@ type Config struct {
 	AppsPath string `json:"apps_path,omitempty"`
 	// AnsibleAppsPath is the path where ansible application files are stored
 	AnsibleAppsPath string `json:"ansible_apps_path,omitempty"`
-	// AgentPrivateKeyPath is the path where the agent's private key is stored
-	AgentPrivateKeyPath string `json:"agent_private_key_path,omitempty"`
+	// CertificatesPath is the path where certificate-related files are stored.
+	CertificatesPath string `json:"certificates_path,omitempty"`
+	// CACertificatePath is the path where the Certificate Authority's certificate is stored.
+	CACertificatePath string `json:"ca_certificate_path,omitempty"`
+	// PrivateKeyPath is the path where the agent's private key is stored
+	PrivateKeyPath string `json:"private_key_path,omitempty"`
 	// CSRPath is the path where the Certificate Signing Request is stored
 	CSRPath string `json:"csr_path,omitempty"`
 	// CertificatePath is the path where the signed certificate is stored
@@ -66,14 +78,20 @@ func applyDefaults(cfg *Config) {
 	if cfg.AnsibleAppsPath == "" {
 		cfg.AnsibleAppsPath = DefaultAnsibleAppsRolesPath
 	}
-	if cfg.AgentPrivateKeyPath == "" {
-		cfg.AgentPrivateKeyPath = DefaultAgentPrivateKeyPath
+	if cfg.CertificatesPath == "" {
+		cfg.CertificatesPath = DefaultCertificatesPath
+	}
+	if cfg.PrivateKeyPath == "" {
+		cfg.PrivateKeyPath = DefaultAgentPrivateKeyPath
 	}
 	if cfg.CSRPath == "" {
 		cfg.CSRPath = DefaultCSRPath
 	}
 	if cfg.CertificatePath == "" {
 		cfg.CertificatePath = DefaultCertificatePath
+	}
+	if cfg.CACertificatePath == "" {
+		cfg.CACertificatePath = DefaultCACertificatePath
 	}
 }
 

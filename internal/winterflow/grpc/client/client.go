@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"sync"
 	"time"
 	"winterflow-agent/internal/winterflow/handlers"
@@ -49,7 +50,6 @@ type Client struct {
 	// Certificate paths
 	certPath string
 	keyPath  string
-	useTLS   bool
 }
 
 // setupConnection creates a new gRPC connection and client
@@ -73,7 +73,11 @@ func (c *Client) setupConnection() error {
 	}
 
 	log.Printf("Setting up secure gRPC connection with TLS credentials")
-	creds, err := certs.LoadTLSCredentials(c.certPath, c.keyPath)
+	host, _, err := net.SplitHostPort(c.serverAddress)
+	if err != nil {
+		host = c.serverAddress
+	}
+	creds, err := certs.LoadTLSCredentials(c.certPath, c.keyPath, host)
 	if err != nil {
 		return log.Errorf("Failed to load TLS credentials: %v", err)
 	}
@@ -140,7 +144,6 @@ func NewClient(serverAddress string, certPath, keyPath string) (*Client, error) 
 		queryBus:          queryBus,
 		certPath:          certPath,
 		keyPath:           keyPath,
-		useTLS:            true, // Always use TLS
 	}
 
 	if err := client.setupConnection(); err != nil {

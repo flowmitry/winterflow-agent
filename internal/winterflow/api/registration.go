@@ -37,21 +37,21 @@ func RegisterAgent(configPath string) error {
 	}
 
 	// Generate agent private key
-	log.Printf("[DEBUG] Generating agent private key at: %s", cfg.AgentPrivateKeyPath)
-	if err := certs.GeneratePrivateKey(cfg.AgentPrivateKeyPath); err != nil {
+	log.Printf("[DEBUG] Generating agent private key at: %s", cfg.PrivateKeyPath)
+	if err := certs.GeneratePrivateKey(cfg.PrivateKeyPath); err != nil {
 		return log.Errorf("failed to generate agent private key: %v", err)
 	}
 
 	// Create CSR
 	log.Printf("[DEBUG] Creating CSR at: %s", cfg.CSRPath)
 	certificateID := uuid.New().String()
-	csrData, err := certs.CreateCSR(certificateID, cfg.AgentPrivateKeyPath, cfg.CSRPath)
+	csrData, err := certs.CreateCSR(certificateID, cfg.PrivateKeyPath, cfg.CSRPath)
 	if err != nil {
 		return log.Errorf("failed to create CSR: %v", err)
 	}
 
 	// Request registration code and submit CSR
-	resp, err := client.RequestRegistrationCode(existingServerID, certificateID, csrData)
+	resp, err := client.RequestRegistrationCode(existingServerID, csrData)
 	if err != nil {
 		// Check if it's an API error
 		if apiErr, ok := err.(*APIError); ok {

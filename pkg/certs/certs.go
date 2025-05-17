@@ -25,7 +25,7 @@ func GeneratePrivateKey(keyPath string) error {
 	}
 
 	// Generate private key
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return fmt.Errorf("failed to generate private key: %v", err)
 	}
@@ -143,17 +143,30 @@ func CreateCSR(certificateID string, privateKeyPath, csrPath string) (string, er
 }
 
 // LoadTLSCredentials loads TLS credentials from certificate and private key files
-func LoadTLSCredentials(certPath, keyPath string) (credentials.TransportCredentials, error) {
+func LoadTLSCredentials(certPath, keyPath, host string) (credentials.TransportCredentials, error) {
 	// Load certificate and private key
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load certificate and private key: %v", err)
 	}
 
+	// Load your CA certificate
+	caCert, err := os.ReadFile(".certs/ca.crt")
+	if err != nil {
+		log.Fatalf("failed to read CA certificate: %v", err)
+	}
+	caCertPool := x509.NewCertPool()
+	ok := caCertPool.AppendCertsFromPEM(caCert)
+	if !ok {
+		log.Fatalf("failed to append CA certificate")
+	}
+
 	// Create TLS configuration
 	tlsConfig := &tls.Config{
+		ServerName:   host,
+		RootCAs:      caCertPool,
 		Certificates: []tls.Certificate{cert},
-		MinVersion:   tls.VersionTLS12, // Ensure minimum TLS version for security
+		MinVersion:   tls.VersionTLS12,
 	}
 
 	// Create and return credentials

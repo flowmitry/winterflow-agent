@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"winterflow-agent/internal/winterflow/grpc/certs"
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/agent"
@@ -20,6 +21,9 @@ import (
 
 //go:embed ansible/inventory/** ansible/playbooks/** ansible/roles/** ansible/apps_roles/README.md ansible/ansible.cfg
 var ansibleFS embed.FS
+
+//go:embed .certs/ca.crt
+var certsFS embed.FS
 
 func main() {
 	// Parse command line flags
@@ -54,9 +58,8 @@ func main() {
 		return
 	}
 
-	ansibleManager := ansible.NewManager(GetAnsibleFS(), *configPath)
-	if err := ansibleManager.SyncAnsibleFiles(); err != nil {
-		log.Fatalf("Error syncing ansible files: %v", err)
+	if err := syncEmbeddedFiles(*configPath, ansibleFS, certsFS); err != nil {
+		log.Fatalf("Error syncing embedded files: %v", err)
 	}
 
 	// Set up signal handling
@@ -110,10 +113,26 @@ func main() {
 	log.Printf("Context canceled, shutting down agent...")
 }
 
-func GetAnsibleFS() fs.FS {
-	fsys, err := fs.Sub(ansibleFS, "ansible")
+func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) error {
+	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
-		return nil
+		log.Fatalf("Failed to load configuration: %v", err)
+		return err
 	}
-	return fsys
+
+	fsysAnsible, err := fs.Sub(ansibleFS, cfg.AnsiblePath)
+	ansibleManager := ansible.NewManager(fsysAnsible, configPath)
+	if err := ansibleManager.SyncFiles(); err != nil {
+		log.Fatalf("Error syncing ansible files: %v", err)
+		return err
+	}
+
+	fsysCerts, err := fs.Sub(certsFS, cfg.CertificatesPath)
+	certsManager := certs.NewManager(fsysCerts, configPath)
+	if err := certsManager.SyncFiles(); err != nil {
+		log.Fatalf("Error syncing ansible files: %v", err)
+		return err
+	}
+
+	return nil
 }
