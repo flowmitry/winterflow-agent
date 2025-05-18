@@ -29,9 +29,13 @@ const (
 //
 // Agent service definition
 type AgentServiceClient interface {
-	// Register an agent
+	// Registers an agent with the server and establishes identity
+	// Returns success if registration is accepted or appropriate error code
 	RegisterAgentV1(ctx context.Context, in *RegisterAgentRequestV1, opts ...grpc.CallOption) (*RegisterAgentResponseV1, error)
-	// Bidirectional streaming
+	// Establishes a bidirectional stream between agent and server
+	// Allows:
+	// 1. agent to send heartbeats and server to respond to them
+	// 2. server to send commands and agent to send responses
 	AgentStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AgentMessage, ServerCommand], error)
 }
 
@@ -72,9 +76,13 @@ type AgentService_AgentStreamClient = grpc.BidiStreamingClient[AgentMessage, Ser
 //
 // Agent service definition
 type AgentServiceServer interface {
-	// Register an agent
+	// Registers an agent with the server and establishes identity
+	// Returns success if registration is accepted or appropriate error code
 	RegisterAgentV1(context.Context, *RegisterAgentRequestV1) (*RegisterAgentResponseV1, error)
-	// Bidirectional streaming
+	// Establishes a bidirectional stream between agent and server
+	// Allows:
+	// 1. agent to send heartbeats and server to respond to them
+	// 2. server to send commands and agent to send responses
 	AgentStream(grpc.BidiStreamingServer[AgentMessage, ServerCommand]) error
 	mustEmbedUnimplementedAgentServiceServer()
 }

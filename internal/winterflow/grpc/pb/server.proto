@@ -18,6 +18,19 @@ enum ResponseCode {
   RESPONSE_CODE_AGENT_ALREADY_CONNECTED = 7;
 }
 
+enum AppStatusCode {
+  STATUS_CODE_UNKNOWN = 0;
+  STATUS_CODE_ACTIVE = 1;
+  STATUS_CODE_INACTIVE = 2;
+  STATUS_CODE_FAILURE = 3;
+}
+
+enum AppAction {
+  STOP = 0;
+  START = 1;
+  RESTART = 2;
+}
+
 message BaseMessage {
   // UUID
   string message_id = 1;
@@ -57,18 +70,31 @@ message HeartbeatResponseV1 {
   BaseResponse base = 1;
 }
 
-// App retrieval messages
-message GetAppRequestV1 {
-  BaseMessage base = 1;
+message AppStatusV1 {
   // UUID
-  string app_id = 2;
+  string app_id = 1;
+  // JSON
+  bytes config = 2;
+  AppStatusCode status_code = 3;
+}
+
+message AgentAppsV1 {
+  BaseMessage base = 1;
+  repeated AppStatusV1 apps = 2;
+}
+
+message AgentAppsResponseV1 {
+  BaseResponse base = 1;
 }
 
 message AppV1 {
   // UUID
   string app_id = 1;
+  // JSON
   bytes config = 2;
+  // JSON
   bytes variables = 3;
+  // JSON
   bytes secrets = 4;
   repeated AppFileV1 files = 5;
 }
@@ -78,43 +104,87 @@ message AppFileV1 {
   bytes content = 2;
 }
 
+message GetAppRequestV1 {
+  BaseMessage base = 1;
+  // UUID
+  string app_id = 2;
+}
+
 message GetAppResponseV1 {
   BaseResponse base = 1;
   AppV1 app = 2;
 }
 
-message CreateAppRequestV1 {
+message SaveAppRequestV1 {
   BaseMessage base = 1;
   AppV1 app = 2;
 }
 
-message CreateAppResponseV1 {
+message SaveAppResponseV1 {
   BaseResponse base = 1;
   AppV1 app = 2;
+}
+
+message DeleteAppRequestV1 {
+  BaseMessage base = 1;
+  // UUID
+  string app_id = 2;
+}
+
+message DeleteAppResponseV1 {
+  BaseResponse base = 1;
+}
+
+message ControlAppRequestV1 {
+  BaseMessage base = 1;
+  // UUID
+  string app_id = 2;
+  AppAction action = 3;
+}
+
+message ControlAppResponseV1 {
+  BaseResponse base = 1;
+  AppStatusCode status_code = 2;
 }
 
 // Command messages for bidirectional streaming
 message ServerCommand {
   oneof command {
+    // Responses for messages initialized by an agent
     HeartbeatResponseV1 heartbeat_response_v1 = 1;
-    GetAppRequestV1 get_app_request_v1 = 2;
-    CreateAppRequestV1 create_app_request_v1 = 3;
+    AgentAppsResponseV1 apps_response_v1 = 2;
+
+    // Commands initialized by the server
+    GetAppRequestV1 get_app_request_v1 = 3;
+    SaveAppRequestV1 save_app_request_v1 = 4;
+    DeleteAppRequestV1 delete_app_request_v1 = 5;
+    ControlAppRequestV1 control_app_request_v1 = 6;
   }
 }
 
 message AgentMessage {
   oneof message {
+    // Messages initialized by an agent
     AgentHeartbeatV1 heartbeat_v1 = 1;
-    GetAppResponseV1 get_app_response_v1 = 2;
-    CreateAppResponseV1 create_app_response_v1 = 3;
+    AgentAppsV1 apps_v1 = 2;
+
+    // Responses for commands initialized by the server
+    GetAppResponseV1 get_app_response_v1 = 3;
+    SaveAppResponseV1 save_app_response_v1 = 4;
+    DeleteAppResponseV1 delete_app_response_v1 = 5;
+    ControlAppResponseV1 control_app_response_v1 = 6;
   }
 }
 
 // Agent service definition
 service AgentService {
-  // Register an agent
+  // Registers an agent with the server and establishes identity
+  // Returns success if registration is accepted or appropriate error code
   rpc RegisterAgentV1(RegisterAgentRequestV1) returns (RegisterAgentResponseV1) {}
 
-  // Bidirectional streaming
+  // Establishes a bidirectional stream between agent and server
+  // Allows:
+  // 1. agent to send heartbeats and server to respond to them
+  // 2. server to send commands and agent to send responses
   rpc AgentStream(stream AgentMessage) returns (stream ServerCommand) {}
 }

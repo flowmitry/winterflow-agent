@@ -1,4 +1,4 @@
-package create_app
+package save_app
 
 import (
 	"encoding/json"
@@ -11,17 +11,17 @@ import (
 	"winterflow-agent/pkg/yaml"
 )
 
-// CreateAppHandler handles the CreateAppCommand
-type CreateAppHandler struct{}
+// SaveAppHandler handles the SaveAppCommand
+type SaveAppHandler struct{}
 
-// Handle executes the CreateAppCommand
-func (h *CreateAppHandler) Handle(cmd CreateAppCommand) error {
-	log.Printf("Processing create app request for app ID: %s", cmd.Request.App.AppId)
+// Handle executes the SaveAppCommand
+func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
+	log.Printf("Processing save app request for app ID: %s", cmd.Request.App.AppId)
 
 	// Create the directory structure and files
 	appID := cmd.Request.App.AppId
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
-	var responseMessage string = "App created successfully"
+	var responseMessage string = "App saved successfully"
 
 	// Create the required directories
 	rolesDir := filepath.Join(config.GetAnsibleAppsRolesPath(), appID)
@@ -180,14 +180,14 @@ func (h *CreateAppHandler) Handle(cmd CreateAppCommand) error {
 	return nil
 }
 
-// CreateAppResult represents the result of creating an app
-type CreateAppResult struct {
+// SaveAppResult represents the result of creating an app
+type SaveAppResult struct {
 	ResponseCode    pb.ResponseCode
 	ResponseMessage string
 	App             *pb.AppV1
 }
 
-// NewCreateAppHandler creates a new CreateAppHandler
-func NewCreateAppHandler() *CreateAppHandler {
-	return &CreateAppHandler{}
+// NewSaveAppHandler creates a new SaveAppHandler
+func NewSaveAppHandler() *SaveAppHandler {
+	return &SaveAppHandler{}
 }

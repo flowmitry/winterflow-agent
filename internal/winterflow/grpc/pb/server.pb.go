@@ -87,6 +87,107 @@ func (ResponseCode) EnumDescriptor() ([]byte, []int) {
 	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{0}
 }
 
+type AppStatusCode int32
+
+const (
+	AppStatusCode_STATUS_CODE_UNKNOWN  AppStatusCode = 0
+	AppStatusCode_STATUS_CODE_ACTIVE   AppStatusCode = 1
+	AppStatusCode_STATUS_CODE_INACTIVE AppStatusCode = 2
+	AppStatusCode_STATUS_CODE_FAILURE  AppStatusCode = 3
+)
+
+// Enum value maps for AppStatusCode.
+var (
+	AppStatusCode_name = map[int32]string{
+		0: "STATUS_CODE_UNKNOWN",
+		1: "STATUS_CODE_ACTIVE",
+		2: "STATUS_CODE_INACTIVE",
+		3: "STATUS_CODE_FAILURE",
+	}
+	AppStatusCode_value = map[string]int32{
+		"STATUS_CODE_UNKNOWN":  0,
+		"STATUS_CODE_ACTIVE":   1,
+		"STATUS_CODE_INACTIVE": 2,
+		"STATUS_CODE_FAILURE":  3,
+	}
+)
+
+func (x AppStatusCode) Enum() *AppStatusCode {
+	p := new(AppStatusCode)
+	*p = x
+	return p
+}
+
+func (x AppStatusCode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AppStatusCode) Descriptor() protoreflect.EnumDescriptor {
+	return file_internal_winterflow_grpc_pb_server_proto_enumTypes[1].Descriptor()
+}
+
+func (AppStatusCode) Type() protoreflect.EnumType {
+	return &file_internal_winterflow_grpc_pb_server_proto_enumTypes[1]
+}
+
+func (x AppStatusCode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AppStatusCode.Descriptor instead.
+func (AppStatusCode) EnumDescriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{1}
+}
+
+type AppAction int32
+
+const (
+	AppAction_STOP    AppAction = 0
+	AppAction_START   AppAction = 1
+	AppAction_RESTART AppAction = 2
+)
+
+// Enum value maps for AppAction.
+var (
+	AppAction_name = map[int32]string{
+		0: "STOP",
+		1: "START",
+		2: "RESTART",
+	}
+	AppAction_value = map[string]int32{
+		"STOP":    0,
+		"START":   1,
+		"RESTART": 2,
+	}
+)
+
+func (x AppAction) Enum() *AppAction {
+	p := new(AppAction)
+	*p = x
+	return p
+}
+
+func (x AppAction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AppAction) Descriptor() protoreflect.EnumDescriptor {
+	return file_internal_winterflow_grpc_pb_server_proto_enumTypes[2].Descriptor()
+}
+
+func (AppAction) Type() protoreflect.EnumType {
+	return &file_internal_winterflow_grpc_pb_server_proto_enumTypes[2]
+}
+
+func (x AppAction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AppAction.Descriptor instead.
+func (AppAction) EnumDescriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{2}
+}
+
 type BaseMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// UUID
@@ -429,30 +530,31 @@ func (x *HeartbeatResponseV1) GetBase() *BaseResponse {
 	return nil
 }
 
-// App retrieval messages
-type GetAppRequestV1 struct {
+type AppStatusV1 struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Base  *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
 	// UUID
-	AppId         string `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	AppId string `protobuf:"bytes,1,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	// JSON
+	Config        []byte        `protobuf:"bytes,2,opt,name=config,proto3" json:"config,omitempty"`
+	StatusCode    AppStatusCode `protobuf:"varint,3,opt,name=status_code,json=statusCode,proto3,enum=pb.AppStatusCode" json:"status_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetAppRequestV1) Reset() {
-	*x = GetAppRequestV1{}
+func (x *AppStatusV1) Reset() {
+	*x = AppStatusV1{}
 	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetAppRequestV1) String() string {
+func (x *AppStatusV1) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetAppRequestV1) ProtoMessage() {}
+func (*AppStatusV1) ProtoMessage() {}
 
-func (x *GetAppRequestV1) ProtoReflect() protoreflect.Message {
+func (x *AppStatusV1) ProtoReflect() protoreflect.Message {
 	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -464,31 +566,137 @@ func (x *GetAppRequestV1) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetAppRequestV1.ProtoReflect.Descriptor instead.
-func (*GetAppRequestV1) Descriptor() ([]byte, []int) {
+// Deprecated: Use AppStatusV1.ProtoReflect.Descriptor instead.
+func (*AppStatusV1) Descriptor() ([]byte, []int) {
 	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *GetAppRequestV1) GetBase() *BaseMessage {
-	if x != nil {
-		return x.Base
-	}
-	return nil
-}
-
-func (x *GetAppRequestV1) GetAppId() string {
+func (x *AppStatusV1) GetAppId() string {
 	if x != nil {
 		return x.AppId
 	}
 	return ""
 }
 
+func (x *AppStatusV1) GetConfig() []byte {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+func (x *AppStatusV1) GetStatusCode() AppStatusCode {
+	if x != nil {
+		return x.StatusCode
+	}
+	return AppStatusCode_STATUS_CODE_UNKNOWN
+}
+
+type AgentAppsV1 struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	Apps          []*AppStatusV1         `protobuf:"bytes,2,rep,name=apps,proto3" json:"apps,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentAppsV1) Reset() {
+	*x = AgentAppsV1{}
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentAppsV1) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentAppsV1) ProtoMessage() {}
+
+func (x *AgentAppsV1) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentAppsV1.ProtoReflect.Descriptor instead.
+func (*AgentAppsV1) Descriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AgentAppsV1) GetBase() *BaseMessage {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *AgentAppsV1) GetApps() []*AppStatusV1 {
+	if x != nil {
+		return x.Apps
+	}
+	return nil
+}
+
+type AgentAppsResponseV1 struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentAppsResponseV1) Reset() {
+	*x = AgentAppsResponseV1{}
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentAppsResponseV1) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentAppsResponseV1) ProtoMessage() {}
+
+func (x *AgentAppsResponseV1) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentAppsResponseV1.ProtoReflect.Descriptor instead.
+func (*AgentAppsResponseV1) Descriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *AgentAppsResponseV1) GetBase() *BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
 type AppV1 struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// UUID
-	AppId         string       `protobuf:"bytes,1,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
-	Config        []byte       `protobuf:"bytes,2,opt,name=config,proto3" json:"config,omitempty"`
-	Variables     []byte       `protobuf:"bytes,3,opt,name=variables,proto3" json:"variables,omitempty"`
+	AppId string `protobuf:"bytes,1,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	// JSON
+	Config []byte `protobuf:"bytes,2,opt,name=config,proto3" json:"config,omitempty"`
+	// JSON
+	Variables []byte `protobuf:"bytes,3,opt,name=variables,proto3" json:"variables,omitempty"`
+	// JSON
 	Secrets       []byte       `protobuf:"bytes,4,opt,name=secrets,proto3" json:"secrets,omitempty"`
 	Files         []*AppFileV1 `protobuf:"bytes,5,rep,name=files,proto3" json:"files,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -497,7 +705,7 @@ type AppV1 struct {
 
 func (x *AppV1) Reset() {
 	*x = AppV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[7]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -509,7 +717,7 @@ func (x *AppV1) String() string {
 func (*AppV1) ProtoMessage() {}
 
 func (x *AppV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[7]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -522,7 +730,7 @@ func (x *AppV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppV1.ProtoReflect.Descriptor instead.
 func (*AppV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{7}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AppV1) GetAppId() string {
@@ -570,7 +778,7 @@ type AppFileV1 struct {
 
 func (x *AppFileV1) Reset() {
 	*x = AppFileV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[8]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -582,7 +790,7 @@ func (x *AppFileV1) String() string {
 func (*AppFileV1) ProtoMessage() {}
 
 func (x *AppFileV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[8]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -595,7 +803,7 @@ func (x *AppFileV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppFileV1.ProtoReflect.Descriptor instead.
 func (*AppFileV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{8}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AppFileV1) GetName() string {
@@ -612,6 +820,59 @@ func (x *AppFileV1) GetContent() []byte {
 	return nil
 }
 
+type GetAppRequestV1 struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Base  *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// UUID
+	AppId         string `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAppRequestV1) Reset() {
+	*x = GetAppRequestV1{}
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAppRequestV1) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAppRequestV1) ProtoMessage() {}
+
+func (x *GetAppRequestV1) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAppRequestV1.ProtoReflect.Descriptor instead.
+func (*GetAppRequestV1) Descriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetAppRequestV1) GetBase() *BaseMessage {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *GetAppRequestV1) GetAppId() string {
+	if x != nil {
+		return x.AppId
+	}
+	return ""
+}
+
 type GetAppResponseV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
@@ -622,7 +883,7 @@ type GetAppResponseV1 struct {
 
 func (x *GetAppResponseV1) Reset() {
 	*x = GetAppResponseV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[9]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -634,7 +895,7 @@ func (x *GetAppResponseV1) String() string {
 func (*GetAppResponseV1) ProtoMessage() {}
 
 func (x *GetAppResponseV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[9]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -647,7 +908,7 @@ func (x *GetAppResponseV1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAppResponseV1.ProtoReflect.Descriptor instead.
 func (*GetAppResponseV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{9}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetAppResponseV1) GetBase() *BaseResponse {
@@ -664,7 +925,7 @@ func (x *GetAppResponseV1) GetApp() *AppV1 {
 	return nil
 }
 
-type CreateAppRequestV1 struct {
+type SaveAppRequestV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
 	App           *AppV1                 `protobuf:"bytes,2,opt,name=app,proto3" json:"app,omitempty"`
@@ -672,21 +933,21 @@ type CreateAppRequestV1 struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CreateAppRequestV1) Reset() {
-	*x = CreateAppRequestV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[10]
+func (x *SaveAppRequestV1) Reset() {
+	*x = SaveAppRequestV1{}
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateAppRequestV1) String() string {
+func (x *SaveAppRequestV1) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateAppRequestV1) ProtoMessage() {}
+func (*SaveAppRequestV1) ProtoMessage() {}
 
-func (x *CreateAppRequestV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[10]
+func (x *SaveAppRequestV1) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -697,26 +958,26 @@ func (x *CreateAppRequestV1) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateAppRequestV1.ProtoReflect.Descriptor instead.
-func (*CreateAppRequestV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{10}
+// Deprecated: Use SaveAppRequestV1.ProtoReflect.Descriptor instead.
+func (*SaveAppRequestV1) Descriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *CreateAppRequestV1) GetBase() *BaseMessage {
+func (x *SaveAppRequestV1) GetBase() *BaseMessage {
 	if x != nil {
 		return x.Base
 	}
 	return nil
 }
 
-func (x *CreateAppRequestV1) GetApp() *AppV1 {
+func (x *SaveAppRequestV1) GetApp() *AppV1 {
 	if x != nil {
 		return x.App
 	}
 	return nil
 }
 
-type CreateAppResponseV1 struct {
+type SaveAppResponseV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
 	App           *AppV1                 `protobuf:"bytes,2,opt,name=app,proto3" json:"app,omitempty"`
@@ -724,21 +985,21 @@ type CreateAppResponseV1 struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CreateAppResponseV1) Reset() {
-	*x = CreateAppResponseV1{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[11]
+func (x *SaveAppResponseV1) Reset() {
+	*x = SaveAppResponseV1{}
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateAppResponseV1) String() string {
+func (x *SaveAppResponseV1) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateAppResponseV1) ProtoMessage() {}
+func (*SaveAppResponseV1) ProtoMessage() {}
 
-func (x *CreateAppResponseV1) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[11]
+func (x *SaveAppResponseV1) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -749,23 +1010,233 @@ func (x *CreateAppResponseV1) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateAppResponseV1.ProtoReflect.Descriptor instead.
-func (*CreateAppResponseV1) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{11}
+// Deprecated: Use SaveAppResponseV1.ProtoReflect.Descriptor instead.
+func (*SaveAppResponseV1) Descriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{14}
 }
 
-func (x *CreateAppResponseV1) GetBase() *BaseResponse {
+func (x *SaveAppResponseV1) GetBase() *BaseResponse {
 	if x != nil {
 		return x.Base
 	}
 	return nil
 }
 
-func (x *CreateAppResponseV1) GetApp() *AppV1 {
+func (x *SaveAppResponseV1) GetApp() *AppV1 {
 	if x != nil {
 		return x.App
 	}
 	return nil
+}
+
+type DeleteAppRequestV1 struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Base  *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// UUID
+	AppId         string `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAppRequestV1) Reset() {
+	*x = DeleteAppRequestV1{}
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAppRequestV1) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAppRequestV1) ProtoMessage() {}
+
+func (x *DeleteAppRequestV1) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAppRequestV1.ProtoReflect.Descriptor instead.
+func (*DeleteAppRequestV1) Descriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *DeleteAppRequestV1) GetBase() *BaseMessage {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *DeleteAppRequestV1) GetAppId() string {
+	if x != nil {
+		return x.AppId
+	}
+	return ""
+}
+
+type DeleteAppResponseV1 struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAppResponseV1) Reset() {
+	*x = DeleteAppResponseV1{}
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAppResponseV1) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAppResponseV1) ProtoMessage() {}
+
+func (x *DeleteAppResponseV1) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAppResponseV1.ProtoReflect.Descriptor instead.
+func (*DeleteAppResponseV1) Descriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *DeleteAppResponseV1) GetBase() *BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+type ControlAppRequestV1 struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Base  *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// UUID
+	AppId         string    `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	Action        AppAction `protobuf:"varint,3,opt,name=action,proto3,enum=pb.AppAction" json:"action,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ControlAppRequestV1) Reset() {
+	*x = ControlAppRequestV1{}
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlAppRequestV1) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlAppRequestV1) ProtoMessage() {}
+
+func (x *ControlAppRequestV1) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlAppRequestV1.ProtoReflect.Descriptor instead.
+func (*ControlAppRequestV1) Descriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ControlAppRequestV1) GetBase() *BaseMessage {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ControlAppRequestV1) GetAppId() string {
+	if x != nil {
+		return x.AppId
+	}
+	return ""
+}
+
+func (x *ControlAppRequestV1) GetAction() AppAction {
+	if x != nil {
+		return x.Action
+	}
+	return AppAction_STOP
+}
+
+type ControlAppResponseV1 struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	StatusCode    AppStatusCode          `protobuf:"varint,2,opt,name=status_code,json=statusCode,proto3,enum=pb.AppStatusCode" json:"status_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ControlAppResponseV1) Reset() {
+	*x = ControlAppResponseV1{}
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlAppResponseV1) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlAppResponseV1) ProtoMessage() {}
+
+func (x *ControlAppResponseV1) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlAppResponseV1.ProtoReflect.Descriptor instead.
+func (*ControlAppResponseV1) Descriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ControlAppResponseV1) GetBase() *BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ControlAppResponseV1) GetStatusCode() AppStatusCode {
+	if x != nil {
+		return x.StatusCode
+	}
+	return AppStatusCode_STATUS_CODE_UNKNOWN
 }
 
 // Command messages for bidirectional streaming
@@ -774,8 +1245,11 @@ type ServerCommand struct {
 	// Types that are valid to be assigned to Command:
 	//
 	//	*ServerCommand_HeartbeatResponseV1
+	//	*ServerCommand_AppsResponseV1
 	//	*ServerCommand_GetAppRequestV1
-	//	*ServerCommand_CreateAppRequestV1
+	//	*ServerCommand_SaveAppRequestV1
+	//	*ServerCommand_DeleteAppRequestV1
+	//	*ServerCommand_ControlAppRequestV1
 	Command       isServerCommand_Command `protobuf_oneof:"command"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -783,7 +1257,7 @@ type ServerCommand struct {
 
 func (x *ServerCommand) Reset() {
 	*x = ServerCommand{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[12]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -795,7 +1269,7 @@ func (x *ServerCommand) String() string {
 func (*ServerCommand) ProtoMessage() {}
 
 func (x *ServerCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[12]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -808,7 +1282,7 @@ func (x *ServerCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerCommand.ProtoReflect.Descriptor instead.
 func (*ServerCommand) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{12}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ServerCommand) GetCommand() isServerCommand_Command {
@@ -827,6 +1301,15 @@ func (x *ServerCommand) GetHeartbeatResponseV1() *HeartbeatResponseV1 {
 	return nil
 }
 
+func (x *ServerCommand) GetAppsResponseV1() *AgentAppsResponseV1 {
+	if x != nil {
+		if x, ok := x.Command.(*ServerCommand_AppsResponseV1); ok {
+			return x.AppsResponseV1
+		}
+	}
+	return nil
+}
+
 func (x *ServerCommand) GetGetAppRequestV1() *GetAppRequestV1 {
 	if x != nil {
 		if x, ok := x.Command.(*ServerCommand_GetAppRequestV1); ok {
@@ -836,10 +1319,28 @@ func (x *ServerCommand) GetGetAppRequestV1() *GetAppRequestV1 {
 	return nil
 }
 
-func (x *ServerCommand) GetCreateAppRequestV1() *CreateAppRequestV1 {
+func (x *ServerCommand) GetSaveAppRequestV1() *SaveAppRequestV1 {
 	if x != nil {
-		if x, ok := x.Command.(*ServerCommand_CreateAppRequestV1); ok {
-			return x.CreateAppRequestV1
+		if x, ok := x.Command.(*ServerCommand_SaveAppRequestV1); ok {
+			return x.SaveAppRequestV1
+		}
+	}
+	return nil
+}
+
+func (x *ServerCommand) GetDeleteAppRequestV1() *DeleteAppRequestV1 {
+	if x != nil {
+		if x, ok := x.Command.(*ServerCommand_DeleteAppRequestV1); ok {
+			return x.DeleteAppRequestV1
+		}
+	}
+	return nil
+}
+
+func (x *ServerCommand) GetControlAppRequestV1() *ControlAppRequestV1 {
+	if x != nil {
+		if x, ok := x.Command.(*ServerCommand_ControlAppRequestV1); ok {
+			return x.ControlAppRequestV1
 		}
 	}
 	return nil
@@ -850,30 +1351,53 @@ type isServerCommand_Command interface {
 }
 
 type ServerCommand_HeartbeatResponseV1 struct {
+	// Responses for messages initialized by an agent
 	HeartbeatResponseV1 *HeartbeatResponseV1 `protobuf:"bytes,1,opt,name=heartbeat_response_v1,json=heartbeatResponseV1,proto3,oneof"`
 }
 
-type ServerCommand_GetAppRequestV1 struct {
-	GetAppRequestV1 *GetAppRequestV1 `protobuf:"bytes,2,opt,name=get_app_request_v1,json=getAppRequestV1,proto3,oneof"`
+type ServerCommand_AppsResponseV1 struct {
+	AppsResponseV1 *AgentAppsResponseV1 `protobuf:"bytes,2,opt,name=apps_response_v1,json=appsResponseV1,proto3,oneof"`
 }
 
-type ServerCommand_CreateAppRequestV1 struct {
-	CreateAppRequestV1 *CreateAppRequestV1 `protobuf:"bytes,3,opt,name=create_app_request_v1,json=createAppRequestV1,proto3,oneof"`
+type ServerCommand_GetAppRequestV1 struct {
+	// Commands initialized by the server
+	GetAppRequestV1 *GetAppRequestV1 `protobuf:"bytes,3,opt,name=get_app_request_v1,json=getAppRequestV1,proto3,oneof"`
+}
+
+type ServerCommand_SaveAppRequestV1 struct {
+	SaveAppRequestV1 *SaveAppRequestV1 `protobuf:"bytes,4,opt,name=save_app_request_v1,json=saveAppRequestV1,proto3,oneof"`
+}
+
+type ServerCommand_DeleteAppRequestV1 struct {
+	DeleteAppRequestV1 *DeleteAppRequestV1 `protobuf:"bytes,5,opt,name=delete_app_request_v1,json=deleteAppRequestV1,proto3,oneof"`
+}
+
+type ServerCommand_ControlAppRequestV1 struct {
+	ControlAppRequestV1 *ControlAppRequestV1 `protobuf:"bytes,6,opt,name=control_app_request_v1,json=controlAppRequestV1,proto3,oneof"`
 }
 
 func (*ServerCommand_HeartbeatResponseV1) isServerCommand_Command() {}
 
+func (*ServerCommand_AppsResponseV1) isServerCommand_Command() {}
+
 func (*ServerCommand_GetAppRequestV1) isServerCommand_Command() {}
 
-func (*ServerCommand_CreateAppRequestV1) isServerCommand_Command() {}
+func (*ServerCommand_SaveAppRequestV1) isServerCommand_Command() {}
+
+func (*ServerCommand_DeleteAppRequestV1) isServerCommand_Command() {}
+
+func (*ServerCommand_ControlAppRequestV1) isServerCommand_Command() {}
 
 type AgentMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Message:
 	//
 	//	*AgentMessage_HeartbeatV1
+	//	*AgentMessage_AppsV1
 	//	*AgentMessage_GetAppResponseV1
-	//	*AgentMessage_CreateAppResponseV1
+	//	*AgentMessage_SaveAppResponseV1
+	//	*AgentMessage_DeleteAppResponseV1
+	//	*AgentMessage_ControlAppResponseV1
 	Message       isAgentMessage_Message `protobuf_oneof:"message"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -881,7 +1405,7 @@ type AgentMessage struct {
 
 func (x *AgentMessage) Reset() {
 	*x = AgentMessage{}
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[13]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -893,7 +1417,7 @@ func (x *AgentMessage) String() string {
 func (*AgentMessage) ProtoMessage() {}
 
 func (x *AgentMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[13]
+	mi := &file_internal_winterflow_grpc_pb_server_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -906,7 +1430,7 @@ func (x *AgentMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentMessage.ProtoReflect.Descriptor instead.
 func (*AgentMessage) Descriptor() ([]byte, []int) {
-	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{13}
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *AgentMessage) GetMessage() isAgentMessage_Message {
@@ -925,6 +1449,15 @@ func (x *AgentMessage) GetHeartbeatV1() *AgentHeartbeatV1 {
 	return nil
 }
 
+func (x *AgentMessage) GetAppsV1() *AgentAppsV1 {
+	if x != nil {
+		if x, ok := x.Message.(*AgentMessage_AppsV1); ok {
+			return x.AppsV1
+		}
+	}
+	return nil
+}
+
 func (x *AgentMessage) GetGetAppResponseV1() *GetAppResponseV1 {
 	if x != nil {
 		if x, ok := x.Message.(*AgentMessage_GetAppResponseV1); ok {
@@ -934,10 +1467,28 @@ func (x *AgentMessage) GetGetAppResponseV1() *GetAppResponseV1 {
 	return nil
 }
 
-func (x *AgentMessage) GetCreateAppResponseV1() *CreateAppResponseV1 {
+func (x *AgentMessage) GetSaveAppResponseV1() *SaveAppResponseV1 {
 	if x != nil {
-		if x, ok := x.Message.(*AgentMessage_CreateAppResponseV1); ok {
-			return x.CreateAppResponseV1
+		if x, ok := x.Message.(*AgentMessage_SaveAppResponseV1); ok {
+			return x.SaveAppResponseV1
+		}
+	}
+	return nil
+}
+
+func (x *AgentMessage) GetDeleteAppResponseV1() *DeleteAppResponseV1 {
+	if x != nil {
+		if x, ok := x.Message.(*AgentMessage_DeleteAppResponseV1); ok {
+			return x.DeleteAppResponseV1
+		}
+	}
+	return nil
+}
+
+func (x *AgentMessage) GetControlAppResponseV1() *ControlAppResponseV1 {
+	if x != nil {
+		if x, ok := x.Message.(*AgentMessage_ControlAppResponseV1); ok {
+			return x.ControlAppResponseV1
 		}
 	}
 	return nil
@@ -948,22 +1499,42 @@ type isAgentMessage_Message interface {
 }
 
 type AgentMessage_HeartbeatV1 struct {
+	// Messages initialized by an agent
 	HeartbeatV1 *AgentHeartbeatV1 `protobuf:"bytes,1,opt,name=heartbeat_v1,json=heartbeatV1,proto3,oneof"`
 }
 
-type AgentMessage_GetAppResponseV1 struct {
-	GetAppResponseV1 *GetAppResponseV1 `protobuf:"bytes,2,opt,name=get_app_response_v1,json=getAppResponseV1,proto3,oneof"`
+type AgentMessage_AppsV1 struct {
+	AppsV1 *AgentAppsV1 `protobuf:"bytes,2,opt,name=apps_v1,json=appsV1,proto3,oneof"`
 }
 
-type AgentMessage_CreateAppResponseV1 struct {
-	CreateAppResponseV1 *CreateAppResponseV1 `protobuf:"bytes,3,opt,name=create_app_response_v1,json=createAppResponseV1,proto3,oneof"`
+type AgentMessage_GetAppResponseV1 struct {
+	// Responses for commands initialized by the server
+	GetAppResponseV1 *GetAppResponseV1 `protobuf:"bytes,3,opt,name=get_app_response_v1,json=getAppResponseV1,proto3,oneof"`
+}
+
+type AgentMessage_SaveAppResponseV1 struct {
+	SaveAppResponseV1 *SaveAppResponseV1 `protobuf:"bytes,4,opt,name=save_app_response_v1,json=saveAppResponseV1,proto3,oneof"`
+}
+
+type AgentMessage_DeleteAppResponseV1 struct {
+	DeleteAppResponseV1 *DeleteAppResponseV1 `protobuf:"bytes,5,opt,name=delete_app_response_v1,json=deleteAppResponseV1,proto3,oneof"`
+}
+
+type AgentMessage_ControlAppResponseV1 struct {
+	ControlAppResponseV1 *ControlAppResponseV1 `protobuf:"bytes,6,opt,name=control_app_response_v1,json=controlAppResponseV1,proto3,oneof"`
 }
 
 func (*AgentMessage_HeartbeatV1) isAgentMessage_Message() {}
 
+func (*AgentMessage_AppsV1) isAgentMessage_Message() {}
+
 func (*AgentMessage_GetAppResponseV1) isAgentMessage_Message() {}
 
-func (*AgentMessage_CreateAppResponseV1) isAgentMessage_Message() {}
+func (*AgentMessage_SaveAppResponseV1) isAgentMessage_Message() {}
+
+func (*AgentMessage_DeleteAppResponseV1) isAgentMessage_Message() {}
+
+func (*AgentMessage_ControlAppResponseV1) isAgentMessage_Message() {}
 
 var File_internal_winterflow_grpc_pb_server_proto protoreflect.FileDescriptor
 
@@ -1001,10 +1572,17 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\";\n" +
 	"\x13HeartbeatResponseV1\x12$\n" +
-	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"M\n" +
-	"\x0fGetAppRequestV1\x12#\n" +
-	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x15\n" +
-	"\x06app_id\x18\x02 \x01(\tR\x05appId\"\x93\x01\n" +
+	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"p\n" +
+	"\vAppStatusV1\x12\x15\n" +
+	"\x06app_id\x18\x01 \x01(\tR\x05appId\x12\x16\n" +
+	"\x06config\x18\x02 \x01(\fR\x06config\x122\n" +
+	"\vstatus_code\x18\x03 \x01(\x0e2\x11.pb.AppStatusCodeR\n" +
+	"statusCode\"W\n" +
+	"\vAgentAppsV1\x12#\n" +
+	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12#\n" +
+	"\x04apps\x18\x02 \x03(\v2\x0f.pb.AppStatusV1R\x04apps\";\n" +
+	"\x13AgentAppsResponseV1\x12$\n" +
+	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"\x93\x01\n" +
 	"\x05AppV1\x12\x15\n" +
 	"\x06app_id\x18\x01 \x01(\tR\x05appId\x12\x16\n" +
 	"\x06config\x18\x02 \x01(\fR\x06config\x12\x1c\n" +
@@ -1013,25 +1591,47 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x05files\x18\x05 \x03(\v2\r.pb.AppFileV1R\x05files\"9\n" +
 	"\tAppFileV1\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\fR\acontent\"U\n" +
+	"\acontent\x18\x02 \x01(\fR\acontent\"M\n" +
+	"\x0fGetAppRequestV1\x12#\n" +
+	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x15\n" +
+	"\x06app_id\x18\x02 \x01(\tR\x05appId\"U\n" +
 	"\x10GetAppResponseV1\x12$\n" +
 	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x1b\n" +
-	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"V\n" +
-	"\x12CreateAppRequestV1\x12#\n" +
+	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"T\n" +
+	"\x10SaveAppRequestV1\x12#\n" +
 	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x1b\n" +
-	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"X\n" +
-	"\x13CreateAppResponseV1\x12$\n" +
+	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"V\n" +
+	"\x11SaveAppResponseV1\x12$\n" +
 	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x1b\n" +
-	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"\xfa\x01\n" +
+	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"P\n" +
+	"\x12DeleteAppRequestV1\x12#\n" +
+	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x15\n" +
+	"\x06app_id\x18\x02 \x01(\tR\x05appId\";\n" +
+	"\x13DeleteAppResponseV1\x12$\n" +
+	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"x\n" +
+	"\x13ControlAppRequestV1\x12#\n" +
+	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x15\n" +
+	"\x06app_id\x18\x02 \x01(\tR\x05appId\x12%\n" +
+	"\x06action\x18\x03 \x01(\x0e2\r.pb.AppActionR\x06action\"p\n" +
+	"\x14ControlAppResponseV1\x12$\n" +
+	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x122\n" +
+	"\vstatus_code\x18\x02 \x01(\x0e2\x11.pb.AppStatusCodeR\n" +
+	"statusCode\"\xd6\x03\n" +
 	"\rServerCommand\x12M\n" +
-	"\x15heartbeat_response_v1\x18\x01 \x01(\v2\x17.pb.HeartbeatResponseV1H\x00R\x13heartbeatResponseV1\x12B\n" +
-	"\x12get_app_request_v1\x18\x02 \x01(\v2\x13.pb.GetAppRequestV1H\x00R\x0fgetAppRequestV1\x12K\n" +
-	"\x15create_app_request_v1\x18\x03 \x01(\v2\x16.pb.CreateAppRequestV1H\x00R\x12createAppRequestV1B\t\n" +
-	"\acommand\"\xeb\x01\n" +
+	"\x15heartbeat_response_v1\x18\x01 \x01(\v2\x17.pb.HeartbeatResponseV1H\x00R\x13heartbeatResponseV1\x12C\n" +
+	"\x10apps_response_v1\x18\x02 \x01(\v2\x17.pb.AgentAppsResponseV1H\x00R\x0eappsResponseV1\x12B\n" +
+	"\x12get_app_request_v1\x18\x03 \x01(\v2\x13.pb.GetAppRequestV1H\x00R\x0fgetAppRequestV1\x12E\n" +
+	"\x13save_app_request_v1\x18\x04 \x01(\v2\x14.pb.SaveAppRequestV1H\x00R\x10saveAppRequestV1\x12K\n" +
+	"\x15delete_app_request_v1\x18\x05 \x01(\v2\x16.pb.DeleteAppRequestV1H\x00R\x12deleteAppRequestV1\x12N\n" +
+	"\x16control_app_request_v1\x18\x06 \x01(\v2\x17.pb.ControlAppRequestV1H\x00R\x13controlAppRequestV1B\t\n" +
+	"\acommand\"\xb4\x03\n" +
 	"\fAgentMessage\x129\n" +
-	"\fheartbeat_v1\x18\x01 \x01(\v2\x14.pb.AgentHeartbeatV1H\x00R\vheartbeatV1\x12E\n" +
-	"\x13get_app_response_v1\x18\x02 \x01(\v2\x14.pb.GetAppResponseV1H\x00R\x10getAppResponseV1\x12N\n" +
-	"\x16create_app_response_v1\x18\x03 \x01(\v2\x17.pb.CreateAppResponseV1H\x00R\x13createAppResponseV1B\t\n" +
+	"\fheartbeat_v1\x18\x01 \x01(\v2\x14.pb.AgentHeartbeatV1H\x00R\vheartbeatV1\x12*\n" +
+	"\aapps_v1\x18\x02 \x01(\v2\x0f.pb.AgentAppsV1H\x00R\x06appsV1\x12E\n" +
+	"\x13get_app_response_v1\x18\x03 \x01(\v2\x14.pb.GetAppResponseV1H\x00R\x10getAppResponseV1\x12H\n" +
+	"\x14save_app_response_v1\x18\x04 \x01(\v2\x15.pb.SaveAppResponseV1H\x00R\x11saveAppResponseV1\x12N\n" +
+	"\x16delete_app_response_v1\x18\x05 \x01(\v2\x17.pb.DeleteAppResponseV1H\x00R\x13deleteAppResponseV1\x12Q\n" +
+	"\x17control_app_response_v1\x18\x06 \x01(\v2\x18.pb.ControlAppResponseV1H\x00R\x14controlAppResponseV1B\t\n" +
 	"\amessage*\x9d\x02\n" +
 	"\fResponseCode\x12\x1d\n" +
 	"\x19RESPONSE_CODE_UNSPECIFIED\x10\x00\x12\x19\n" +
@@ -1041,7 +1641,16 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x1aRESPONSE_CODE_SERVER_ERROR\x10\x04\x12!\n" +
 	"\x1dRESPONSE_CODE_AGENT_NOT_FOUND\x10\x05\x12\"\n" +
 	"\x1eRESPONSE_CODE_SERVER_NOT_FOUND\x10\x06\x12)\n" +
-	"%RESPONSE_CODE_AGENT_ALREADY_CONNECTED\x10\a2\x96\x01\n" +
+	"%RESPONSE_CODE_AGENT_ALREADY_CONNECTED\x10\a*s\n" +
+	"\rAppStatusCode\x12\x17\n" +
+	"\x13STATUS_CODE_UNKNOWN\x10\x00\x12\x16\n" +
+	"\x12STATUS_CODE_ACTIVE\x10\x01\x12\x18\n" +
+	"\x14STATUS_CODE_INACTIVE\x10\x02\x12\x17\n" +
+	"\x13STATUS_CODE_FAILURE\x10\x03*-\n" +
+	"\tAppAction\x12\b\n" +
+	"\x04STOP\x10\x00\x12\t\n" +
+	"\x05START\x10\x01\x12\v\n" +
+	"\aRESTART\x10\x022\x96\x01\n" +
 	"\fAgentService\x12L\n" +
 	"\x0fRegisterAgentV1\x12\x1a.pb.RegisterAgentRequestV1\x1a\x1b.pb.RegisterAgentResponseV1\"\x00\x128\n" +
 	"\vAgentStream\x12\x10.pb.AgentMessage\x1a\x11.pb.ServerCommand\"\x00(\x010\x01B.Z,winterflow-agent/internal/winterflow/grpc/pbb\x06proto3"
@@ -1058,63 +1667,88 @@ func file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP() []byte {
 	return file_internal_winterflow_grpc_pb_server_proto_rawDescData
 }
 
-var file_internal_winterflow_grpc_pb_server_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_internal_winterflow_grpc_pb_server_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_internal_winterflow_grpc_pb_server_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_internal_winterflow_grpc_pb_server_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_internal_winterflow_grpc_pb_server_proto_goTypes = []any{
 	(ResponseCode)(0),               // 0: pb.ResponseCode
-	(*BaseMessage)(nil),             // 1: pb.BaseMessage
-	(*BaseResponse)(nil),            // 2: pb.BaseResponse
-	(*RegisterAgentRequestV1)(nil),  // 3: pb.RegisterAgentRequestV1
-	(*RegisterAgentResponseV1)(nil), // 4: pb.RegisterAgentResponseV1
-	(*AgentHeartbeatV1)(nil),        // 5: pb.AgentHeartbeatV1
-	(*HeartbeatResponseV1)(nil),     // 6: pb.HeartbeatResponseV1
-	(*GetAppRequestV1)(nil),         // 7: pb.GetAppRequestV1
-	(*AppV1)(nil),                   // 8: pb.AppV1
-	(*AppFileV1)(nil),               // 9: pb.AppFileV1
-	(*GetAppResponseV1)(nil),        // 10: pb.GetAppResponseV1
-	(*CreateAppRequestV1)(nil),      // 11: pb.CreateAppRequestV1
-	(*CreateAppResponseV1)(nil),     // 12: pb.CreateAppResponseV1
-	(*ServerCommand)(nil),           // 13: pb.ServerCommand
-	(*AgentMessage)(nil),            // 14: pb.AgentMessage
-	nil,                             // 15: pb.RegisterAgentRequestV1.CapabilitiesEntry
-	nil,                             // 16: pb.RegisterAgentRequestV1.FeaturesEntry
-	nil,                             // 17: pb.AgentHeartbeatV1.MetricsEntry
-	(*timestamppb.Timestamp)(nil),   // 18: google.protobuf.Timestamp
+	(AppStatusCode)(0),              // 1: pb.AppStatusCode
+	(AppAction)(0),                  // 2: pb.AppAction
+	(*BaseMessage)(nil),             // 3: pb.BaseMessage
+	(*BaseResponse)(nil),            // 4: pb.BaseResponse
+	(*RegisterAgentRequestV1)(nil),  // 5: pb.RegisterAgentRequestV1
+	(*RegisterAgentResponseV1)(nil), // 6: pb.RegisterAgentResponseV1
+	(*AgentHeartbeatV1)(nil),        // 7: pb.AgentHeartbeatV1
+	(*HeartbeatResponseV1)(nil),     // 8: pb.HeartbeatResponseV1
+	(*AppStatusV1)(nil),             // 9: pb.AppStatusV1
+	(*AgentAppsV1)(nil),             // 10: pb.AgentAppsV1
+	(*AgentAppsResponseV1)(nil),     // 11: pb.AgentAppsResponseV1
+	(*AppV1)(nil),                   // 12: pb.AppV1
+	(*AppFileV1)(nil),               // 13: pb.AppFileV1
+	(*GetAppRequestV1)(nil),         // 14: pb.GetAppRequestV1
+	(*GetAppResponseV1)(nil),        // 15: pb.GetAppResponseV1
+	(*SaveAppRequestV1)(nil),        // 16: pb.SaveAppRequestV1
+	(*SaveAppResponseV1)(nil),       // 17: pb.SaveAppResponseV1
+	(*DeleteAppRequestV1)(nil),      // 18: pb.DeleteAppRequestV1
+	(*DeleteAppResponseV1)(nil),     // 19: pb.DeleteAppResponseV1
+	(*ControlAppRequestV1)(nil),     // 20: pb.ControlAppRequestV1
+	(*ControlAppResponseV1)(nil),    // 21: pb.ControlAppResponseV1
+	(*ServerCommand)(nil),           // 22: pb.ServerCommand
+	(*AgentMessage)(nil),            // 23: pb.AgentMessage
+	nil,                             // 24: pb.RegisterAgentRequestV1.CapabilitiesEntry
+	nil,                             // 25: pb.RegisterAgentRequestV1.FeaturesEntry
+	nil,                             // 26: pb.AgentHeartbeatV1.MetricsEntry
+	(*timestamppb.Timestamp)(nil),   // 27: google.protobuf.Timestamp
 }
 var file_internal_winterflow_grpc_pb_server_proto_depIdxs = []int32{
-	18, // 0: pb.BaseMessage.timestamp:type_name -> google.protobuf.Timestamp
-	18, // 1: pb.BaseResponse.timestamp:type_name -> google.protobuf.Timestamp
+	27, // 0: pb.BaseMessage.timestamp:type_name -> google.protobuf.Timestamp
+	27, // 1: pb.BaseResponse.timestamp:type_name -> google.protobuf.Timestamp
 	0,  // 2: pb.BaseResponse.response_code:type_name -> pb.ResponseCode
-	1,  // 3: pb.RegisterAgentRequestV1.base:type_name -> pb.BaseMessage
-	15, // 4: pb.RegisterAgentRequestV1.capabilities:type_name -> pb.RegisterAgentRequestV1.CapabilitiesEntry
-	16, // 5: pb.RegisterAgentRequestV1.features:type_name -> pb.RegisterAgentRequestV1.FeaturesEntry
-	2,  // 6: pb.RegisterAgentResponseV1.base:type_name -> pb.BaseResponse
-	1,  // 7: pb.AgentHeartbeatV1.base:type_name -> pb.BaseMessage
-	17, // 8: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
-	2,  // 9: pb.HeartbeatResponseV1.base:type_name -> pb.BaseResponse
-	1,  // 10: pb.GetAppRequestV1.base:type_name -> pb.BaseMessage
-	9,  // 11: pb.AppV1.files:type_name -> pb.AppFileV1
-	2,  // 12: pb.GetAppResponseV1.base:type_name -> pb.BaseResponse
-	8,  // 13: pb.GetAppResponseV1.app:type_name -> pb.AppV1
-	1,  // 14: pb.CreateAppRequestV1.base:type_name -> pb.BaseMessage
-	8,  // 15: pb.CreateAppRequestV1.app:type_name -> pb.AppV1
-	2,  // 16: pb.CreateAppResponseV1.base:type_name -> pb.BaseResponse
-	8,  // 17: pb.CreateAppResponseV1.app:type_name -> pb.AppV1
-	6,  // 18: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
-	7,  // 19: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
-	11, // 20: pb.ServerCommand.create_app_request_v1:type_name -> pb.CreateAppRequestV1
-	5,  // 21: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
-	10, // 22: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
-	12, // 23: pb.AgentMessage.create_app_response_v1:type_name -> pb.CreateAppResponseV1
-	3,  // 24: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
-	14, // 25: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
-	4,  // 26: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
-	13, // 27: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
-	26, // [26:28] is the sub-list for method output_type
-	24, // [24:26] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	3,  // 3: pb.RegisterAgentRequestV1.base:type_name -> pb.BaseMessage
+	24, // 4: pb.RegisterAgentRequestV1.capabilities:type_name -> pb.RegisterAgentRequestV1.CapabilitiesEntry
+	25, // 5: pb.RegisterAgentRequestV1.features:type_name -> pb.RegisterAgentRequestV1.FeaturesEntry
+	4,  // 6: pb.RegisterAgentResponseV1.base:type_name -> pb.BaseResponse
+	3,  // 7: pb.AgentHeartbeatV1.base:type_name -> pb.BaseMessage
+	26, // 8: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
+	4,  // 9: pb.HeartbeatResponseV1.base:type_name -> pb.BaseResponse
+	1,  // 10: pb.AppStatusV1.status_code:type_name -> pb.AppStatusCode
+	3,  // 11: pb.AgentAppsV1.base:type_name -> pb.BaseMessage
+	9,  // 12: pb.AgentAppsV1.apps:type_name -> pb.AppStatusV1
+	4,  // 13: pb.AgentAppsResponseV1.base:type_name -> pb.BaseResponse
+	13, // 14: pb.AppV1.files:type_name -> pb.AppFileV1
+	3,  // 15: pb.GetAppRequestV1.base:type_name -> pb.BaseMessage
+	4,  // 16: pb.GetAppResponseV1.base:type_name -> pb.BaseResponse
+	12, // 17: pb.GetAppResponseV1.app:type_name -> pb.AppV1
+	3,  // 18: pb.SaveAppRequestV1.base:type_name -> pb.BaseMessage
+	12, // 19: pb.SaveAppRequestV1.app:type_name -> pb.AppV1
+	4,  // 20: pb.SaveAppResponseV1.base:type_name -> pb.BaseResponse
+	12, // 21: pb.SaveAppResponseV1.app:type_name -> pb.AppV1
+	3,  // 22: pb.DeleteAppRequestV1.base:type_name -> pb.BaseMessage
+	4,  // 23: pb.DeleteAppResponseV1.base:type_name -> pb.BaseResponse
+	3,  // 24: pb.ControlAppRequestV1.base:type_name -> pb.BaseMessage
+	2,  // 25: pb.ControlAppRequestV1.action:type_name -> pb.AppAction
+	4,  // 26: pb.ControlAppResponseV1.base:type_name -> pb.BaseResponse
+	1,  // 27: pb.ControlAppResponseV1.status_code:type_name -> pb.AppStatusCode
+	8,  // 28: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
+	11, // 29: pb.ServerCommand.apps_response_v1:type_name -> pb.AgentAppsResponseV1
+	14, // 30: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
+	16, // 31: pb.ServerCommand.save_app_request_v1:type_name -> pb.SaveAppRequestV1
+	18, // 32: pb.ServerCommand.delete_app_request_v1:type_name -> pb.DeleteAppRequestV1
+	20, // 33: pb.ServerCommand.control_app_request_v1:type_name -> pb.ControlAppRequestV1
+	7,  // 34: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
+	10, // 35: pb.AgentMessage.apps_v1:type_name -> pb.AgentAppsV1
+	15, // 36: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
+	17, // 37: pb.AgentMessage.save_app_response_v1:type_name -> pb.SaveAppResponseV1
+	19, // 38: pb.AgentMessage.delete_app_response_v1:type_name -> pb.DeleteAppResponseV1
+	21, // 39: pb.AgentMessage.control_app_response_v1:type_name -> pb.ControlAppResponseV1
+	5,  // 40: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
+	23, // 41: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
+	6,  // 42: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
+	22, // 43: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
+	42, // [42:44] is the sub-list for method output_type
+	40, // [40:42] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_internal_winterflow_grpc_pb_server_proto_init() }
@@ -1122,23 +1756,29 @@ func file_internal_winterflow_grpc_pb_server_proto_init() {
 	if File_internal_winterflow_grpc_pb_server_proto != nil {
 		return
 	}
-	file_internal_winterflow_grpc_pb_server_proto_msgTypes[12].OneofWrappers = []any{
+	file_internal_winterflow_grpc_pb_server_proto_msgTypes[19].OneofWrappers = []any{
 		(*ServerCommand_HeartbeatResponseV1)(nil),
+		(*ServerCommand_AppsResponseV1)(nil),
 		(*ServerCommand_GetAppRequestV1)(nil),
-		(*ServerCommand_CreateAppRequestV1)(nil),
+		(*ServerCommand_SaveAppRequestV1)(nil),
+		(*ServerCommand_DeleteAppRequestV1)(nil),
+		(*ServerCommand_ControlAppRequestV1)(nil),
 	}
-	file_internal_winterflow_grpc_pb_server_proto_msgTypes[13].OneofWrappers = []any{
+	file_internal_winterflow_grpc_pb_server_proto_msgTypes[20].OneofWrappers = []any{
 		(*AgentMessage_HeartbeatV1)(nil),
+		(*AgentMessage_AppsV1)(nil),
 		(*AgentMessage_GetAppResponseV1)(nil),
-		(*AgentMessage_CreateAppResponseV1)(nil),
+		(*AgentMessage_SaveAppResponseV1)(nil),
+		(*AgentMessage_DeleteAppResponseV1)(nil),
+		(*AgentMessage_ControlAppResponseV1)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_winterflow_grpc_pb_server_proto_rawDesc), len(file_internal_winterflow_grpc_pb_server_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   17,
+			NumEnums:      3,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

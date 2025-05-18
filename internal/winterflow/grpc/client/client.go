@@ -551,7 +551,10 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			reregisterCh := make(chan struct{})
 			fatalErrorCh := make(chan error)
 			appRequestCh := make(chan *pb.GetAppRequestV1)
-			createAppRequestCh := make(chan *pb.CreateAppRequestV1)
+			saveAppRequestCh := make(chan *pb.SaveAppRequestV1)
+			deleteAppRequestCh := make(chan *pb.DeleteAppRequestV1)
+			controlAppRequestCh := make(chan *pb.ControlAppRequestV1)
+			agentAppsResponseCh := make(chan *pb.AgentAppsResponseV1)
 
 			// Start goroutine to receive responses
 			go func() {
@@ -607,13 +610,40 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							log.Printf("Warning: App request channel full, dropping request")
 						}
 
-					case *pb.ServerCommand_CreateAppRequestV1:
-						log.Printf("Received create app request: %s", cmd.CreateAppRequestV1.Base.MessageId)
+					case *pb.ServerCommand_SaveAppRequestV1:
+						log.Printf("Received save app request: %s", cmd.SaveAppRequestV1.Base.MessageId)
 						// Forward the request to be handled by the main loop
 						select {
-						case createAppRequestCh <- cmd.CreateAppRequestV1:
+						case saveAppRequestCh <- cmd.SaveAppRequestV1:
 						default:
-							log.Printf("Warning: Create app request channel full, dropping request")
+							log.Printf("Warning: Save app request channel full, dropping request")
+						}
+
+					case *pb.ServerCommand_DeleteAppRequestV1:
+						log.Printf("Received delete app request: %s", cmd.DeleteAppRequestV1.Base.MessageId)
+						// Forward the request to be handled by the main loop
+						select {
+						case deleteAppRequestCh <- cmd.DeleteAppRequestV1:
+						default:
+							log.Printf("Warning: Delete app request channel full, dropping request")
+						}
+
+					case *pb.ServerCommand_ControlAppRequestV1:
+						log.Printf("Received control app request: %s", cmd.ControlAppRequestV1.Base.MessageId)
+						// Forward the request to be handled by the main loop
+						select {
+						case controlAppRequestCh <- cmd.ControlAppRequestV1:
+						default:
+							log.Printf("Warning: Control app request channel full, dropping request")
+						}
+
+					case *pb.ServerCommand_AppsResponseV1:
+						log.Printf("Received apps response: %s", cmd.AppsResponseV1.Base.MessageId)
+						// Forward the response to be handled by the main loop
+						select {
+						case agentAppsResponseCh <- cmd.AppsResponseV1:
+						default:
+							log.Printf("Warning: Apps response channel full, dropping response")
 						}
 
 					default:
@@ -673,18 +703,47 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					}
 					log.Info("App response sent successfully")
 
-				case createAppRequest := <-createAppRequestCh:
-					agentMsg, err := HandleCreateAppRequest(c.commandBus, createAppRequest, agentID)
+				case saveAppRequest := <-saveAppRequestCh:
+					agentMsg, err := HandleSaveAppRequest(c.commandBus, saveAppRequest, agentID)
 					if err != nil {
-						log.Error("Error creating app response: %v", err)
+						log.Error("Error saving app response: %v", err)
 						continue
 					}
 
 					if err := stream.Send(agentMsg); err != nil {
-						log.Warn("Error sending create app response: %v", err)
+						log.Warn("Error sending save app response: %v", err)
 						continue
 					}
-					log.Info("Create app response sent successfully")
+					log.Info("Save app response sent successfully")
+
+				case deleteAppRequest := <-deleteAppRequestCh:
+					agentMsg, err := HandleDeleteAppRequest(c.commandBus, deleteAppRequest, agentID)
+					if err != nil {
+						log.Error("Error deleting app response: %v", err)
+						continue
+					}
+
+					if err := stream.Send(agentMsg); err != nil {
+						log.Warn("Error sending delete app response: %v", err)
+						continue
+					}
+					log.Info("Delete app response sent successfully")
+
+				case controlAppRequest := <-controlAppRequestCh:
+					agentMsg, err := HandleControlAppRequest(c.commandBus, controlAppRequest, agentID)
+					if err != nil {
+						log.Error("Error controlling app response: %v", err)
+						continue
+					}
+
+					if err := stream.Send(agentMsg); err != nil {
+						log.Warn("Error sending control app response: %v", err)
+						continue
+					}
+					log.Info("Control app response sent successfully")
+
+				case agentAppsResponse := <-agentAppsResponseCh:
+					log.Info("Received agent apps response: %s", agentAppsResponse.Base.MessageId)
 
 				case <-streamDone:
 					log.Printf("Stream receiver stopped, recreating stream")
