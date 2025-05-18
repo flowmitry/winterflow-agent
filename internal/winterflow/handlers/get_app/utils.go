@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"winterflow-agent/internal/winterflow/grpc/pb"
 )
 
 // convertYAMLToIDValueJSON converts YAML to JSON with "id": "value" format
@@ -91,4 +92,38 @@ func convertYAMLToIDValueJSON(configBytes, yamlBytes []byte) ([]byte, error) {
 	}
 
 	return idJSON, nil
+}
+
+// convertJSONToAppVars converts a JSON byte array to a slice of AppVarV1
+func convertJSONToAppVars(jsonBytes []byte) ([]*pb.AppVarV1, error) {
+	var jsonMap map[string]interface{}
+	if err := json.Unmarshal(jsonBytes, &jsonMap); err != nil {
+		return nil, fmt.Errorf("error parsing JSON: %w", err)
+	}
+
+	var appVars []*pb.AppVarV1
+	for id, value := range jsonMap {
+		// Convert the value to string
+		var strValue string
+		switch v := value.(type) {
+		case string:
+			strValue = v
+		case bool:
+			strValue = fmt.Sprintf("%t", v)
+		case int:
+			strValue = fmt.Sprintf("%d", v)
+		case float64:
+			strValue = fmt.Sprintf("%g", v)
+		default:
+			strValue = fmt.Sprintf("%v", v)
+		}
+
+		appVar := &pb.AppVarV1{
+			Id:      id,
+			Content: []byte(strValue),
+		}
+		appVars = append(appVars, appVar)
+	}
+
+	return appVars, nil
 }

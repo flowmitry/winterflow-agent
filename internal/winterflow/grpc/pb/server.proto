@@ -87,21 +87,28 @@ message AgentAppsResponseV1 {
   BaseResponse base = 1;
 }
 
+message AppFileV1 {
+  // uuid
+  string id = 1;
+  // text or binary content
+  bytes content = 2;
+}
+
+message AppVarV1 {
+  // uuid
+  string id = 1;
+  // text or binary content
+  bytes content = 2;
+}
+
 message AppV1 {
   // UUID
   string app_id = 1;
   // JSON
   bytes config = 2;
-  // JSON
-  bytes variables = 3;
-  // JSON
-  bytes secrets = 4;
+  repeated AppVarV1 variables = 3;
+  repeated AppVarV1 secrets = 4;
   repeated AppFileV1 files = 5;
-}
-
-message AppFileV1 {
-  string name = 1;
-  bytes content = 2;
 }
 
 message GetAppRequestV1 {

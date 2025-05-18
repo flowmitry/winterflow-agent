@@ -57,10 +57,22 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 		return nil, fmt.Errorf("error converting variables to JSON: %w", err)
 	}
 
+	// Convert variables JSON to AppVarV1 slice
+	variables, err := convertJSONToAppVars(varsJSON)
+	if err != nil {
+		return nil, fmt.Errorf("error converting variables JSON to AppVarV1: %w", err)
+	}
+
 	// Convert secrets from YAML to JSON with "id": "value" format
 	secretsJSON, err := convertYAMLToIDValueJSON(configBytes, secretsBytes)
 	if err != nil {
 		return nil, fmt.Errorf("error converting secrets to JSON: %w", err)
+	}
+
+	// Convert secrets JSON to AppVarV1 slice
+	secrets, err := convertJSONToAppVars(secretsJSON)
+	if err != nil {
+		return nil, fmt.Errorf("error converting secrets JSON to AppVarV1: %w", err)
 	}
 
 	// Parse config to get list of files
@@ -107,7 +119,7 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 
 		// Create an AppFileV1 for the file
 		file := &pb.AppFileV1{
-			Name:    filename,
+			Id:      filename,
 			Content: content,
 		}
 		files = append(files, file)
@@ -117,8 +129,8 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 	return &pb.AppV1{
 		AppId:     appID,
 		Config:    configBytes,
-		Variables: varsJSON,
-		Secrets:   secretsJSON,
+		Variables: variables,
+		Secrets:   secrets,
 		Files:     files,
 	}, nil
 }
