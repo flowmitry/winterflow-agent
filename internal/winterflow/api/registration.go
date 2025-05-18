@@ -70,12 +70,12 @@ func RegisterAgent(configPath string) error {
 	}
 
 	// Save agent_id to config immediately if it's new
-	if existingAgentID == "" && resp.Data.ServerID != "" {
-		cfg.AgentID = resp.Data.ServerID
+	if existingAgentID == "" && resp.Data.AgentID != "" {
+		cfg.AgentID = resp.Data.AgentID
 		if err := config.SaveConfig(cfg, configPath); err != nil {
 			log.Warn("[WARN] Failed to save agent_id to config: %v", err)
 		} else {
-			log.Printf("[DEBUG] Saved new agent_id to config: %s", resp.Data.ServerID)
+			log.Printf("[DEBUG] Saved new agent_id to config: %s", resp.Data.AgentID)
 		}
 	}
 
@@ -114,7 +114,7 @@ func RegisterAgent(configPath string) error {
 
 	// Poll for registration status
 	for {
-		statusResp, err := client.GetRegistrationStatus(resp.Data.ServerID)
+		statusResp, err := client.GetRegistrationStatus(resp.Data.AgentID)
 		if err != nil {
 			// Check if it's an API error
 			if apiErr, ok := err.(*APIError); ok {

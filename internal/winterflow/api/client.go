@@ -44,7 +44,7 @@ func (e *APIError) Error() string {
 // RegistrationRequest represents the request body for registration
 type RegistrationRequest struct {
 	Hostname      string `json:"hostname"`
-	ServerID      string `json:"server_id"`
+	AgentID       string `json:"agent_id"`
 	CertificateID string `json:"certificate_id"`
 	CSRData       string `json:"csr_data"`
 }
@@ -53,7 +53,7 @@ type RegistrationRequest struct {
 type RegistrationResponse struct {
 	Success bool `json:"success"`
 	Data    struct {
-		ServerID        string `json:"server_id"`
+		AgentID         string `json:"agent_id"`
 		Code            string `json:"code"`
 		ExpiresAt       string `json:"expires_at"`
 		CertificateData string `json:"certificate_data"`
@@ -81,7 +81,7 @@ func (c *Client) RequestRegistrationCode(agentID string, csrData string) (*Regis
 
 	reqBody := RegistrationRequest{
 		Hostname: hostname,
-		ServerID: agentID,
+		AgentID:  agentID,
 		CSRData:  encodedCSRData,
 	}
 
