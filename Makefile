@@ -6,8 +6,8 @@ API_URL=http://127.0.0.1:8080
 BUILD_DIR=.
 
 # Go build flags
-LDFLAGS=-X winterflow-agent/internal/agent.version=${VERSION} -X winterflow-agent/internal/config/config.DefaultGRPCServerAddress=${GRPC_ADDR} -X winterflow-agent/internal/config/config.DefaultAPIBaseURL=${API_URL}
-BUILD_FLAGS=-v -ldflags="${LDFLAGS}"
+LDFLAGS=-X winterflow-agent/internal/agent.version=${VERSION} -X winterflow-agent/internal/config.DefaultGRPCServerAddress=${GRPC_ADDR} -X winterflow-agent/internal/config.DefaultAPIBaseURL=${API_URL}
+BUILD_FLAGS=-v
 
 .PHONY: all clean grpc build run install-tools ansible-version
 
@@ -23,7 +23,8 @@ ansible-version:
 build: ansible-version
 	@echo "Building ${BINARY_NAME}..."
 	@mkdir -p ${BUILD_DIR}
-	@go build ${BUILD_FLAGS} -o ${BUILD_DIR}/${BINARY_NAME} ./main.go
+	@echo "go build ${BUILD_FLAGS} -ldflags=\"${LDFLAGS}\" -o ${BUILD_DIR}/${BINARY_NAME} ./main.go"
+	@go build ${BUILD_FLAGS} -ldflags="${LDFLAGS}" -o ${BUILD_DIR}/${BINARY_NAME} ./main.go
 	@chmod +x ${BUILD_DIR}/${BINARY_NAME}
 
 # Run the agent

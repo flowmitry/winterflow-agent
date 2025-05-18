@@ -90,7 +90,7 @@ func (c *Client) RequestRegistrationCode(agentID string, csrData string) (*Regis
 		return nil, fmt.Errorf("failed to marshal request: %v", err)
 	}
 
-	url := fmt.Sprintf("%s/api/v1/servers/request-registration-code", c.baseURL)
+	url := fmt.Sprintf("%s/api/v1/agents/request-registration-code", c.baseURL)
 	log.Printf("[DEBUG] Sending registration request to: %s", url)
 	log.Printf("[DEBUG] Request body: %s", string(jsonData))
 
@@ -142,7 +142,7 @@ func (c *Client) RequestRegistrationCode(agentID string, csrData string) (*Regis
 
 // GetRegistrationStatus checks the registration status
 func (c *Client) GetRegistrationStatus(agentID string) (*RegistrationStatusResponse, error) {
-	url := fmt.Sprintf("%s/api/v1/servers/get-registration-status?server_id=%s", c.baseURL, agentID)
+	url := fmt.Sprintf("%s/api/v1/agents/get-registration-status?agent_id=%s", c.baseURL, agentID)
 	log.Printf("[DEBUG] Checking registration status at: %s", url)
 
 	req, err := http.NewRequest("GET", url, nil)
