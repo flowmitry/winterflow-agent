@@ -90,10 +90,11 @@ func (ResponseCode) EnumDescriptor() ([]byte, []int) {
 type AppStatusCode int32
 
 const (
-	AppStatusCode_STATUS_CODE_UNKNOWN  AppStatusCode = 0
-	AppStatusCode_STATUS_CODE_ACTIVE   AppStatusCode = 1
-	AppStatusCode_STATUS_CODE_INACTIVE AppStatusCode = 2
-	AppStatusCode_STATUS_CODE_FAILURE  AppStatusCode = 3
+	AppStatusCode_STATUS_CODE_UNKNOWN   AppStatusCode = 0
+	AppStatusCode_STATUS_CODE_ACTIVE    AppStatusCode = 1
+	AppStatusCode_STATUS_CODE_INACTIVE  AppStatusCode = 2
+	AppStatusCode_STATUS_CODE_FAILURE   AppStatusCode = 3
+	AppStatusCode_STATUS_CODE_NOT_FOUND AppStatusCode = 4
 )
 
 // Enum value maps for AppStatusCode.
@@ -103,12 +104,14 @@ var (
 		1: "STATUS_CODE_ACTIVE",
 		2: "STATUS_CODE_INACTIVE",
 		3: "STATUS_CODE_FAILURE",
+		4: "STATUS_CODE_NOT_FOUND",
 	}
 	AppStatusCode_value = map[string]int32{
-		"STATUS_CODE_UNKNOWN":  0,
-		"STATUS_CODE_ACTIVE":   1,
-		"STATUS_CODE_INACTIVE": 2,
-		"STATUS_CODE_FAILURE":  3,
+		"STATUS_CODE_UNKNOWN":   0,
+		"STATUS_CODE_ACTIVE":    1,
+		"STATUS_CODE_INACTIVE":  2,
+		"STATUS_CODE_FAILURE":   3,
+		"STATUS_CODE_NOT_FOUND": 4,
 	}
 )
 
@@ -1698,12 +1701,13 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x1aRESPONSE_CODE_SERVER_ERROR\x10\x04\x12!\n" +
 	"\x1dRESPONSE_CODE_AGENT_NOT_FOUND\x10\x05\x12\"\n" +
 	"\x1eRESPONSE_CODE_SERVER_NOT_FOUND\x10\x06\x12)\n" +
-	"%RESPONSE_CODE_AGENT_ALREADY_CONNECTED\x10\a*s\n" +
+	"%RESPONSE_CODE_AGENT_ALREADY_CONNECTED\x10\a*\x8e\x01\n" +
 	"\rAppStatusCode\x12\x17\n" +
 	"\x13STATUS_CODE_UNKNOWN\x10\x00\x12\x16\n" +
 	"\x12STATUS_CODE_ACTIVE\x10\x01\x12\x18\n" +
 	"\x14STATUS_CODE_INACTIVE\x10\x02\x12\x17\n" +
-	"\x13STATUS_CODE_FAILURE\x10\x03*-\n" +
+	"\x13STATUS_CODE_FAILURE\x10\x03\x12\x19\n" +
+	"\x15STATUS_CODE_NOT_FOUND\x10\x04*-\n" +
 	"\tAppAction\x12\b\n" +
 	"\x04STOP\x10\x00\x12\t\n" +
 	"\x05START\x10\x01\x12\v\n" +

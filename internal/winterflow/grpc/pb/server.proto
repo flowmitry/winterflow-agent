@@ -23,6 +23,7 @@ enum AppStatusCode {
   STATUS_CODE_ACTIVE = 1;
   STATUS_CODE_INACTIVE = 2;
   STATUS_CODE_FAILURE = 3;
+  STATUS_CODE_NOT_FOUND = 4;
 }
 
 enum AppAction {
