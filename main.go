@@ -14,8 +14,8 @@ import (
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/agent"
-	"winterflow-agent/internal/ansible"
 	"winterflow-agent/internal/config"
+	ansiblefiles "winterflow-agent/internal/winterflow/ansible/files"
 	"winterflow-agent/internal/winterflow/api"
 )
 
@@ -121,7 +121,7 @@ func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) 
 	}
 
 	fsysAnsible, err := fs.Sub(ansibleFS, cfg.AnsiblePath)
-	ansibleManager := ansible.NewManager(fsysAnsible, configPath)
+	ansibleManager := ansiblefiles.NewManager(fsysAnsible, configPath)
 	if err := ansibleManager.SyncFiles(); err != nil {
 		log.Fatalf("Error syncing ansible files: %v", err)
 		return err

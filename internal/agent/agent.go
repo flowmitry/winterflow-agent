@@ -22,7 +22,7 @@ type Agent struct {
 
 // NewAgent creates a new agent instance
 func NewAgent(config *config.Config) (*Agent, error) {
-	c, err := client.NewClient(config.GRPCServerAddress, config.CertificatePath, config.PrivateKeyPath)
+	c, err := client.NewClient(config)
 	if err != nil {
 		return nil, log.Errorf("New GRPC client failed", err)
 	}

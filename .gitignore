@@ -49,4 +49,5 @@ dist/
 build/
 
 # Log files
-*.log 
+*.log
+.output.txt

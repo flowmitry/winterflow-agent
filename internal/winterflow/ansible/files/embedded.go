@@ -1,4 +1,4 @@
-package ansible
+package files
 
 import (
 	"io/fs"

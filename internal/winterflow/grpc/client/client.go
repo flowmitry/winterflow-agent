@@ -7,6 +7,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/handlers"
 	log "winterflow-agent/pkg/log"
 
@@ -97,21 +98,24 @@ func (c *Client) setupConnection() error {
 }
 
 // NewClient creates a new gRPC client
-func NewClient(serverAddress string, certPath, keyPath string) (*Client, error) {
+func NewClient(config *config.Config) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
+	serverAddress := config.GRPCServerAddress
+	certPath := config.CertificatePath
+	keyPath := config.PrivateKeyPath
 
 	log.Printf("Creating new gRPC client for %s", serverAddress)
 
 	// Create command bus and register handlers
 	commandBus := cqrs.NewCommandBus()
-	if err := handlers.RegisterCommandHandlers(commandBus); err != nil {
+	if err := handlers.RegisterCommandHandlers(commandBus, config); err != nil {
 		cancel()
 		return nil, log.Errorf("failed to register command handlers: %v", err)
 	}
 
 	// Create query bus and register handlers
 	queryBus := cqrs.NewQueryBus()
-	if err := handlers.RegisterQueryHandlers(queryBus); err != nil {
+	if err := handlers.RegisterQueryHandlers(queryBus, config); err != nil {
 		cancel()
 		return nil, log.Errorf("failed to register query handlers: %v", err)
 	}
