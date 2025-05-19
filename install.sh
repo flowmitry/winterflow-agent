@@ -27,17 +27,21 @@ AGENT_BINARY="${INSTALL_DIR}/agent"
 CONFIG_FILE="${INSTALL_DIR}/agent.config.json"
 SERVICE_FILE="/etc/systemd/system/winterflow-agent.service"
 INSTALL_SCRIPT="${INSTALL_DIR}/install.sh"
+LOGS_DIR="/var/log/winterflow/"
 
 # URLs
 GITHUB_API="https://api.github.com/repos/winterflowio/agent/releases"
 INSTALL_SCRIPT_URL="https://winterflowio.github.io/agent/install.sh"
 
 # Required packages
-REQUIRED_PACKAGES="curl"
+REQUIRED_PACKAGES="curl ansible"
 
 # Minimum required versions
 MIN_UBUNTU_VERSION=20
 MIN_DEBIAN_VERSION=12
+
+# User settings
+USER="winterflow"
 
 #######################
 # Utility Functions
@@ -51,7 +55,7 @@ log() {
     local GREEN='\033[0;32m'
     local YELLOW='\033[0;33m'
     local NC='\033[0m' # No Color
-    
+
     case "$level" in
         "info")
             echo -e "[${GREEN}INFO${NC}] $message"
@@ -129,6 +133,14 @@ create_directories() {
         mkdir -p "${INSTALL_DIR}"
         log "info" "Created directory ${INSTALL_DIR}"
     fi
+
+    # Change ownership to service user
+    if id "${USER}" &>/dev/null; then
+        chown -R ${USER}:${USER} "${INSTALL_DIR}"
+        log "info" "Changed ownership of ${INSTALL_DIR} to ${USER} user"
+    else
+        log "warn" "Could not change ownership of ${INSTALL_DIR}: ${USER} user does not exist"
+    fi
 }
 
 # Function to create empty config file
@@ -145,16 +157,16 @@ create_config_file() {
 # Function to handle agent binary download and installation
 handle_agent_binary() {
     local service_was_running="$1"
-    
+
     # Get system architecture
     local arch
     arch=$(get_arch)
     log "info" "Detected architecture: $arch"
-    
+
     # Create a temporary file for downloading
     local temp_binary
     temp_binary=$(mktemp)
-    
+
     # Get the latest stable release download URL for the current architecture (ignoring pre-releases)
     log "info" "Fetching latest stable release information..."
     local download_url
@@ -173,7 +185,7 @@ handle_agent_binary() {
         fi
         return 1
     fi
-    
+
     log "info" "Downloading Winterflow Agent from ${download_url}"
     if ! curl -L -f -S --progress-bar -o "${temp_binary}" "${download_url}"; then
         log "error" "Failed to download the agent binary"
@@ -197,7 +209,7 @@ handle_agent_binary() {
 
     # Make the temporary binary executable
     chmod +x "${temp_binary}"
-    
+
     # Verify the binary is executable
     if ! [ -x "${temp_binary}" ]; then
         log "error" "Failed to make the binary executable"
@@ -211,7 +223,7 @@ handle_agent_binary() {
 
     # Move the temporary binary to the final location
     mv "${temp_binary}" "${AGENT_BINARY}"
-    
+
     log "info" "Agent binary successfully installed"
     return 0
 }
@@ -219,7 +231,7 @@ handle_agent_binary() {
 # Function to manage systemd service
 manage_systemd_service() {
     local service_was_running="$1"
-    
+
     # Create systemd service file if it doesn't exist
     if [ ! -f "${SERVICE_FILE}" ]; then
         log "info" "Creating systemd service..."
@@ -233,11 +245,11 @@ Type=simple
 ExecStart=${AGENT_BINARY} --config ${CONFIG_FILE}
 Restart=always
 RestartSec=10
-User=root
-Group=root
+User=${USER}
+Group=${USER}
 WorkingDirectory=${INSTALL_DIR}
-StandardOutput=syslog
-StandardError=syslog
+StandardOutput=${LOGS_DIR}/winterflow_agent.log
+StandardError=${LOGS_DIR}/winterflow_agent_error.log
 SyslogIdentifier=winterflow-agent
 
 [Install]
@@ -271,16 +283,39 @@ display_next_steps() {
     echo "For more information, visit: https://docs.winterflow.com"
 }
 
+# Function to create service user and group
+create_service_user() {
+    log "info" "Creating ${USER} user and group..."
+
+    # Check if user already exists
+    if id "${USER}" &>/dev/null; then
+        log "info" "User ${USER} already exists"
+    else
+        # Create user with home directory
+        useradd -m -s /bin/bash ${USER}
+        log "info" "Created ${USER} user with home directory"
+    fi
+
+    # Add user to sudoers
+    if [ -d "/etc/sudoers.d" ]; then
+        echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER}
+        chmod 440 /etc/sudoers.d/${USER}
+        log "info" "Added ${USER} user to sudoers"
+    else
+        log "warn" "Could not add ${USER} user to sudoers: /etc/sudoers.d directory not found"
+    fi
+}
+
 # Function to save installation script
 save_installation_script() {
     log "info" "Saving installation script to ${INSTALL_SCRIPT}"
-    
+
     # Download the installation script
     if ! curl -fsSL "${INSTALL_SCRIPT_URL}" > "${INSTALL_SCRIPT}"; then
         log "error" "Failed to download installation script"
         return 1
     fi
-    
+
     # Make the saved script executable
     chmod +x "${INSTALL_SCRIPT}"
     log "info" "Installation script saved and made executable"
@@ -300,9 +335,12 @@ check_os_version
 log "info" "Updating package repositories..."
 apt-get update
 
-# Install required packages (only curl now)
+# Install required packages
 log "info" "Installing required packages..."
 apt-get install -y ${REQUIRED_PACKAGES}
+
+# Create service user and group
+create_service_user
 
 # Create required directories
 create_directories
