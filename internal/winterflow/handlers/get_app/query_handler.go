@@ -11,7 +11,8 @@ import (
 
 // GetAppQueryHandler handles the GetAppQuery
 type GetAppQueryHandler struct {
-	AnsibleAppsRolesPath string
+	AnsibleAppsRolesPath           string
+	AnsibleAppsRolesCurrentVersion string
 }
 
 // Handle executes the GetAppQuery and returns the result
@@ -21,8 +22,16 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 	// Get the app ID from the request
 	appID := query.Request.AppId
 
+	// Determine the app version to use
+	var versionDir string
+	if query.Request.AppVersion > 0 {
+		versionDir = fmt.Sprintf("%d", query.Request.AppVersion)
+	} else {
+		versionDir = h.AnsibleAppsRolesCurrentVersion
+	}
+
 	// Define the paths to the app files
-	rolesDir := filepath.Join(h.AnsibleAppsRolesPath, appID)
+	rolesDir := filepath.Join(h.AnsibleAppsRolesPath, appID, versionDir)
 	rolesVarsDir := filepath.Join(rolesDir, "vars")
 	rolesTemplatesDir := filepath.Join(rolesDir, "templates")
 
@@ -137,8 +146,9 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 }
 
 // NewGetAppQueryHandler creates a new GetAppQueryHandler
-func NewGetAppQueryHandler(ansibleAppsRolesPath string) *GetAppQueryHandler {
+func NewGetAppQueryHandler(ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *GetAppQueryHandler {
 	return &GetAppQueryHandler{
-		AnsibleAppsRolesPath: ansibleAppsRolesPath,
+		AnsibleAppsRolesPath:           ansibleAppsRolesPath,
+		AnsibleAppsRolesCurrentVersion: ansibleAppsRolesCurrentVersion,
 	}
 }

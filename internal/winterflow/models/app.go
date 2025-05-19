@@ -2,11 +2,55 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 )
+
+type AppType string
+
+const (
+	AppTypeDockerCompose AppType = "docker_compose"
+	AppTypeDockerSwarm   AppType = "docker_swarm"
+)
+
+// String returns the string representation of AppType
+func (at AppType) String() string {
+	return string(at)
+}
+
+// IsValid checks if the AppType value is valid
+func (at AppType) IsValid() bool {
+	switch at {
+	case AppTypeDockerCompose, AppTypeDockerSwarm:
+		return true
+	}
+	return false
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface for AppType
+func (at *AppType) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	temp := AppType(s)
+	if !temp.IsValid() {
+		return fmt.Errorf("invalid AppType: %s", s)
+	}
+
+	*at = temp
+	return nil
+}
+
+// MarshalJSON implements the json.Marshaler interface for AppType
+func (at AppType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(at.String())
+}
 
 // AppConfig represents the configuration of an app
 type AppConfig struct {
 	ID           string           `json:"id"`
+	Type         AppType          `json:"type"`
 	Name         string           `json:"name"`
 	Files        []AppFile        `json:"files"`
 	Variables    []AppVariable    `json:"variables"`

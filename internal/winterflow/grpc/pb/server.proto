@@ -32,6 +32,11 @@ enum AppAction {
   RESTART = 2;
 }
 
+enum AppType {
+  DOCKER_COMPOSE = 0;
+  DOCKER_SWARM = 1;
+}
+
 message BaseMessage {
   // UUID
   string message_id = 1;
@@ -116,11 +121,13 @@ message GetAppRequestV1 {
   BaseMessage base = 1;
   // UUID
   string app_id = 2;
+  uint32 app_version = 3;
 }
 
 message GetAppResponseV1 {
   BaseResponse base = 1;
   AppV1 app = 2;
+  uint32 app_version = 3;
 }
 
 message SaveAppRequestV1 {
@@ -147,12 +154,16 @@ message ControlAppRequestV1 {
   BaseMessage base = 1;
   // UUID
   string app_id = 2;
-  AppAction action = 3;
+  uint32 app_version = 3;
+  AppAction action = 4;
 }
 
 message ControlAppResponseV1 {
   BaseResponse base = 1;
-  AppStatusCode status_code = 2;
+  // UUID
+  string app_id = 2;
+  uint32 app_version = 3;
+  AppStatusCode status_code = 4;
 }
 
 // Command messages for bidirectional streaming

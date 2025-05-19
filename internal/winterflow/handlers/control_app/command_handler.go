@@ -53,13 +53,20 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	}
 
 	// Determine the app version to use
-	appVersion := "latest" // Default version
+	var appVersion string
+	if cmd.Request.AppVersion > 0 {
+		appVersion = fmt.Sprintf("%d", cmd.Request.AppVersion)
+	} else {
+		appVersion = h.ansible.GetConfig().AnsibleAppsRolesCurrentVersion
+	}
 
 	// Build environment variables
 	env := map[string]string{
-		"app_id":      fmt.Sprintf("app_id=%s", appID),
-		"app_version": fmt.Sprintf("app_version=%s", appVersion),
-		"app_name":    fmt.Sprintf("app_name=%s", appConfig.Name),
+		"app_id":         fmt.Sprintf("%s", appID),
+		"app_version":    fmt.Sprintf("%s", appVersion),
+		"app_name":       fmt.Sprintf("%s", appConfig.Name),
+		"apps_roles_dir": fmt.Sprintf("%s", h.AnsibleAppsRolesPath),
+		"orchestrator":   fmt.Sprintf("%s", appConfig.Type),
 	}
 	ansibleCommand := ansiblepkg.Command{
 		Id:       cmd.Request.Base.MessageId,

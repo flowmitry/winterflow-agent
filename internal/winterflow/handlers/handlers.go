@@ -27,7 +27,7 @@ func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config) error {
 
 // RegisterQueryHandlers registers all query handlers with the query bus
 func RegisterQueryHandlers(b cqrs.QueryBus, config *config.Config) error {
-	if err := b.Register(get_app.NewGetAppQueryHandler(config.GetAnsibleAppsRolesPath())); err != nil {
+	if err := b.Register(get_app.NewGetAppQueryHandler(config.GetAnsibleAppsRolesPath(), configconst.AnsibleAppsRolesCurrentVersionFolder)); err != nil {
 		return log.Errorf("failed to register get app query handler: %v", err)
 	}
 	return nil

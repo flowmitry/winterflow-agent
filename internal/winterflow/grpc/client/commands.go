@@ -78,6 +78,8 @@ func HandleControlAppRequest(commandBus cqrs.CommandBus, controlAppRequest *pb.C
 	baseResp := createBaseResponse(controlAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	controlAppResp := &pb.ControlAppResponseV1{
 		Base:       &baseResp,
+		AppId:      controlAppRequest.AppId,
+		AppVersion: controlAppRequest.AppVersion,
 		StatusCode: statusCode,
 	}
 

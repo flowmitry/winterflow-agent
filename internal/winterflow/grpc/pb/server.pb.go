@@ -191,6 +191,52 @@ func (AppAction) EnumDescriptor() ([]byte, []int) {
 	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{2}
 }
 
+type AppType int32
+
+const (
+	AppType_DOCKER_COMPOSE AppType = 0
+	AppType_DOCKER_SWARM   AppType = 1
+)
+
+// Enum value maps for AppType.
+var (
+	AppType_name = map[int32]string{
+		0: "DOCKER_COMPOSE",
+		1: "DOCKER_SWARM",
+	}
+	AppType_value = map[string]int32{
+		"DOCKER_COMPOSE": 0,
+		"DOCKER_SWARM":   1,
+	}
+)
+
+func (x AppType) Enum() *AppType {
+	p := new(AppType)
+	*p = x
+	return p
+}
+
+func (x AppType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AppType) Descriptor() protoreflect.EnumDescriptor {
+	return file_internal_winterflow_grpc_pb_server_proto_enumTypes[3].Descriptor()
+}
+
+func (AppType) Type() protoreflect.EnumType {
+	return &file_internal_winterflow_grpc_pb_server_proto_enumTypes[3]
+}
+
+func (x AppType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AppType.Descriptor instead.
+func (AppType) EnumDescriptor() ([]byte, []int) {
+	return file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{3}
+}
+
 type BaseMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// UUID
@@ -882,6 +928,7 @@ type GetAppRequestV1 struct {
 	Base  *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
 	// UUID
 	AppId         string `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	AppVersion    uint32 `protobuf:"varint,3,opt,name=app_version,json=appVersion,proto3" json:"app_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -930,10 +977,18 @@ func (x *GetAppRequestV1) GetAppId() string {
 	return ""
 }
 
+func (x *GetAppRequestV1) GetAppVersion() uint32 {
+	if x != nil {
+		return x.AppVersion
+	}
+	return 0
+}
+
 type GetAppResponseV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
 	App           *AppV1                 `protobuf:"bytes,2,opt,name=app,proto3" json:"app,omitempty"`
+	AppVersion    uint32                 `protobuf:"varint,3,opt,name=app_version,json=appVersion,proto3" json:"app_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -980,6 +1035,13 @@ func (x *GetAppResponseV1) GetApp() *AppV1 {
 		return x.App
 	}
 	return nil
+}
+
+func (x *GetAppResponseV1) GetAppVersion() uint32 {
+	if x != nil {
+		return x.AppVersion
+	}
+	return 0
 }
 
 type SaveAppRequestV1 struct {
@@ -1188,7 +1250,8 @@ type ControlAppRequestV1 struct {
 	Base  *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
 	// UUID
 	AppId         string    `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
-	Action        AppAction `protobuf:"varint,3,opt,name=action,proto3,enum=pb.AppAction" json:"action,omitempty"`
+	AppVersion    uint32    `protobuf:"varint,3,opt,name=app_version,json=appVersion,proto3" json:"app_version,omitempty"`
+	Action        AppAction `protobuf:"varint,4,opt,name=action,proto3,enum=pb.AppAction" json:"action,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1237,6 +1300,13 @@ func (x *ControlAppRequestV1) GetAppId() string {
 	return ""
 }
 
+func (x *ControlAppRequestV1) GetAppVersion() uint32 {
+	if x != nil {
+		return x.AppVersion
+	}
+	return 0
+}
+
 func (x *ControlAppRequestV1) GetAction() AppAction {
 	if x != nil {
 		return x.Action
@@ -1245,9 +1315,12 @@ func (x *ControlAppRequestV1) GetAction() AppAction {
 }
 
 type ControlAppResponseV1 struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Base          *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
-	StatusCode    AppStatusCode          `protobuf:"varint,2,opt,name=status_code,json=statusCode,proto3,enum=pb.AppStatusCode" json:"status_code,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Base  *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// UUID
+	AppId         string        `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	AppVersion    uint32        `protobuf:"varint,3,opt,name=app_version,json=appVersion,proto3" json:"app_version,omitempty"`
+	StatusCode    AppStatusCode `protobuf:"varint,4,opt,name=status_code,json=statusCode,proto3,enum=pb.AppStatusCode" json:"status_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1287,6 +1360,20 @@ func (x *ControlAppResponseV1) GetBase() *BaseResponse {
 		return x.Base
 	}
 	return nil
+}
+
+func (x *ControlAppResponseV1) GetAppId() string {
+	if x != nil {
+		return x.AppId
+	}
+	return ""
+}
+
+func (x *ControlAppResponseV1) GetAppVersion() uint32 {
+	if x != nil {
+		return x.AppVersion
+	}
+	return 0
 }
 
 func (x *ControlAppResponseV1) GetStatusCode() AppStatusCode {
@@ -1651,13 +1738,17 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x06config\x18\x02 \x01(\fR\x06config\x12*\n" +
 	"\tvariables\x18\x03 \x03(\v2\f.pb.AppVarV1R\tvariables\x12&\n" +
 	"\asecrets\x18\x04 \x03(\v2\f.pb.AppVarV1R\asecrets\x12#\n" +
-	"\x05files\x18\x05 \x03(\v2\r.pb.AppFileV1R\x05files\"M\n" +
+	"\x05files\x18\x05 \x03(\v2\r.pb.AppFileV1R\x05files\"n\n" +
 	"\x0fGetAppRequestV1\x12#\n" +
 	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x15\n" +
-	"\x06app_id\x18\x02 \x01(\tR\x05appId\"U\n" +
+	"\x06app_id\x18\x02 \x01(\tR\x05appId\x12\x1f\n" +
+	"\vapp_version\x18\x03 \x01(\rR\n" +
+	"appVersion\"v\n" +
 	"\x10GetAppResponseV1\x12$\n" +
 	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x1b\n" +
-	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"T\n" +
+	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\x12\x1f\n" +
+	"\vapp_version\x18\x03 \x01(\rR\n" +
+	"appVersion\"T\n" +
 	"\x10SaveAppRequestV1\x12#\n" +
 	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x1b\n" +
 	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"V\n" +
@@ -1668,14 +1759,19 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x15\n" +
 	"\x06app_id\x18\x02 \x01(\tR\x05appId\";\n" +
 	"\x13DeleteAppResponseV1\x12$\n" +
-	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"x\n" +
+	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"\x99\x01\n" +
 	"\x13ControlAppRequestV1\x12#\n" +
 	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x15\n" +
-	"\x06app_id\x18\x02 \x01(\tR\x05appId\x12%\n" +
-	"\x06action\x18\x03 \x01(\x0e2\r.pb.AppActionR\x06action\"p\n" +
+	"\x06app_id\x18\x02 \x01(\tR\x05appId\x12\x1f\n" +
+	"\vapp_version\x18\x03 \x01(\rR\n" +
+	"appVersion\x12%\n" +
+	"\x06action\x18\x04 \x01(\x0e2\r.pb.AppActionR\x06action\"\xa8\x01\n" +
 	"\x14ControlAppResponseV1\x12$\n" +
-	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x122\n" +
-	"\vstatus_code\x18\x02 \x01(\x0e2\x11.pb.AppStatusCodeR\n" +
+	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x15\n" +
+	"\x06app_id\x18\x02 \x01(\tR\x05appId\x12\x1f\n" +
+	"\vapp_version\x18\x03 \x01(\rR\n" +
+	"appVersion\x122\n" +
+	"\vstatus_code\x18\x04 \x01(\x0e2\x11.pb.AppStatusCodeR\n" +
 	"statusCode\"\xd6\x03\n" +
 	"\rServerCommand\x12M\n" +
 	"\x15heartbeat_response_v1\x18\x01 \x01(\v2\x17.pb.HeartbeatResponseV1H\x00R\x13heartbeatResponseV1\x12C\n" +
@@ -1711,7 +1807,10 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\tAppAction\x12\b\n" +
 	"\x04STOP\x10\x00\x12\t\n" +
 	"\x05START\x10\x01\x12\v\n" +
-	"\aRESTART\x10\x022\x96\x01\n" +
+	"\aRESTART\x10\x02*/\n" +
+	"\aAppType\x12\x12\n" +
+	"\x0eDOCKER_COMPOSE\x10\x00\x12\x10\n" +
+	"\fDOCKER_SWARM\x10\x012\x96\x01\n" +
 	"\fAgentService\x12L\n" +
 	"\x0fRegisterAgentV1\x12\x1a.pb.RegisterAgentRequestV1\x1a\x1b.pb.RegisterAgentResponseV1\"\x00\x128\n" +
 	"\vAgentStream\x12\x10.pb.AgentMessage\x1a\x11.pb.ServerCommand\"\x00(\x010\x01B.Z,winterflow-agent/internal/winterflow/grpc/pbb\x06proto3"
@@ -1728,86 +1827,87 @@ func file_internal_winterflow_grpc_pb_server_proto_rawDescGZIP() []byte {
 	return file_internal_winterflow_grpc_pb_server_proto_rawDescData
 }
 
-var file_internal_winterflow_grpc_pb_server_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_internal_winterflow_grpc_pb_server_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_internal_winterflow_grpc_pb_server_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_internal_winterflow_grpc_pb_server_proto_goTypes = []any{
 	(ResponseCode)(0),               // 0: pb.ResponseCode
 	(AppStatusCode)(0),              // 1: pb.AppStatusCode
 	(AppAction)(0),                  // 2: pb.AppAction
-	(*BaseMessage)(nil),             // 3: pb.BaseMessage
-	(*BaseResponse)(nil),            // 4: pb.BaseResponse
-	(*RegisterAgentRequestV1)(nil),  // 5: pb.RegisterAgentRequestV1
-	(*RegisterAgentResponseV1)(nil), // 6: pb.RegisterAgentResponseV1
-	(*AgentHeartbeatV1)(nil),        // 7: pb.AgentHeartbeatV1
-	(*HeartbeatResponseV1)(nil),     // 8: pb.HeartbeatResponseV1
-	(*AppStatusV1)(nil),             // 9: pb.AppStatusV1
-	(*AgentAppsV1)(nil),             // 10: pb.AgentAppsV1
-	(*AgentAppsResponseV1)(nil),     // 11: pb.AgentAppsResponseV1
-	(*AppFileV1)(nil),               // 12: pb.AppFileV1
-	(*AppVarV1)(nil),                // 13: pb.AppVarV1
-	(*AppV1)(nil),                   // 14: pb.AppV1
-	(*GetAppRequestV1)(nil),         // 15: pb.GetAppRequestV1
-	(*GetAppResponseV1)(nil),        // 16: pb.GetAppResponseV1
-	(*SaveAppRequestV1)(nil),        // 17: pb.SaveAppRequestV1
-	(*SaveAppResponseV1)(nil),       // 18: pb.SaveAppResponseV1
-	(*DeleteAppRequestV1)(nil),      // 19: pb.DeleteAppRequestV1
-	(*DeleteAppResponseV1)(nil),     // 20: pb.DeleteAppResponseV1
-	(*ControlAppRequestV1)(nil),     // 21: pb.ControlAppRequestV1
-	(*ControlAppResponseV1)(nil),    // 22: pb.ControlAppResponseV1
-	(*ServerCommand)(nil),           // 23: pb.ServerCommand
-	(*AgentMessage)(nil),            // 24: pb.AgentMessage
-	nil,                             // 25: pb.RegisterAgentRequestV1.CapabilitiesEntry
-	nil,                             // 26: pb.RegisterAgentRequestV1.FeaturesEntry
-	nil,                             // 27: pb.AgentHeartbeatV1.MetricsEntry
-	(*timestamppb.Timestamp)(nil),   // 28: google.protobuf.Timestamp
+	(AppType)(0),                    // 3: pb.AppType
+	(*BaseMessage)(nil),             // 4: pb.BaseMessage
+	(*BaseResponse)(nil),            // 5: pb.BaseResponse
+	(*RegisterAgentRequestV1)(nil),  // 6: pb.RegisterAgentRequestV1
+	(*RegisterAgentResponseV1)(nil), // 7: pb.RegisterAgentResponseV1
+	(*AgentHeartbeatV1)(nil),        // 8: pb.AgentHeartbeatV1
+	(*HeartbeatResponseV1)(nil),     // 9: pb.HeartbeatResponseV1
+	(*AppStatusV1)(nil),             // 10: pb.AppStatusV1
+	(*AgentAppsV1)(nil),             // 11: pb.AgentAppsV1
+	(*AgentAppsResponseV1)(nil),     // 12: pb.AgentAppsResponseV1
+	(*AppFileV1)(nil),               // 13: pb.AppFileV1
+	(*AppVarV1)(nil),                // 14: pb.AppVarV1
+	(*AppV1)(nil),                   // 15: pb.AppV1
+	(*GetAppRequestV1)(nil),         // 16: pb.GetAppRequestV1
+	(*GetAppResponseV1)(nil),        // 17: pb.GetAppResponseV1
+	(*SaveAppRequestV1)(nil),        // 18: pb.SaveAppRequestV1
+	(*SaveAppResponseV1)(nil),       // 19: pb.SaveAppResponseV1
+	(*DeleteAppRequestV1)(nil),      // 20: pb.DeleteAppRequestV1
+	(*DeleteAppResponseV1)(nil),     // 21: pb.DeleteAppResponseV1
+	(*ControlAppRequestV1)(nil),     // 22: pb.ControlAppRequestV1
+	(*ControlAppResponseV1)(nil),    // 23: pb.ControlAppResponseV1
+	(*ServerCommand)(nil),           // 24: pb.ServerCommand
+	(*AgentMessage)(nil),            // 25: pb.AgentMessage
+	nil,                             // 26: pb.RegisterAgentRequestV1.CapabilitiesEntry
+	nil,                             // 27: pb.RegisterAgentRequestV1.FeaturesEntry
+	nil,                             // 28: pb.AgentHeartbeatV1.MetricsEntry
+	(*timestamppb.Timestamp)(nil),   // 29: google.protobuf.Timestamp
 }
 var file_internal_winterflow_grpc_pb_server_proto_depIdxs = []int32{
-	28, // 0: pb.BaseMessage.timestamp:type_name -> google.protobuf.Timestamp
-	28, // 1: pb.BaseResponse.timestamp:type_name -> google.protobuf.Timestamp
+	29, // 0: pb.BaseMessage.timestamp:type_name -> google.protobuf.Timestamp
+	29, // 1: pb.BaseResponse.timestamp:type_name -> google.protobuf.Timestamp
 	0,  // 2: pb.BaseResponse.response_code:type_name -> pb.ResponseCode
-	3,  // 3: pb.RegisterAgentRequestV1.base:type_name -> pb.BaseMessage
-	25, // 4: pb.RegisterAgentRequestV1.capabilities:type_name -> pb.RegisterAgentRequestV1.CapabilitiesEntry
-	26, // 5: pb.RegisterAgentRequestV1.features:type_name -> pb.RegisterAgentRequestV1.FeaturesEntry
-	4,  // 6: pb.RegisterAgentResponseV1.base:type_name -> pb.BaseResponse
-	3,  // 7: pb.AgentHeartbeatV1.base:type_name -> pb.BaseMessage
-	27, // 8: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
-	4,  // 9: pb.HeartbeatResponseV1.base:type_name -> pb.BaseResponse
+	4,  // 3: pb.RegisterAgentRequestV1.base:type_name -> pb.BaseMessage
+	26, // 4: pb.RegisterAgentRequestV1.capabilities:type_name -> pb.RegisterAgentRequestV1.CapabilitiesEntry
+	27, // 5: pb.RegisterAgentRequestV1.features:type_name -> pb.RegisterAgentRequestV1.FeaturesEntry
+	5,  // 6: pb.RegisterAgentResponseV1.base:type_name -> pb.BaseResponse
+	4,  // 7: pb.AgentHeartbeatV1.base:type_name -> pb.BaseMessage
+	28, // 8: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
+	5,  // 9: pb.HeartbeatResponseV1.base:type_name -> pb.BaseResponse
 	1,  // 10: pb.AppStatusV1.status_code:type_name -> pb.AppStatusCode
-	3,  // 11: pb.AgentAppsV1.base:type_name -> pb.BaseMessage
-	9,  // 12: pb.AgentAppsV1.apps:type_name -> pb.AppStatusV1
-	4,  // 13: pb.AgentAppsResponseV1.base:type_name -> pb.BaseResponse
-	13, // 14: pb.AppV1.variables:type_name -> pb.AppVarV1
-	13, // 15: pb.AppV1.secrets:type_name -> pb.AppVarV1
-	12, // 16: pb.AppV1.files:type_name -> pb.AppFileV1
-	3,  // 17: pb.GetAppRequestV1.base:type_name -> pb.BaseMessage
-	4,  // 18: pb.GetAppResponseV1.base:type_name -> pb.BaseResponse
-	14, // 19: pb.GetAppResponseV1.app:type_name -> pb.AppV1
-	3,  // 20: pb.SaveAppRequestV1.base:type_name -> pb.BaseMessage
-	14, // 21: pb.SaveAppRequestV1.app:type_name -> pb.AppV1
-	4,  // 22: pb.SaveAppResponseV1.base:type_name -> pb.BaseResponse
-	14, // 23: pb.SaveAppResponseV1.app:type_name -> pb.AppV1
-	3,  // 24: pb.DeleteAppRequestV1.base:type_name -> pb.BaseMessage
-	4,  // 25: pb.DeleteAppResponseV1.base:type_name -> pb.BaseResponse
-	3,  // 26: pb.ControlAppRequestV1.base:type_name -> pb.BaseMessage
+	4,  // 11: pb.AgentAppsV1.base:type_name -> pb.BaseMessage
+	10, // 12: pb.AgentAppsV1.apps:type_name -> pb.AppStatusV1
+	5,  // 13: pb.AgentAppsResponseV1.base:type_name -> pb.BaseResponse
+	14, // 14: pb.AppV1.variables:type_name -> pb.AppVarV1
+	14, // 15: pb.AppV1.secrets:type_name -> pb.AppVarV1
+	13, // 16: pb.AppV1.files:type_name -> pb.AppFileV1
+	4,  // 17: pb.GetAppRequestV1.base:type_name -> pb.BaseMessage
+	5,  // 18: pb.GetAppResponseV1.base:type_name -> pb.BaseResponse
+	15, // 19: pb.GetAppResponseV1.app:type_name -> pb.AppV1
+	4,  // 20: pb.SaveAppRequestV1.base:type_name -> pb.BaseMessage
+	15, // 21: pb.SaveAppRequestV1.app:type_name -> pb.AppV1
+	5,  // 22: pb.SaveAppResponseV1.base:type_name -> pb.BaseResponse
+	15, // 23: pb.SaveAppResponseV1.app:type_name -> pb.AppV1
+	4,  // 24: pb.DeleteAppRequestV1.base:type_name -> pb.BaseMessage
+	5,  // 25: pb.DeleteAppResponseV1.base:type_name -> pb.BaseResponse
+	4,  // 26: pb.ControlAppRequestV1.base:type_name -> pb.BaseMessage
 	2,  // 27: pb.ControlAppRequestV1.action:type_name -> pb.AppAction
-	4,  // 28: pb.ControlAppResponseV1.base:type_name -> pb.BaseResponse
+	5,  // 28: pb.ControlAppResponseV1.base:type_name -> pb.BaseResponse
 	1,  // 29: pb.ControlAppResponseV1.status_code:type_name -> pb.AppStatusCode
-	8,  // 30: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
-	11, // 31: pb.ServerCommand.apps_response_v1:type_name -> pb.AgentAppsResponseV1
-	15, // 32: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
-	17, // 33: pb.ServerCommand.save_app_request_v1:type_name -> pb.SaveAppRequestV1
-	19, // 34: pb.ServerCommand.delete_app_request_v1:type_name -> pb.DeleteAppRequestV1
-	21, // 35: pb.ServerCommand.control_app_request_v1:type_name -> pb.ControlAppRequestV1
-	7,  // 36: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
-	10, // 37: pb.AgentMessage.apps_v1:type_name -> pb.AgentAppsV1
-	16, // 38: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
-	18, // 39: pb.AgentMessage.save_app_response_v1:type_name -> pb.SaveAppResponseV1
-	20, // 40: pb.AgentMessage.delete_app_response_v1:type_name -> pb.DeleteAppResponseV1
-	22, // 41: pb.AgentMessage.control_app_response_v1:type_name -> pb.ControlAppResponseV1
-	5,  // 42: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
-	24, // 43: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
-	6,  // 44: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
-	23, // 45: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
+	9,  // 30: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
+	12, // 31: pb.ServerCommand.apps_response_v1:type_name -> pb.AgentAppsResponseV1
+	16, // 32: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
+	18, // 33: pb.ServerCommand.save_app_request_v1:type_name -> pb.SaveAppRequestV1
+	20, // 34: pb.ServerCommand.delete_app_request_v1:type_name -> pb.DeleteAppRequestV1
+	22, // 35: pb.ServerCommand.control_app_request_v1:type_name -> pb.ControlAppRequestV1
+	8,  // 36: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
+	11, // 37: pb.AgentMessage.apps_v1:type_name -> pb.AgentAppsV1
+	17, // 38: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
+	19, // 39: pb.AgentMessage.save_app_response_v1:type_name -> pb.SaveAppResponseV1
+	21, // 40: pb.AgentMessage.delete_app_response_v1:type_name -> pb.DeleteAppResponseV1
+	23, // 41: pb.AgentMessage.control_app_response_v1:type_name -> pb.ControlAppResponseV1
+	6,  // 42: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
+	25, // 43: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
+	7,  // 44: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
+	24, // 45: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
 	44, // [44:46] is the sub-list for method output_type
 	42, // [42:44] is the sub-list for method input_type
 	42, // [42:42] is the sub-list for extension type_name
@@ -1841,7 +1941,7 @@ func file_internal_winterflow_grpc_pb_server_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_winterflow_grpc_pb_server_proto_rawDesc), len(file_internal_winterflow_grpc_pb_server_proto_rawDesc)),
-			NumEnums:      3,
+			NumEnums:      4,
 			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,

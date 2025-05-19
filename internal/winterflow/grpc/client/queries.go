@@ -38,8 +38,9 @@ func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1
 
 	baseResp := createBaseResponse(getAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	getAppResp := &pb.GetAppResponseV1{
-		Base: &baseResp,
-		App:  app,
+		Base:       &baseResp,
+		App:        app,
+		AppVersion: getAppRequest.AppVersion,
 	}
 
 	agentMsg := &pb.AgentMessage{

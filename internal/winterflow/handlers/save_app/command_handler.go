@@ -45,7 +45,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	rolesVarsDir := filepath.Join(versionDir, "vars")
 	rolesVarsFile := filepath.Join(rolesVarsDir, "vars.yml")
 	rolesSecretsFile := filepath.Join(rolesVarsDir, "secrets.yml")
-	rolesTemplatesDir := filepath.Join(versionDir, "templates/docker_compose")
+	rolesTemplatesDir := filepath.Join(versionDir, "templates")
 
 	// Create directories if they don't exist
 	if err := os.MkdirAll(versionDir, 0755); err != nil {
