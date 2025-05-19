@@ -40,7 +40,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	rolesDir := filepath.Join(config.GetAnsibleAppsRolesPath(), appID)
 	rolesDefaultsDir := filepath.Join(rolesDir, "defaults")
 	rolesVarsDir := filepath.Join(rolesDir, "vars")
-	rolesTemplatesDir := filepath.Join(rolesDir, "templates")
+	rolesTemplatesDir := filepath.Join(rolesDir, "templates/docker_compose")
 	rolesVarsFile := filepath.Join(rolesVarsDir, "vars.yml")
 	rolesSecretsFile := filepath.Join(rolesVarsDir, "secrets.yml")
 
