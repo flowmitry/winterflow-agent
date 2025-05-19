@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/grpc/pb"
 	"winterflow-agent/internal/winterflow/models"
 	log "winterflow-agent/pkg/log"
@@ -14,7 +13,10 @@ import (
 )
 
 // SaveAppHandler handles the SaveAppCommand
-type SaveAppHandler struct{}
+type SaveAppHandler struct {
+	AnsibleAppsRolesPath           string
+	AnsibleAppsRolesCurrentVersion string
+}
 
 // Handle executes the SaveAppCommand
 func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
@@ -37,15 +39,16 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	var responseMessage string = "App saved successfully"
 
 	// Create the required directories
-	rolesDir := filepath.Join(config.GetAnsibleAppsRolesPath(), appID, "latest")
-	rolesDefaultsDir := filepath.Join(rolesDir, "defaults")
-	rolesVarsDir := filepath.Join(rolesDir, "vars")
-	rolesTemplatesDir := filepath.Join(rolesDir, "templates/docker_compose")
+	rolesDir := filepath.Join(h.AnsibleAppsRolesPath, appID)
+	versionDir := filepath.Join(rolesDir, h.AnsibleAppsRolesCurrentVersion)
+	rolesDefaultsDir := filepath.Join(versionDir, "defaults")
+	rolesVarsDir := filepath.Join(versionDir, "vars")
 	rolesVarsFile := filepath.Join(rolesVarsDir, "vars.yml")
 	rolesSecretsFile := filepath.Join(rolesVarsDir, "secrets.yml")
+	rolesTemplatesDir := filepath.Join(versionDir, "templates/docker_compose")
 
 	// Create directories if they don't exist
-	if err := os.MkdirAll(rolesDir, 0755); err != nil {
+	if err := os.MkdirAll(versionDir, 0755); err != nil {
 		log.Error("Error creating roles directory: %v", err)
 		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 		responseMessage = fmt.Sprintf("Error creating roles directory: %v", err)
@@ -72,7 +75,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	// Process files, variables, and secrets
 	if responseCode == pb.ResponseCode_RESPONSE_CODE_SUCCESS {
 		// Create config file
-		roleConfigFile := filepath.Join(rolesDir, "config.json")
+		roleConfigFile := filepath.Join(versionDir, "config.json")
 
 		// Store config.json in roles/{APP_ID}/config.json
 		if err := os.WriteFile(roleConfigFile, cmd.Request.App.Config, 0644); err != nil {
@@ -304,6 +307,9 @@ type SaveAppResult struct {
 }
 
 // NewSaveAppHandler creates a new SaveAppHandler
-func NewSaveAppHandler() *SaveAppHandler {
-	return &SaveAppHandler{}
+func NewSaveAppHandler(ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *SaveAppHandler {
+	return &SaveAppHandler{
+		AnsibleAppsRolesPath:           ansibleAppsRolesPath,
+		AnsibleAppsRolesCurrentVersion: ansibleAppsRolesCurrentVersion,
+	}
 }

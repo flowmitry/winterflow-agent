@@ -14,13 +14,13 @@ import (
 
 type Config struct {
 	// AnsiblePath is the path where ansible files are stored
-	AnsiblePath string `json:"ansible_path,omitempty"`
-	// AnsibleAppsPath is the path where ansible application files are stored
-	AnsibleAppsPath string `json:"ansible_apps_path,omitempty"`
+	AnsiblePath string
+	// AnsibleAppsRolesPath is the path where ansible application files are stored
+	AnsibleAppsRolesPath string
+	// AnsibleAppsRolesCurrentVersion represents the current version folder name of Ansible application roles.
+	AnsibleAppsRolesCurrentVersion string
 	// AnsibleLogsPath defines the directory path where ansible log files are stored.
-	AnsibleLogsPath string `json:"ansible_logs_path,omitempty"`
-	// AppsPath is the path where application files are stored
-	AppsPath string `json:"apps_path,omitempty"`
+	AnsibleLogsPath string
 }
 
 // Result represents the result of an Ansible command execution
@@ -48,6 +48,8 @@ type Client interface {
 	// RunAsync executes an Ansible command asynchronously and returns the log path
 	// The caller can use the returned context.CancelFunc to cancel the execution
 	RunAsync(cmd Command) (string, context.CancelFunc, error)
+
+	GetConfig() *Config
 }
 
 // client implements the Client interface
@@ -239,6 +241,10 @@ func (c *client) RunAsync(cmd Command) (string, context.CancelFunc, error) {
 	}()
 
 	return logPath, cancelFunc, nil
+}
+
+func (c *client) GetConfig() *Config {
+	return c.config
 }
 
 func commandArgs(ansiblePath string, cmd Command) []string {

@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/models"
 )
 
 // GetAppConfig retrieves the app configuration for the given app ID
-func GetAppConfig(appID string) (*models.AppConfig, error) {
+func GetAppConfig(AnsibleAppsRolesPath, appID string) (*models.AppConfig, error) {
 	// Check if the app exists
-	appDir := filepath.Join(config.GetAnsibleAppsRolesPath(), appID)
+	appDir := filepath.Join(AnsibleAppsRolesPath, appID)
 	if _, err := os.Stat(appDir); os.IsNotExist(err) {
 		return nil, fmt.Errorf("app with ID %s does not exist", appID)
 	}

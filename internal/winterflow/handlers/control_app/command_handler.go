@@ -9,7 +9,8 @@ import (
 
 // ControlAppHandler handles the ControlAppCommand
 type ControlAppHandler struct {
-	ansible ansiblepkg.Client
+	ansible              ansiblepkg.Client
+	AnsibleAppsRolesPath string
 }
 
 // Handle executes the ControlAppCommand
@@ -33,7 +34,7 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	}
 
 	// Get the app config
-	appConfig, err := GetAppConfig(appID)
+	appConfig, err := GetAppConfig(h.AnsibleAppsRolesPath, appID)
 	if err != nil {
 		return log.Errorf("failed to get app config for app ID %s: %w", appID, err)
 	}
@@ -79,8 +80,9 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 }
 
 // NewControlAppHandler creates a new ControlAppHandler
-func NewControlAppHandler(client *ansiblepkg.Client) *ControlAppHandler {
+func NewControlAppHandler(client *ansiblepkg.Client, ansibleAppsRolesPath string) *ControlAppHandler {
 	return &ControlAppHandler{
-		ansible: *client,
+		ansible:              *client,
+		AnsibleAppsRolesPath: ansibleAppsRolesPath,
 	}
 }

@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -18,10 +19,12 @@ var (
 const (
 	// DefaultAnsiblePath is the default path for Ansible files
 	DefaultAnsiblePath = "ansible"
-	// DefaultAnsibleAppsRolesPath is the default path for Ansible application files
-	DefaultAnsibleAppsRolesPath = "ansible/apps_roles"
-	// DefaultAppsPath is the default path for application files
-	DefaultAppsPath = "apps"
+	// AnsibleAppsRolesFolder defines the folder name where Ansible application role files are stored.
+	AnsibleAppsRolesFolder               = "apps_roles"
+	AnsibleAppsRolesCurrentVersionFolder = "current"
+
+	// DefaultLogsPath is the default directory path where application log files are stored.
+	DefaultLogsPath = "/var/log/winterflow"
 
 	// DefaultCertificatesPath is the default directory path for storing certificates.
 	DefaultCertificatesPath = ".certs"
@@ -45,10 +48,8 @@ type Config struct {
 	APIBaseURL string `json:"api_base_url,omitempty"`
 	// AnsiblePath is the path where ansible files are stored
 	AnsiblePath string `json:"ansible_path,omitempty"`
-	// AppsPath is the path where application files are stored
-	AppsPath string `json:"apps_path,omitempty"`
-	// AnsibleAppsPath is the path where ansible application files are stored
-	AnsibleAppsPath string `json:"ansible_apps_path,omitempty"`
+	// LogsPath specifies the directory where log files are stored.
+	LogsPath string `json:"logs_path,omitempty"`
 	// CertificatesPath is the path where certificate-related files are stored.
 	CertificatesPath string `json:"certificates_path,omitempty"`
 	// CACertificatePath is the path where the Certificate Authority's certificate is stored.
@@ -72,11 +73,8 @@ func applyDefaults(cfg *Config) {
 	if cfg.AnsiblePath == "" {
 		cfg.AnsiblePath = DefaultAnsiblePath
 	}
-	if cfg.AppsPath == "" {
-		cfg.AppsPath = DefaultAppsPath
-	}
-	if cfg.AnsibleAppsPath == "" {
-		cfg.AnsibleAppsPath = DefaultAnsibleAppsRolesPath
+	if cfg.LogsPath == "" {
+		cfg.LogsPath = DefaultLogsPath
 	}
 	if cfg.CertificatesPath == "" {
 		cfg.CertificatesPath = DefaultCertificatesPath
@@ -201,7 +199,6 @@ func SaveConfig(config *Config, configPath string) error {
 	return nil
 }
 
-// GetAnsibleAppsRolesPath returns the default path for Ansible application files
-func GetAnsibleAppsRolesPath() string {
-	return DefaultAnsibleAppsRolesPath
+func (c *Config) GetAnsibleAppsRolesPath() string {
+	return fmt.Sprintf("%s/%s", c.AnsiblePath, AnsibleAppsRolesFolder)
 }

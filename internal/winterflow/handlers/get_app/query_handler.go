@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/grpc/pb"
 	log "winterflow-agent/pkg/log"
 )
 
 // GetAppQueryHandler handles the GetAppQuery
-type GetAppQueryHandler struct{}
+type GetAppQueryHandler struct {
+	AnsibleAppsRolesPath string
+}
 
 // Handle executes the GetAppQuery and returns the result
 func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
@@ -21,7 +22,7 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 	appID := query.Request.AppId
 
 	// Define the paths to the app files
-	rolesDir := filepath.Join(config.GetAnsibleAppsRolesPath(), appID)
+	rolesDir := filepath.Join(h.AnsibleAppsRolesPath, appID)
 	rolesVarsDir := filepath.Join(rolesDir, "vars")
 	rolesTemplatesDir := filepath.Join(rolesDir, "templates")
 
@@ -136,6 +137,8 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 }
 
 // NewGetAppQueryHandler creates a new GetAppQueryHandler
-func NewGetAppQueryHandler() *GetAppQueryHandler {
-	return &GetAppQueryHandler{}
+func NewGetAppQueryHandler(ansibleAppsRolesPath string) *GetAppQueryHandler {
+	return &GetAppQueryHandler{
+		AnsibleAppsRolesPath: ansibleAppsRolesPath,
+	}
 }
