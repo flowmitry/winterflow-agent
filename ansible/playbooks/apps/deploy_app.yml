@@ -1,0 +1,69 @@
+---
+- name: Deploy applications
+  hosts: localhost
+  become: false
+  gather_facts: true
+
+  #  roles:
+  #    - role: check_requirements
+  #
+  #    - role: docker
+  #      when: orchestrator == 'docker-compose'
+  #
+  #    - role: docker_compose
+  #      when: orchestrator == 'docker-compose'
+
+  pre_tasks:
+    - name: Validate required variables
+      assert:
+        that:
+          - app_id is defined
+          - app_version is defined
+          - apps_roles_dir is defined
+          - apps_output_dir is defined
+          - orchestrator is defined
+        fail_msg: >
+          Required variables must be defined:
+          - app_id: The ID of the application to deploy
+          - app_version: The version of the application
+          - apps_roles_dir: Path to the application's Ansible role
+          - apps_output_dir: The directory to store the apps files
+          - orchestrator: The orchestrator type
+
+    - name: Set calculated variables
+      set_fact:
+        _app_role_dir: "{{ apps_roles_dir }}/{{ app_id }}/{{ app_version }}"
+        _app_output_dir: "{{ apps_output_dir }}/{{ app_id }}"
+      run_once: true
+
+  tasks:
+    - name: Load defaults
+      include_vars:
+        file: "{{ _app_role_dir }}/defaults/main.yml"
+
+    - name: Load variables
+      include_vars:
+        file: "{{ _app_role_dir }}/vars/vars.yml"
+
+    - name: Load secrets
+      include_vars:
+        file: "{{ _app_role_dir }}/vars/secrets.yml"
+
+    - name: Create a destination directory
+      file:
+        path: "{{ _app_output_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Process templates
+      template:
+        src: "{{ item }}"
+        dest: "{{ _app_output_dir }}/{{ item | basename | regex_replace('\\.j2$', '') }}"
+      with_fileglob:
+        - "{{ _app_role_dir }}/templates/{{ orchestrator }}/*.j2"
+
+    - name: Deploy application
+      include_tasks: "{{ playbook_dir }}/{{ orchestrator }}/tasks/deploy_app.yml"
+      vars:
+        app_id: "{{ app_id }}"
+        app_dir: "{{ _app_output_dir }}"

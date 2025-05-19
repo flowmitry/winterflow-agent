@@ -1,0 +1,13 @@
+---
+- name: Deploy applications
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    # Common roles for all nodes
+    - role: check_requirements
+
+    # Docker Swarm roles
+    - role: docker
+      when: app_server == 'docker-swarm'

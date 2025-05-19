@@ -4,4 +4,9 @@ all:
     # Variables
     timezone: UTC
     ssh_login_type: "password"
-    app_server: "docker-swarm"
+
+    # Apps Server
+    orchestrator: "docker_swarm"
+    apps_roles_dir: "/opt/winterflow/ansible/apps_roles"
+    apps_output_dir: "/opt/winterflow/apps"
+    logs_dir: "/var/logs/winterflow/"

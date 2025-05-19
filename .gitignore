@@ -6,6 +6,8 @@ ansible/vault_pass.txt
 ansible/version.txt
 ansible/apps_roles/*
 !ansible/apps_roles/README.md
+ansible/inventory/*
+!ansible/inventory/defaults.yml
 .certs/*
 !.certs/ca.crt
 

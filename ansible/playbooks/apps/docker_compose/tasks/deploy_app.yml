@@ -1,0 +1,29 @@
+---
+- name: Validate required variables
+  assert:
+    that:
+      - app_id is defined
+      - app_dir is defined
+    fail_msg: >
+      Required variables must be defined:
+      - app_id: The ID of the application to deploy
+      - app_dir: The directory to store the app files
+
+
+#- name: Run docker compose up in app_dir
+#  command: docker compose up -d
+#  args:
+#    chdir: "{{ app_dir }}"
+#  register: docker_compose_up_result
+#  changed_when: docker_compose_up_result.rc == 0
+#
+#- name: Get docker compose status
+#  command: docker compose ps
+#  args:
+#    chdir: "{{ app_dir }}"
+#  register: docker_compose_status
+#  changed_when: false
+#
+#- name: Display docker compose status
+#  debug:
+#    var: docker_compose_status.stdout_lines

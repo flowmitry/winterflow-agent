@@ -37,7 +37,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	var responseMessage string = "App saved successfully"
 
 	// Create the required directories
-	rolesDir := filepath.Join(config.GetAnsibleAppsRolesPath(), appID)
+	rolesDir := filepath.Join(config.GetAnsibleAppsRolesPath(), appID, "latest")
 	rolesDefaultsDir := filepath.Join(rolesDir, "defaults")
 	rolesVarsDir := filepath.Join(rolesDir, "vars")
 	rolesTemplatesDir := filepath.Join(rolesDir, "templates/docker_compose")

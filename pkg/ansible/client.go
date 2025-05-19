@@ -32,14 +32,20 @@ type Result struct {
 	Error error
 }
 
+type Command struct {
+	Playbook string
+	Env      map[string]string
+	Args     []string
+}
+
 // Client is the interface for the Ansible client
 type Client interface {
 	// RunSync executes an Ansible command synchronously and returns the result
-	RunSync(id string, args []string) Result
+	RunSync(id string, cmd Command) Result
 
 	// RunAsync executes an Ansible command asynchronously and returns the log path
 	// The caller can use the returned context.CancelFunc to cancel the execution
-	RunAsync(id string, args []string) (string, context.CancelFunc, error)
+	RunAsync(id string, cmd Command) (string, context.CancelFunc, error)
 }
 
 // client implements the Client interface
@@ -66,7 +72,7 @@ func getLogPath(logsDir, id string) string {
 }
 
 // RunSync executes an Ansible command synchronously and returns the result
-func (c *client) RunSync(id string, args []string) Result {
+func (c *client) RunSync(id string, cmd Command) Result {
 	logPath := getLogPath(c.config.AnsibleLogsPath, id)
 
 	// Create log file
@@ -82,32 +88,35 @@ func (c *client) RunSync(id string, args []string) Result {
 
 	// Write header to log file
 	fmt.Fprintf(logFile, "=== Ansible Command Execution (ID: %s) ===\n", id)
-	fmt.Fprintf(logFile, "Command: ansible-playbook %s\n", args)
+	fmt.Fprintf(logFile, "Command: ansible-playbook %s\n", cmd.Playbook)
 	fmt.Fprintf(logFile, "Working Directory: %s\n", c.config.AnsiblePath)
 	fmt.Fprintf(logFile, "=== Output ===\n\n")
 
-	// Create command
-	cmd := exec.Command("ansible-playbook", args...)
-	cmd.Dir = c.config.AnsiblePath
+	cmdArgs := commandArgs(c.config.AnsiblePath, cmd)
+	runner := exec.Command("ansible-playbook", cmdArgs...)
+	runner.Dir = c.config.AnsiblePath
 
 	// Set up output to both log file and standard output
-	cmd.Stdout = io.MultiWriter(logFile, os.Stdout)
-	cmd.Stderr = io.MultiWriter(logFile, os.Stderr)
+	runner.Stdout = io.MultiWriter(logFile, os.Stdout)
+	runner.Stderr = io.MultiWriter(logFile, os.Stderr)
 
 	// Execute command
-	err = cmd.Run()
+	err = runner.Run()
 
 	// Get exit code
 	exitCode := 0
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()
+			fmt.Fprintf(logFile, "\n=== Error (Exit Code: %d) ===\n%v\n", exitCode, err)
+			log.Printf("Ansible command failed with exit code %d: %v", exitCode, err)
 		} else {
 			exitCode = -1
+			fmt.Fprintf(logFile, "\n=== Error (Unknown) ===\n%v\n", err)
+			log.Printf("Ansible command failed with unknown error: %v", err)
 		}
-
-		// Write error to log file
-		fmt.Fprintf(logFile, "\n=== Error ===\n%v\n", err)
+	} else {
+		log.Printf("Ansible command completed successfully")
 	}
 
 	// Write footer to log file
@@ -121,7 +130,7 @@ func (c *client) RunSync(id string, args []string) Result {
 }
 
 // RunAsync executes an Ansible command asynchronously and returns the log path
-func (c *client) RunAsync(id string, args []string) (string, context.CancelFunc, error) {
+func (c *client) RunAsync(id string, cmd Command) (string, context.CancelFunc, error) {
 	logPath := getLogPath(c.config.AnsibleLogsPath, id)
 
 	// Create log file
@@ -132,24 +141,25 @@ func (c *client) RunAsync(id string, args []string) (string, context.CancelFunc,
 
 	// Write header to log file
 	fmt.Fprintf(logFile, "=== Ansible Command Execution (ID: %s) ===\n", id)
-	fmt.Fprintf(logFile, "Command: ansible-playbook %s\n", args)
+	fmt.Fprintf(logFile, "Command: ansible-playbook %s\n", cmd.Playbook)
 	fmt.Fprintf(logFile, "Working Directory: %s\n", c.config.AnsiblePath)
 	fmt.Fprintf(logFile, "=== Output ===\n\n")
 
 	// Create command
-	cmd := exec.Command("ansible-playbook", args...)
-	cmd.Dir = c.config.AnsiblePath
+	cmdArgs := commandArgs(c.config.AnsiblePath, cmd)
+	runner := exec.Command("ansible-playbook", cmdArgs...)
+	runner.Dir = c.config.AnsiblePath
 
 	// Set up output to log file
-	cmd.Stdout = logFile
-	cmd.Stderr = logFile
+	runner.Stdout = logFile
+	runner.Stderr = logFile
 
 	// Create a context that can be used to cancel the command
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Store the command in the processes map
 	c.mu.Lock()
-	c.processes[id] = cmd
+	c.processes[id] = runner
 	c.mu.Unlock()
 
 	// Create a cancel function that will clean up resources
@@ -162,8 +172,8 @@ func (c *client) RunAsync(id string, args []string) (string, context.CancelFunc,
 		c.mu.Unlock()
 
 		// Kill the process if it's still running
-		if cmd.Process != nil {
-			cmd.Process.Kill()
+		if runner.Process != nil {
+			runner.Process.Kill()
 		}
 
 		// Close the log file
@@ -171,7 +181,7 @@ func (c *client) RunAsync(id string, args []string) (string, context.CancelFunc,
 	}
 
 	// Start the command
-	if err := cmd.Start(); err != nil {
+	if err := runner.Start(); err != nil {
 		cancelFunc()
 		return logPath, nil, fmt.Errorf("failed to start command: %w", err)
 	}
@@ -180,18 +190,22 @@ func (c *client) RunAsync(id string, args []string) (string, context.CancelFunc,
 	go func() {
 		defer cancelFunc()
 
+		// Create a channel to signal command completion
+		done := make(chan error, 1)
+		go func() {
+			done <- runner.Wait()
+		}()
+
 		// Wait for the command to complete or be cancelled
 		select {
 		case <-ctx.Done():
 			// Command was cancelled
-			if cmd.Process != nil {
-				cmd.Process.Kill()
+			if runner.Process != nil {
+				runner.Process.Kill()
 			}
 			fmt.Fprintf(logFile, "\n=== Execution Cancelled ===\n")
-		default:
+		case err := <-done:
 			// Command completed normally
-			err := cmd.Wait()
-
 			// Get exit code
 			exitCode := 0
 			if err != nil {
@@ -211,4 +225,16 @@ func (c *client) RunAsync(id string, args []string) (string, context.CancelFunc,
 	}()
 
 	return logPath, cancelFunc, nil
+}
+
+func commandArgs(ansiblePath string, cmd Command) []string {
+	cmdArgs := []string{
+		fmt.Sprintf("%s/%s", ansiblePath, cmd.Playbook),
+		"-i", fmt.Sprintf("%s/inventory/defaults.yml", ansiblePath),
+		"-i", fmt.Sprintf("%s/inventory/custom.yml", ansiblePath),
+	}
+	for k, v := range cmd.Env {
+		cmdArgs = append(cmdArgs, "-e", fmt.Sprintf("%s=%s", k, v))
+	}
+	return append(cmdArgs, cmd.Args...)
 }
