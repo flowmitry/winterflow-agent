@@ -3,6 +3,7 @@ package ansible
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"io"
 	"os"
 	"os/exec"
@@ -33,6 +34,7 @@ type Result struct {
 }
 
 type Command struct {
+	Id       string
 	Playbook string
 	Env      map[string]string
 	Args     []string
@@ -41,11 +43,11 @@ type Command struct {
 // Client is the interface for the Ansible client
 type Client interface {
 	// RunSync executes an Ansible command synchronously and returns the result
-	RunSync(id string, cmd Command) Result
+	RunSync(cmd Command) Result
 
 	// RunAsync executes an Ansible command asynchronously and returns the log path
 	// The caller can use the returned context.CancelFunc to cancel the execution
-	RunAsync(id string, cmd Command) (string, context.CancelFunc, error)
+	RunAsync(cmd Command) (string, context.CancelFunc, error)
 }
 
 // client implements the Client interface
@@ -72,9 +74,15 @@ func getLogPath(logsDir, id string) string {
 }
 
 // RunSync executes an Ansible command synchronously and returns the result
-func (c *client) RunSync(id string, cmd Command) Result {
-	logPath := getLogPath(c.config.AnsibleLogsPath, id)
+func (c *client) RunSync(cmd Command) Result {
+	id := ""
+	if cmd.Id != "" {
+		id = cmd.Id
+	} else {
+		id = uuid.New().String()
+	}
 
+	logPath := getLogPath(c.config.AnsibleLogsPath, id)
 	// Create log file
 	logFile, err := os.Create(logPath)
 	if err != nil {
@@ -130,7 +138,13 @@ func (c *client) RunSync(id string, cmd Command) Result {
 }
 
 // RunAsync executes an Ansible command asynchronously and returns the log path
-func (c *client) RunAsync(id string, cmd Command) (string, context.CancelFunc, error) {
+func (c *client) RunAsync(cmd Command) (string, context.CancelFunc, error) {
+	id := ""
+	if cmd.Id != "" {
+		id = cmd.Id
+	} else {
+		id = uuid.New().String()
+	}
 	logPath := getLogPath(c.config.AnsibleLogsPath, id)
 
 	// Create log file

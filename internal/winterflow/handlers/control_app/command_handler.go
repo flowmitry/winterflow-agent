@@ -60,10 +60,8 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 		"app_version": fmt.Sprintf("app_version=%s", appVersion),
 		"app_name":    fmt.Sprintf("app_name=%s", appConfig.Name),
 	}
-
-	// Add any additional environment variables from app configuration if needed
-
 	ansibleCommand := ansiblepkg.Command{
+		Id:       cmd.Request.Base.MessageId,
 		Playbook: fmt.Sprintf("apps/%s.yml", playbook),
 		Env:      env,
 	}
@@ -71,7 +69,7 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	log.Info("Executing %s playbook for app %s (ID: %s, Version: %s)",
 		playbook, appConfig.Name, appID, appVersion)
 
-	result := h.ansible.RunSync(cmd.Request.Base.MessageId, ansibleCommand)
+	result := h.ansible.RunSync(ansibleCommand)
 	if result.ExitCode != 0 {
 		return log.Errorf("command failed with exit code %d: %v", result.ExitCode, result.Error)
 	}
