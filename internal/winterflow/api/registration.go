@@ -72,10 +72,12 @@ func RegisterAgent(configPath string) error {
 	// Save agent_id to config immediately if it's new
 	if existingAgentID == "" && resp.Data.AgentID != "" {
 		cfg.AgentID = resp.Data.AgentID
+		// Set agent status to pending during registration process
+		cfg.AgentStatus = config.AgentStatusPending
 		if err := config.SaveConfig(cfg, configPath); err != nil {
 			log.Warn("[WARN] Failed to save agent_id to config: %v", err)
 		} else {
-			log.Printf("[DEBUG] Saved new agent_id to config: %s", resp.Data.AgentID)
+			log.Printf("[DEBUG] Saved new agent_id and set status to pending in config: %s", resp.Data.AgentID)
 		}
 	}
 
@@ -119,6 +121,12 @@ func RegisterAgent(configPath string) error {
 			// Check if it's an API error
 			if apiErr, ok := err.(*APIError); ok {
 				if apiErr.StatusCode == 400 {
+					// Reset agent status to unknown before restarting registration
+					cfg.AgentStatus = config.AgentStatusUnknown
+					if err := config.SaveConfig(cfg, configPath); err != nil {
+						log.Warn("[WARN] Failed to reset agent status to unknown: %v", err)
+					}
+
 					// For 400 errors, start a new registration
 					fmt.Println("\nRegistration code has expired.")
 					fmt.Println("Starting a new registration process...")
@@ -133,6 +141,14 @@ func RegisterAgent(configPath string) error {
 
 		switch statusResp.Data.Status {
 		case "registered":
+			// Update agent status to registered
+			cfg.AgentStatus = config.AgentStatusRegistered
+			if err := config.SaveConfig(cfg, configPath); err != nil {
+				log.Warn("[WARN] Failed to update agent status to registered: %v", err)
+			} else {
+				log.Printf("[DEBUG] Updated agent status to registered")
+			}
+
 			fmt.Println("\n=== Registration Successful ===")
 			fmt.Println("The agent has been successfully registered and configured.")
 			fmt.Println("\nNext steps:")
@@ -140,6 +156,12 @@ func RegisterAgent(configPath string) error {
 			return nil
 
 		case "expired", "unknown":
+			// Reset agent status to unknown before restarting registration
+			cfg.AgentStatus = config.AgentStatusUnknown
+			if err := config.SaveConfig(cfg, configPath); err != nil {
+				log.Warn("[WARN] Failed to reset agent status to unknown: %v", err)
+			}
+
 			fmt.Println("\nRegistration code has expired or is invalid.")
 			fmt.Println("Starting a new registration process...")
 			return RegisterAgent(configPath)

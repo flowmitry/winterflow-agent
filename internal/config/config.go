@@ -9,9 +9,21 @@ import (
 	log "winterflow-agent/pkg/log"
 )
 
+// AgentStatus represents the current status of the agent
+type AgentStatus string
+
+const (
+	// AgentStatusRegistered indicates the agent is registered with the server
+	AgentStatusRegistered AgentStatus = "registered"
+	// AgentStatusPending indicates the agent registration is pending
+	AgentStatusPending AgentStatus = "pending"
+	// AgentStatusUnknown indicates the agent status is unknown
+	AgentStatusUnknown AgentStatus = "unknown"
+)
+
 var (
 	// DefaultGRPCServerAddress is the default gRPC server address for agent communication
-	DefaultGRPCServerAddress = "server.winterflow.io"
+	DefaultGRPCServerAddress = "grpc.winterflow.io"
 	// DefaultAPIBaseURL is the default HTTP API server URL for web interface
 	DefaultAPIBaseURL = "https://api.winterflow.io"
 )
@@ -40,8 +52,9 @@ const (
 
 // Config holds the application configuration
 type Config struct {
-	AgentID  string          `json:"agent_id"`
-	Features map[string]bool `json:"features"`
+	AgentID     string          `json:"agent_id"`
+	AgentStatus AgentStatus     `json:"agent_status"`
+	Features    map[string]bool `json:"features"`
 	// GRPCServerAddress is the gRPC server address for agent communication
 	GRPCServerAddress string `json:"grpc_server_address,omitempty"`
 	// APIBaseURL is the base HTTP API URL for web interface
@@ -64,6 +77,9 @@ type Config struct {
 
 // applyDefaults ensures that all necessary fields have default values if they are empty.
 func applyDefaults(cfg *Config) {
+	if cfg.AgentStatus == "" {
+		cfg.AgentStatus = AgentStatusUnknown
+	}
 	if cfg.GRPCServerAddress == "" {
 		cfg.GRPCServerAddress = DefaultGRPCServerAddress
 	}
@@ -154,9 +170,9 @@ func WaitUntilReady(configPath string) (*Config, error) {
 			if err == nil {
 				var config Config // Start with an empty config
 				if err := json.Unmarshal(data, &config); err == nil {
-					// Check if required fields are filled
-					if config.AgentID != "" {
-						// All required fields are present, proceed
+					// Check if required fields are filled and agent is registered
+					if config.AgentID != "" && config.AgentStatus == AgentStatusRegistered {
+						// All required fields are present and agent is registered, proceed
 						// Validate and merge features
 						config.Features = validateAndMergeFeatures(config.Features)
 						// Apply defaults for optional fields
@@ -166,7 +182,7 @@ func WaitUntilReady(configPath string) (*Config, error) {
 				}
 			}
 		}
-		log.Printf("Waiting for valid configuration file at %s...", configPath)
+		log.Printf("Waiting for valid configuration file with registered status at %s...", configPath)
 		time.Sleep(5 * time.Second)
 	}
 }
