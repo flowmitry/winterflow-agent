@@ -23,9 +23,9 @@ const (
 
 var (
 	// DefaultGRPCServerAddress is the default gRPC server address for agent communication
-	DefaultGRPCServerAddress = "grpc.winterflow.io"
+	DefaultGRPCServerAddress = "grpc.winterflow.io:50051"
 	// DefaultAPIBaseURL is the default HTTP API server URL for web interface
-	DefaultAPIBaseURL = "https://api.winterflow.io"
+	DefaultAPIBaseURL = "https://app.winterflow.io"
 )
 
 const (

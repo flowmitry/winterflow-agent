@@ -1,7 +1,7 @@
 # Build configuration
 BINARY_NAME=agent
 VERSION=$(shell date +'%Y.%m.%d')
-GRPC_ADDR=127.0.0.1:8081
+GRPC_ADDR=127.0.0.1:50051
 API_URL=http://127.0.0.1:8080
 BUILD_DIR=.
 
