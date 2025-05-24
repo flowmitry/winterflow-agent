@@ -1,14 +1,46 @@
 ---
 - name: Deploy applications
-  hosts: all
-  become: true
+  hosts: localhost
+  become: false
   gather_facts: true
 
-  roles:
-    # Common roles for all nodes
-    - role: check_requirements
+  #  roles:
+  #    - role: check_requirements
+  #
+  #    - role: docker
+  #      when: orchestrator == 'docker-compose'
+  #
+  #    - role: docker_compose
+  #      when: orchestrator == 'docker-compose'
 
-    # Docker Swarm roles
-    - role: docker
-      when: app_server == 'docker-swarm'
-    
+  pre_tasks:
+    - name: Validate required variables
+      assert:
+        that:
+          - app_id is defined
+          - app_version is defined
+          - apps_roles_dir is defined
+          - apps_output_dir is defined
+          - orchestrator is defined
+          - orchestrator in ['docker_compose']
+        fail_msg: >
+          Required variables must be defined:
+          - app_id: The ID of the application to deploy
+          - app_version: The version of the application
+          - apps_roles_dir: Path to the application's Ansible roles
+          - apps_output_dir: The directory to store the apps files
+          - orchestrator: The orchestrator type
+          - orchestrator: Must be one of 'docker-compose'
+
+    - name: Set calculated variables
+      set_fact:
+        _app_role_dir: "{{ apps_roles_dir }}/{{ app_id }}/{{ app_version }}"
+        _app_output_dir: "{{ apps_output_dir }}/{{ app_id }}"
+      run_once: true
+
+  tasks:
+    - name: Stop application
+      include_tasks: "./stop_app.yml"
+
+    - name: Deploy application
+      include_tasks: "./deploy_app.yml"

@@ -1,0 +1,161 @@
+# Use the following technical stack:
+
+- Backend: Go 1.24.0
+- Use only standard library for GO;
+- Use GRPC;
+- Use JSON file for the configuration storage.
+
+# GO source code location:
+
+- cmd
+- internal
+- pkg
+
+# GO shared libraries and packages:
+
+Create a package in pkg if you need to create some shared component.
+
+# Usage of packages:
+
+- Use only standard library for GO;
+- Use custom logging package (pkg/log) for all logging:
+    - Import as: log "winterflow-agent/pkg/log"
+    - Use structured logging methods: Debug, Info, Warn, Error
+    - Use Printf for compatibility with existing code
+    - Use Fatalf/Fatal for fatal errors
+    - All logs are JSON formatted and include timestamps
+    - Log levels: Debug, Info, Warn, Error
+    - Include relevant context in log messages
+    - Use consistent log message format: [LEVEL] message
+    - Include error details when logging errors
+    - Use proper log levels for different types of messages
+
+# Adding New Capabilities:
+
+To add a new capability to the system, follow these steps:
+
+1. Add a new constant in pkg/capabilities/capability.go:
+   ```go
+   const (
+       CapabilityNewTool = "new-tool"
+   )
+   ```
+
+2. Create a new file pkg/capabilities/new_tool.go:
+   ```go
+   package capabilities
+
+   import (
+       "os/exec"
+       "strings"
+   )
+
+   // NewToolCapability represents the New Tool capability
+   type NewToolCapability struct {
+       version string
+   }
+
+   // NewNewToolCapability creates a new New Tool capability
+   func NewNewToolCapability() *NewToolCapability {
+       return &NewToolCapability{
+           version: "1.0", // Default version
+       }
+   }
+
+   // Name returns the name of the capability
+   func (c *NewToolCapability) Name() string {
+       return CapabilityNewTool
+   }
+
+   // Version returns the version of the capability
+   func (c *NewToolCapability) Version() string {
+       return c.version
+   }
+
+   // IsAvailable checks if New Tool is available on the system
+   func (c *NewToolCapability) IsAvailable() bool {
+       cmd := exec.Command("new-tool", "--version")
+       output, err := cmd.Output()
+       if err != nil {
+           return false
+       }
+       
+       // Parse version from output
+       versionStr := string(output)
+       if strings.Contains(versionStr, "new-tool version") {
+           // Extract version from output
+           parts := strings.Split(versionStr, " ")
+           if len(parts) > 2 {
+               c.version = parts[2]
+           }
+           return true
+       }
+       return false
+   }
+   ```
+
+3. Add the new capability to the factory in pkg/capabilities/capability.go:
+   ```go
+   func NewCapabilityFactory() *CapabilityFactory {
+       return &CapabilityFactory{
+           capabilities: []Capability{
+               // ... existing capabilities ...
+               NewNewToolCapability(),
+           },
+       }
+   }
+   ```
+
+4. Update the SystemCapabilities struct in internal/agent/capabilities.go:
+   ```go
+   type SystemCapabilities struct {
+       // ... existing fields ...
+       NewTool string
+   }
+   ```
+
+5. Update the ToMap method in internal/agent/capabilities.go:
+   ```go
+   func (c SystemCapabilities) ToMap() map[string]string {
+       return map[string]string{
+           // ... existing mappings ...
+           "new-tool": c.NewTool,
+       }
+   }
+   ```
+
+6. Update the GetSystemCapabilities function in internal/agent/capabilities.go:
+   ```go
+   func GetSystemCapabilities() SystemCapabilities {
+       // ... existing code ...
+       for _, c := range factory.GetAllCapabilities() {
+           if c.IsAvailable() {
+               switch c.Name() {
+               // ... existing cases ...
+               case capabilities.CapabilityNewTool:
+                   result.NewTool = c.Version()
+               }
+           }
+       }
+       return result
+   }
+   ```
+
+Best Practices:
+
+- Use consistent naming conventions (e.g., snake_case for file names, CamelCase for types)
+- Include proper error handling in IsAvailable()
+- Add appropriate comments and documentation
+- Test the capability detection on different platforms
+- Keep version parsing logic consistent with existing capabilities
+- Use meaningful default versions
+- Follow the existing code structure and patterns
+
+# Command line tools
+
+- Use makefile for build, run, test, lint, format, etc.
+
+# Tasks completion
+
+After each task run `make build` and fix errors if any.
+
