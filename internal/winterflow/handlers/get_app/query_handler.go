@@ -97,21 +97,23 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 		return nil, fmt.Errorf("files not found in config or not an array")
 	}
 
-	// Create a map of filenames for quick lookup
-	fileNames := make(map[string]bool)
+	// Create a map of file info for quick lookup
+	fileInfo := make(map[string]string) // map[filename]fileID
 	for _, f := range configFiles {
 		file, ok := f.(map[string]interface{})
 		if !ok {
 			continue
 		}
-		if filename, ok := file["filename"].(string); ok {
-			fileNames[filename] = true
+		filename, filenameOk := file["filename"].(string)
+		id, idOk := file["id"].(string)
+		if filenameOk && idOk {
+			fileInfo[filename] = id
 		}
 	}
 
 	// Read only the files listed in the config
 	var files []*pb.AppFileV1
-	for filename := range fileNames {
+	for filename, fileID := range fileInfo {
 		// Construct the full path to the file
 		filePath := filepath.Join(rolesTemplatesDir, filename+".j2")
 
@@ -129,7 +131,7 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 
 		// Create an AppFileV1 for the file
 		file := &pb.AppFileV1{
-			Id:      filename,
+			Id:      fileID,
 			Content: content,
 		}
 		files = append(files, file)
