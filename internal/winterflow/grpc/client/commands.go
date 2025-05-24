@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"winterflow-agent/internal/winterflow/grpc/pb"
+	"winterflow-agent/internal/winterflow/handlers/delete_app"
 	"winterflow-agent/internal/winterflow/handlers/save_app"
 	"winterflow-agent/pkg/cqrs"
 	log "winterflow-agent/pkg/log"
@@ -44,11 +45,18 @@ func HandleSaveAppRequest(commandBus cqrs.CommandBus, saveAppRequest *pb.SaveApp
 func HandleDeleteAppRequest(commandBus cqrs.CommandBus, deleteAppRequest *pb.DeleteAppRequestV1, agentID string) (*pb.AgentMessage, error) {
 	log.Debug("Processing delete app request for app ID: %s", deleteAppRequest.AppId)
 
-	// TODO: Implement actual delete app command and handler
-	// For now, just return a success response
+	// Create and dispatch the command
+	cmd := delete_app.DeleteAppCommand{Request: deleteAppRequest}
 
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage string = "App deleted successfully"
+
+	// Dispatch the command to the handler
+	if err := commandBus.Dispatch(cmd); err != nil {
+		log.Error("Error deleting app: %v", err)
+		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		responseMessage = fmt.Sprintf("Error deleting app: %v", err)
+	}
 
 	baseResp := createBaseResponse(deleteAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	deleteAppResp := &pb.DeleteAppResponseV1{
