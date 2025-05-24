@@ -2,11 +2,13 @@ package certs
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"os"
@@ -179,4 +181,50 @@ func LoadTLSCredentials(certPath, keyPath, host string) (credentials.TransportCr
 func CertificateExists(certPath string) bool {
 	_, err := os.Stat(certPath)
 	return err == nil
+}
+
+// DecryptWithPrivateKey decrypts base64-encoded data using the RSA private key at the specified path
+func DecryptWithPrivateKey(privateKeyPath, encryptedBase64 string) (string, error) {
+	// Read private key
+	keyData, err := os.ReadFile(privateKeyPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read private key: %v", err)
+	}
+
+	// Parse private key
+	block, _ := pem.Decode(keyData)
+	if block == nil {
+		return "", fmt.Errorf("failed to parse private key PEM")
+	}
+
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse private key: %v", err)
+	}
+
+	// Decode base64 data
+	encryptedData, err := base64.StdEncoding.DecodeString(encryptedBase64)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode base64 data: %v", err)
+	}
+
+	// Create a SHA-256 hash for OAEP
+	hash := crypto.SHA256.New()
+
+	// Decrypt data using RSA-OAEP with SHA-256
+	decryptedData, err := rsa.DecryptOAEP(hash, rand.Reader, privateKey, encryptedData, nil)
+	if err != nil {
+		// Try with SHA-1 if SHA-256 fails (for backward compatibility)
+		hash = crypto.SHA1.New()
+		decryptedData, err = rsa.DecryptOAEP(hash, rand.Reader, privateKey, encryptedData, nil)
+		if err != nil {
+			// If both fail, try PKCS#1 v1.5 as a last resort
+			decryptedData, err = rsa.DecryptPKCS1v15(rand.Reader, privateKey, encryptedData)
+			if err != nil {
+				return "", fmt.Errorf("failed to decrypt data: %v", err)
+			}
+		}
+	}
+
+	return string(decryptedData), nil
 }

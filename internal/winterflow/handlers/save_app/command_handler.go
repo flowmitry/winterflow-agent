@@ -8,6 +8,7 @@ import (
 	"strings"
 	"winterflow-agent/internal/winterflow/grpc/pb"
 	"winterflow-agent/internal/winterflow/models"
+	"winterflow-agent/pkg/certs"
 	log "winterflow-agent/pkg/log"
 	"winterflow-agent/pkg/yaml"
 )
@@ -16,6 +17,7 @@ import (
 type SaveAppHandler struct {
 	AnsibleAppsRolesPath           string
 	AnsibleAppsRolesCurrentVersion string
+	PrivateKeyPath                 string
 }
 
 // Handle executes the SaveAppCommand
@@ -206,7 +208,7 @@ func (h *SaveAppHandler) createDefaultsFile(defaultsDir string, appConfig *model
 }
 
 // processMap is a helper function that processes variables or secrets for the app
-func (h *SaveAppHandler) processMap(filePath string, appConfig *models.AppConfig, variableMap models.VariableMap) error {
+func (h *SaveAppHandler) processMap(filePath string, appConfig *models.AppConfig, variableMap models.VariableMap, decrypt bool) error {
 	// Map variable IDs to names using the appConfig
 	idToName := make(map[string]string)
 	// Create a set of variable IDs from appConfig for checking which variables/secrets to keep
@@ -259,6 +261,17 @@ func (h *SaveAppHandler) processMap(filePath string, appConfig *models.AppConfig
 	for id, value := range variableMap {
 		// Only process values that are in the appConfig
 		if configVarIDs[id] {
+			// Decrypt the value if needed
+			if decrypt && h.PrivateKeyPath != "" {
+				decryptedValue, err := certs.DecryptWithPrivateKey(h.PrivateKeyPath, value)
+				if err != nil {
+					log.Error("Error decrypting value for ID %s: %v", id, err)
+					// Continue with the original value if decryption fails
+				} else {
+					value = decryptedValue
+				}
+			}
+
 			name, ok := idToName[id]
 			if ok {
 				existingNamedValues[name] = value
@@ -291,12 +304,12 @@ func (h *SaveAppHandler) processMap(filePath string, appConfig *models.AppConfig
 
 // processVariables processes the variables for the app
 func (h *SaveAppHandler) processVariables(varsFile string, appConfig *models.AppConfig, variables models.VariableMap) error {
-	return h.processMap(varsFile, appConfig, variables)
+	return h.processMap(varsFile, appConfig, variables, false)
 }
 
 // processSecrets processes the secrets for the app
 func (h *SaveAppHandler) processSecrets(secretsFile string, appConfig *models.AppConfig, secrets models.VariableMap) error {
-	return h.processMap(secretsFile, appConfig, secrets)
+	return h.processMap(secretsFile, appConfig, secrets, true)
 }
 
 // SaveAppResult represents the result of creating an app
@@ -307,9 +320,10 @@ type SaveAppResult struct {
 }
 
 // NewSaveAppHandler creates a new SaveAppHandler
-func NewSaveAppHandler(ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *SaveAppHandler {
+func NewSaveAppHandler(ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion, privateKeyPath string) *SaveAppHandler {
 	return &SaveAppHandler{
 		AnsibleAppsRolesPath:           ansibleAppsRolesPath,
 		AnsibleAppsRolesCurrentVersion: ansibleAppsRolesCurrentVersion,
+		PrivateKeyPath:                 privateKeyPath,
 	}
 }

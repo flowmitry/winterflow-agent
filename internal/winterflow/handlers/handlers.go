@@ -14,7 +14,7 @@ import (
 // RegisterCommandHandlers registers all command handlers with the command bus
 func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config) error {
 	ansibleClient := ansible.NewAnsibleClient(config)
-	if err := b.Register(save_app.NewSaveAppHandler(config.GetAnsibleAppsRolesPath(), configconst.AnsibleAppsRolesCurrentVersionFolder)); err != nil {
+	if err := b.Register(save_app.NewSaveAppHandler(config.GetAnsibleAppsRolesPath(), configconst.AnsibleAppsRolesCurrentVersionFolder, config.PrivateKeyPath)); err != nil {
 		return log.Errorf("failed to register save app handler: %v", err)
 	}
 
