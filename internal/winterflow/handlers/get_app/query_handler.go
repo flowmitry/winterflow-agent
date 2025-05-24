@@ -79,10 +79,10 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 		return nil, fmt.Errorf("error converting secrets to JSON: %w", err)
 	}
 
-	// Convert secrets JSON to AppVarV1 slice
-	secrets, err := convertJSONToAppVars(secretsJSON)
+	// Convert secrets JSON to AppVarV1 slice with encrypted values
+	secrets, err := convertJSONToEncryptedAppVars(secretsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("error converting secrets JSON to AppVarV1: %w", err)
+		return nil, fmt.Errorf("error converting secrets JSON to encrypted AppVarV1: %w", err)
 	}
 
 	// Parse config to get list of files

@@ -127,3 +127,23 @@ func convertJSONToAppVars(jsonBytes []byte) ([]*pb.AppVarV1, error) {
 
 	return appVars, nil
 }
+
+// convertJSONToEncryptedAppVars converts a JSON byte array to a slice of AppVarV1 with encrypted values
+func convertJSONToEncryptedAppVars(jsonBytes []byte) ([]*pb.AppVarV1, error) {
+	var jsonMap map[string]interface{}
+	if err := json.Unmarshal(jsonBytes, &jsonMap); err != nil {
+		return nil, fmt.Errorf("error parsing JSON: %w", err)
+	}
+
+	var appVars []*pb.AppVarV1
+	for id := range jsonMap {
+		// Always use "<encrypted>" for the value
+		appVar := &pb.AppVarV1{
+			Id:      id,
+			Content: []byte("<encrypted>"),
+		}
+		appVars = append(appVars, appVar)
+	}
+
+	return appVars, nil
+}
