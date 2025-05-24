@@ -3,6 +3,7 @@ package control_app
 import (
 	"fmt"
 	"winterflow-agent/internal/winterflow/grpc/pb"
+	"winterflow-agent/internal/winterflow/handlers/utils"
 	ansiblepkg "winterflow-agent/pkg/ansible"
 	log "winterflow-agent/pkg/log"
 )
@@ -34,7 +35,7 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	}
 
 	// Get the app config
-	appConfig, err := GetAppConfig(h.AnsibleAppsRolesPath, appID)
+	appConfig, err := utils.GetAppConfig(h.AnsibleAppsRolesPath, appID)
 	if err != nil {
 		return log.Errorf("failed to get app config for app ID %s: %w", appID, err)
 	}
@@ -64,7 +65,6 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	env := map[string]string{
 		"app_id":         fmt.Sprintf("%s", appID),
 		"app_version":    fmt.Sprintf("%s", appVersion),
-		"app_name":       fmt.Sprintf("%s", appConfig.Name),
 		"apps_roles_dir": fmt.Sprintf("%s", h.AnsibleAppsRolesPath),
 		"orchestrator":   fmt.Sprintf("%s", appConfig.Type),
 	}
