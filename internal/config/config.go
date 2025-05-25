@@ -194,8 +194,24 @@ func SaveConfig(config *Config, configPath string) error {
 	// Validate and merge features before saving
 	config.Features = validateAndMergeFeatures(config.Features)
 
+	// Create a copy of the config for saving
+	configToSave := *config
+
+	// Filter out features that have default values
+	// This ensures we only save features that differ from defaults
+	// or features that were explicitly set in the config file
+	filteredFeatures := make(map[string]bool)
+	for feature, value := range config.Features {
+		// Only include the feature if it's not in DefaultFeatureValues
+		// or if its value differs from the default
+		if defaultValue, exists := DefaultFeatureValues[feature]; !exists || value != defaultValue {
+			filteredFeatures[feature] = value
+		}
+	}
+	configToSave.Features = filteredFeatures
+
 	// Marshal config to JSON
-	data, err := json.MarshalIndent(config, "", "  ")
+	data, err := json.MarshalIndent(configToSave, "", "  ")
 	if err != nil {
 		return log.Errorf("failed to marshal config: %v", err)
 	}
