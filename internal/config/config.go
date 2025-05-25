@@ -38,6 +38,9 @@ const (
 	// DefaultLogsPath is the default directory path where application log files are stored.
 	DefaultLogsPath = "/var/log/winterflow"
 
+	// DefaultOrchestrator defines the default container orchestration tool used by the system.
+	DefaultOrchestrator = "docker_compose"
+
 	// DefaultCertificatesPath is the default directory path for storing certificates.
 	DefaultCertificatesPath = ".certs"
 	// DefaultAgentPrivateKeyPath is the default path for the agent's private key
@@ -63,6 +66,8 @@ type Config struct {
 	AnsiblePath string `json:"ansible_path,omitempty"`
 	// LogsPath specifies the directory where log files are stored.
 	LogsPath string `json:"logs_path,omitempty"`
+	// Orchestrator specifies the orchestration platform or tool used for managing deployments and configurations.
+	Orchestrator string `json:"orchestrator,omitempty"`
 	// CertificatesPath is the path where certificate-related files are stored.
 	CertificatesPath string `json:"certificates_path,omitempty"`
 	// CACertificatePath is the path where the Certificate Authority's certificate is stored.
@@ -91,6 +96,9 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.LogsPath == "" {
 		cfg.LogsPath = DefaultLogsPath
+	}
+	if cfg.Orchestrator == "" {
+		cfg.Orchestrator = DefaultOrchestrator
 	}
 	if cfg.CertificatesPath == "" {
 		cfg.CertificatesPath = DefaultCertificatesPath

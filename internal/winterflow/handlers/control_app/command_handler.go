@@ -12,6 +12,7 @@ import (
 type ControlAppHandler struct {
 	ansible              ansiblepkg.Client
 	AnsibleAppsRolesPath string
+	Orchestrator         string
 }
 
 // Handle executes the ControlAppCommand
@@ -35,7 +36,7 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	}
 
 	// Get the app config
-	appConfig, err := utils.GetAppConfig(h.AnsibleAppsRolesPath, appID)
+	appConfig, err := utils.GetAppConfig(h.AnsibleAppsRolesPath, appID, h.ansible.GetConfig().AnsibleAppsRolesCurrentVersion)
 	if err != nil {
 		return log.Errorf("failed to get app config for app ID %s: %w", appID, err)
 	}
@@ -66,15 +67,15 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 		"app_id":         fmt.Sprintf("%s", appID),
 		"app_version":    fmt.Sprintf("%s", appVersion),
 		"apps_roles_dir": fmt.Sprintf("%s", h.AnsibleAppsRolesPath),
-		"orchestrator":   fmt.Sprintf("%s", appConfig.Type),
+		"orchestrator":   fmt.Sprintf("%s", h.Orchestrator),
 	}
 	ansibleCommand := ansiblepkg.Command{
-		Id:       cmd.Request.Base.MessageId,
+		Id:       messageID,
 		Playbook: fmt.Sprintf("apps/%s.yml", playbook),
 		Env:      env,
 	}
 
-	log.Info("Executing %s playbook for app %s (ID: %s, Version: %s)",
+	log.Printf("Executing %s playbook for app %s (ID: %s, Version: %s)",
 		playbook, appConfig.Name, appID, appVersion)
 
 	result := h.ansible.RunSync(ansibleCommand)
@@ -82,14 +83,15 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 		return log.Errorf("command failed with exit code %d: %v", result.ExitCode, result.Error)
 	}
 
-	log.Info("Successfully executed %s playbook on app %s", playbook, appConfig.Name)
+	log.Printf("Successfully executed %s playbook on app %s", playbook, appConfig.Name)
 	return nil
 }
 
 // NewControlAppHandler creates a new ControlAppHandler
-func NewControlAppHandler(client *ansiblepkg.Client, ansibleAppsRolesPath string) *ControlAppHandler {
+func NewControlAppHandler(client *ansiblepkg.Client, ansibleAppsRolesPath, orchestrator string) *ControlAppHandler {
 	return &ControlAppHandler{
 		ansible:              *client,
 		AnsibleAppsRolesPath: ansibleAppsRolesPath,
+		Orchestrator:         orchestrator,
 	}
 }

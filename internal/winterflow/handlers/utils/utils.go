@@ -8,9 +8,9 @@ import (
 )
 
 // GetAppConfig retrieves the app configuration for the given app ID
-func GetAppConfig(AnsibleAppsRolesPath, appID string) (*models.AppConfig, error) {
+func GetAppConfig(AnsibleAppsRolesPath, appID, version string) (*models.AppConfig, error) {
 	// Check if the app exists
-	appDir := filepath.Join(AnsibleAppsRolesPath, appID)
+	appDir := filepath.Join(AnsibleAppsRolesPath, appID, version)
 	if _, err := os.Stat(appDir); os.IsNotExist(err) {
 		return nil, fmt.Errorf("app with ID %s does not exist", appID)
 	}

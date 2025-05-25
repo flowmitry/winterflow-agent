@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"winterflow-agent/internal/winterflow/grpc/pb"
+	"winterflow-agent/internal/winterflow/handlers/control_app"
 	"winterflow-agent/internal/winterflow/handlers/delete_app"
 	"winterflow-agent/internal/winterflow/handlers/save_app"
 	"winterflow-agent/pkg/cqrs"
@@ -76,12 +77,19 @@ func HandleDeleteAppRequest(commandBus cqrs.CommandBus, deleteAppRequest *pb.Del
 func HandleControlAppRequest(commandBus cqrs.CommandBus, controlAppRequest *pb.ControlAppRequestV1, agentID string) (*pb.AgentMessage, error) {
 	log.Debug("Processing control app request for app ID: %s, action: %v", controlAppRequest.AppId, controlAppRequest.Action)
 
-	// TODO: Implement actual control app command and handler
-	// For now, just return a success response
+	// Create and dispatch the command
+	cmd := control_app.ControlAppCommand{Request: controlAppRequest}
 
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage string = "App control action executed successfully"
 	var statusCode pb.AppStatusCode = pb.AppStatusCode_STATUS_CODE_ACTIVE
+
+	// Dispatch the command to the handler
+	if err := commandBus.Dispatch(cmd); err != nil {
+		log.Error("Error controlling app: %v", err)
+		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		responseMessage = fmt.Sprintf("Error controlling app: %v", err)
+	}
 
 	baseResp := createBaseResponse(controlAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	controlAppResp := &pb.ControlAppResponseV1{
