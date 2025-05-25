@@ -6,11 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // AgentStatus represents the current status of the agent
 type AgentStatus string
+
+// OrchestratorType represents the orchestrator
+type OrchestratorType string
 
 const (
 	// AgentStatusRegistered indicates the agent is registered with the server
@@ -26,7 +29,7 @@ var (
 	APIBaseURL        string
 	BasePath          string
 	LogsPath          string
-	Orchestrator      string
+	Orchestrator      OrchestratorType
 )
 
 const (
@@ -38,8 +41,13 @@ const (
 	defaultBasePath = "/opt/winterflow"
 	// defaultLogsPath is the default directory path where application log files are stored.
 	defaultLogsPath = "/var/log/winterflow"
+
+	// OrchestratorTypeDockerCompose represents Docker Compose orchestration
+	OrchestratorTypeDockerCompose OrchestratorType = "docker_compose"
+	// OrchestratorTypeDockerSwarm represents Docker Swarm orchestration
+	OrchestratorTypeDockerSwarm OrchestratorType = "docker_swarm"
 	// defaultOrchestrator defines the default container orchestration tool used by the system.
-	defaultOrchestrator = "docker_compose"
+	defaultOrchestrator = OrchestratorTypeDockerCompose
 
 	// ansibleFolder is the path for Ansible files
 	ansibleFolder = "ansible"
@@ -64,16 +72,12 @@ type Config struct {
 	AgentID     string          `json:"agent_id"`
 	AgentStatus AgentStatus     `json:"agent_status"`
 	Features    map[string]bool `json:"features"`
-	// GRPCServerAddress is the gRPC server address for agent communication
-	GRPCServerAddress string `json:"grpc_server_address,omitempty"`
-	// APIBaseURL is the base HTTP API URL for web interface
-	APIBaseURL string `json:"api_base_url,omitempty"`
 	// BasePath specifies the root directory used to store application-related files and configurations.
 	BasePath string `json:"base_path,omitempty"`
 	// LogsPath specifies the directory where log files are stored.
 	LogsPath string `json:"logs_path,omitempty"`
 	// Orchestrator specifies the orchestration platform or tool used for managing deployments and configurations.
-	Orchestrator string `json:"orchestrator,omitempty"`
+	Orchestrator OrchestratorType `json:"orchestrator,omitempty"`
 }
 
 // applyDefaults ensures that all necessary fields have default values if they are empty.
@@ -81,19 +85,13 @@ func applyDefaults(cfg *Config) {
 	if cfg.AgentStatus == "" {
 		cfg.AgentStatus = AgentStatusUnknown
 	}
-	if cfg.GRPCServerAddress == "" {
-		cfg.GRPCServerAddress = defaultGRPCServerAddress
-	}
-	if cfg.APIBaseURL == "" {
-		cfg.APIBaseURL = defaultAPIBaseURL
-	}
 	if cfg.BasePath == "" {
 		cfg.BasePath = defaultBasePath
 	}
 	if cfg.LogsPath == "" {
 		cfg.LogsPath = defaultLogsPath
 	}
-	if cfg.Orchestrator == "" {
+	if cfg.Orchestrator == "" || !isValidOrchestratorType(cfg.Orchestrator) {
 		cfg.Orchestrator = defaultOrchestrator
 	}
 }
@@ -121,12 +119,10 @@ func validateAndMergeFeatures(configFeatures map[string]bool) map[string]bool {
 
 func NewConfig() *Config {
 	return &Config{
-		Features:          make(map[string]bool),
-		GRPCServerAddress: GRPCServerAddress,
-		APIBaseURL:        APIBaseURL,
-		BasePath:          BasePath,
-		LogsPath:          LogsPath,
-		Orchestrator:      Orchestrator,
+		Features:     make(map[string]bool),
+		BasePath:     BasePath,
+		LogsPath:     LogsPath,
+		Orchestrator: Orchestrator,
 	}
 }
 
@@ -158,7 +154,7 @@ func LoadConfig(configPath string) (*Config, error) {
 	return config, nil
 }
 
-// WaitUntilCompleted waits for the configuration file to exist and have valid content
+// WaitUntilReady WaitUntilCompleted waits for the configuration file to exist and have valid content
 func WaitUntilReady(configPath string) (*Config, error) {
 	for {
 		if _, err := os.Stat(configPath); err == nil {
@@ -212,6 +208,20 @@ func SaveConfig(config *Config, configPath string) error {
 	return nil
 }
 
+func (c *Config) GetGRPCServerAddress() string {
+	if GRPCServerAddress == "" {
+		return defaultGRPCServerAddress
+	}
+	return GRPCServerAddress
+}
+
+func (c *Config) GetAPIBaseURL() string {
+	if APIBaseURL == "" {
+		return defaultAPIBaseURL
+	}
+	return APIBaseURL
+}
+
 func (c *Config) GetAnsibleFolder() string {
 	return ansibleFolder
 }
@@ -250,4 +260,31 @@ func (c *Config) GetCACertificatePath() string {
 
 func (c *Config) GetCACertificateFile() string {
 	return agentCACertificateFile
+}
+
+func (c *Config) GetOrchestrator() string {
+	return c.Orchestrator.ToString()
+}
+
+func isValidOrchestratorType(orchestratorType OrchestratorType) bool {
+	return orchestratorType == OrchestratorTypeDockerCompose ||
+		orchestratorType == OrchestratorTypeDockerSwarm
+}
+
+func (o OrchestratorType) Validate() {
+	if !isValidOrchestratorType(o) {
+		panic(fmt.Sprintf("invalid orchestrator type: %s, must be one of: %s, %s",
+			o, OrchestratorTypeDockerCompose, OrchestratorTypeDockerSwarm))
+	}
+}
+
+func (o OrchestratorType) ToString() string {
+	return string(o)
+}
+
+// SetOrchestrator sets the orchestrator type after validating it
+func (c *Config) SetOrchestrator(orchestratorType OrchestratorType) error {
+	orchestratorType.Validate()
+	c.Orchestrator = orchestratorType
+	return nil
 }

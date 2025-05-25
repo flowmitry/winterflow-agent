@@ -22,7 +22,7 @@ func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config) error {
 		return log.Errorf("failed to register delete app handler: %v", err)
 	}
 
-	if err := b.Register(control_app.NewControlAppHandler(&ansibleClient, config.GetAnsibleAppsRolesPath(), config.Orchestrator)); err != nil {
+	if err := b.Register(control_app.NewControlAppHandler(&ansibleClient, config.GetAnsibleAppsRolesPath(), config.GetOrchestrator())); err != nil {
 		return log.Errorf("failed to register control app handler: %v", err)
 	}
 

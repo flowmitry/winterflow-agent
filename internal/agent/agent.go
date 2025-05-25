@@ -124,7 +124,7 @@ func (a *Agent) RegisterWithRetry(ctx context.Context) error {
 // Run starts the agent's main loop
 func (a *Agent) Run(ctx context.Context) error {
 	// Register the agent
-	log.Printf("Registering agent with server: %s", a.config.GRPCServerAddress)
+	log.Printf("Registering agent with server: %s", a.config.GetGRPCServerAddress())
 	err := a.RegisterWithRetry(ctx)
 	if err != nil {
 		return log.Errorf("failed to register agent: %v", err)

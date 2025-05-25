@@ -101,7 +101,7 @@ func (c *Client) setupConnection() error {
 // NewClient creates a new gRPC client
 func NewClient(config *config.Config) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	serverAddress := config.GRPCServerAddress
+	serverAddress := config.GetGRPCServerAddress()
 	caCertPath := config.GetCACertificatePath()
 	certPath := config.GetCertificatePath()
 	keyPath := config.GetPrivateKeyPath()

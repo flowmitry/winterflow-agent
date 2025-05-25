@@ -27,7 +27,7 @@ func RegisterAgent(configPath string) error {
 		return log.Errorf("failed to load configuration: %v", err)
 	}
 
-	client := NewClient(cfg.APIBaseURL)
+	client := NewClient(cfg.GetAPIBaseURL())
 
 	// Try to load existing config to get agent_id
 	var existingAgentID string
