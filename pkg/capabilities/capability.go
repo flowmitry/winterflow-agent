@@ -5,8 +5,8 @@ const (
 	CapabilityAnsible       = "ansible"
 	CapabilityPython        = "python"
 	CapabilityDocker        = "docker"
-	CapabilityDockerCompose = "docker-compose"
-	CapabilityDockerSwarm   = "docker-swarm"
+	CapabilityDockerCompose = "docker_compose"
+	CapabilityDockerSwarm   = "docker_swarm"
 	// System info capabilities
 	SystemCapabilityCpuCores    = "system_cpu_cores"
 	CapabilitySystemUptime      = "system_uptime"
@@ -15,6 +15,8 @@ const (
 	// OS capabilities
 	CapabilityOS     = "os"
 	CapabilityOSArch = "os_arch"
+	// Agent capabilities
+	CapabilityAgentVersion = "agent_version"
 )
 
 // Capability represents a system capability that can be detected
