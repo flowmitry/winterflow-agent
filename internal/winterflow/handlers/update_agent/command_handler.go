@@ -35,8 +35,8 @@ func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
 		return log.Errorf("targetVersion is required for update agent command")
 	}
 
-	if agentversion.GetNumericVersion() == agentversion.ParseNumericVersion(targetVersion) {
-		log.Printf("Agent already uses %s targetVersion", targetVersion)
+	if agentversion.IsBiggerThan(targetVersion) {
+		log.Info("Agent already uses %s version, which is newer than %s", agentversion.GetVersion(), targetVersion)
 		return nil
 	}
 
