@@ -1,7 +1,8 @@
 package version
 
 import (
-	"winterflow-agent/pkg/semver"
+	"strconv"
+	"strings"
 )
 
 var (
@@ -13,5 +14,15 @@ func GetVersion() string {
 }
 
 func GetNumericVersion() int {
-	return semver.GetNumericVersion(version)
+	return ParseNumericVersion(version)
+}
+
+func ParseNumericVersion(semVer string) int {
+	parts := strings.Split(semVer, ".")
+	result := 0
+	for _, part := range parts {
+		num, _ := strconv.Atoi(part)
+		result = result*1000 + num
+	}
+	return result
 }

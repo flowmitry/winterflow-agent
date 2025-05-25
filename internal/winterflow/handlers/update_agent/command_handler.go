@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"winterflow-agent/internal/config"
+	agentversion "winterflow-agent/internal/version"
 	log "winterflow-agent/pkg/log"
 )
 
@@ -27,11 +28,16 @@ func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
 	}
 
 	messageID := cmd.Request.Base.MessageId
-	version := cmd.Request.Version
-	log.Debug("Processing update agent request for message ID: %s, version: %s", messageID, version)
+	targetVersion := cmd.Request.Version
+	log.Debug("Processing update agent request for message ID: %s, current targetVersion: %s, target targetVersion", messageID, agentversion.GetVersion(), targetVersion)
 
-	if version == "" {
-		return log.Errorf("version is required for update agent command")
+	if targetVersion == "" {
+		return log.Errorf("targetVersion is required for update agent command")
+	}
+
+	if agentversion.GetNumericVersion() == agentversion.ParseNumericVersion(targetVersion) {
+		log.Printf("Agent already uses %s targetVersion", targetVersion)
+		return nil
 	}
 
 	// Get the current executable path
@@ -48,7 +54,7 @@ func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
 	defer os.RemoveAll(tempDir)
 
 	// Construct the download URL
-	// Format: {GitHubReleasesURL}/{version}/winterflow-agent-{os}-{arch}
+	// Format: {GitHubReleasesURL}/{targetVersion}/winterflow-agent-{os}-{arch}
 	osName := runtime.GOOS
 	archName := runtime.GOARCH
 	binaryName := fmt.Sprintf("winterflow-agent-%s-%s", osName, archName)
@@ -56,8 +62,8 @@ func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
 		return log.Errorf("windows is not supported")
 	}
 
-	downloadURL := fmt.Sprintf("%s/%s/%s", h.config.GetGitHubReleasesURL(), version, binaryName)
-	log.Printf("Downloading agent version %s from %s", version, downloadURL)
+	downloadURL := fmt.Sprintf("%s/%s/%s", h.config.GetGitHubReleasesURL(), targetVersion, binaryName)
+	log.Printf("Downloading agent targetVersion %s from %s", targetVersion, downloadURL)
 
 	// Download the binary
 	resp, err := http.Get(downloadURL)
@@ -95,15 +101,15 @@ func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
 	}
 	out.Close()
 
-	log.Printf("Successfully downloaded agent version %s to %s", version, tempFile)
+	log.Printf("Successfully downloaded agent targetVersion %s to %s", targetVersion, tempFile)
 
 	// On Unix-like systems, we can replace the executable and let systemd restart the service
-	log.Printf("Replacing current executable at %s with new version", execPath)
+	log.Printf("Replacing current executable at %s with new targetVersion", execPath)
 	if err := os.Rename(tempFile, execPath); err != nil {
 		return log.Errorf("failed to replace current executable: %w", err)
 	}
 
-	log.Printf("Successfully replaced agent with version %s, exiting to let systemd restart the service", version)
+	log.Printf("Successfully replaced agent (%s) with targetVersion %s, exiting to let systemd restart the service", agentversion.GetVersion(), targetVersion)
 	os.Exit(0)
 	return nil
 }
