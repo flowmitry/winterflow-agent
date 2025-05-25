@@ -21,9 +21,10 @@ enum ResponseCode {
 enum AppStatusCode {
   STATUS_CODE_UNKNOWN = 0;
   STATUS_CODE_ACTIVE = 1;
-  STATUS_CODE_INACTIVE = 2;
-  STATUS_CODE_FAILURE = 3;
-  STATUS_CODE_NOT_FOUND = 4;
+  STATUS_CODE_IDLE = 2;
+  STATUS_CODE_TRANSITIONING = 3;
+  STATUS_CODE_PROBLEMATIC = 4;
+  STATUS_CODE_STOPPED = 5;
 }
 
 enum AppAction {
@@ -70,6 +71,7 @@ message RegisterAgentResponseV1 {
 message AgentHeartbeatV1 {
   BaseMessage base = 1;
   map<string, string> metrics = 2;
+  repeated AppStatusV1 apps = 3;
 }
 
 message HeartbeatResponseV1 {
@@ -79,18 +81,7 @@ message HeartbeatResponseV1 {
 message AppStatusV1 {
   // UUID
   string app_id = 1;
-  // JSON
-  bytes config = 2;
-  AppStatusCode status_code = 3;
-}
-
-message AgentAppsV1 {
-  BaseMessage base = 1;
-  repeated AppStatusV1 apps = 2;
-}
-
-message AgentAppsResponseV1 {
-  BaseResponse base = 1;
+  AppStatusCode status_code = 2;
 }
 
 message AppFileV1 {
@@ -171,13 +162,12 @@ message ServerCommand {
   oneof command {
     // Responses for messages initialized by an agent
     HeartbeatResponseV1 heartbeat_response_v1 = 1;
-    AgentAppsResponseV1 apps_response_v1 = 2;
 
     // Commands initialized by the server
-    GetAppRequestV1 get_app_request_v1 = 3;
-    SaveAppRequestV1 save_app_request_v1 = 4;
-    DeleteAppRequestV1 delete_app_request_v1 = 5;
-    ControlAppRequestV1 control_app_request_v1 = 6;
+    GetAppRequestV1 get_app_request_v1 = 2;
+    SaveAppRequestV1 save_app_request_v1 = 3;
+    DeleteAppRequestV1 delete_app_request_v1 = 4;
+    ControlAppRequestV1 control_app_request_v1 = 5;
   }
 }
 
@@ -185,13 +175,12 @@ message AgentMessage {
   oneof message {
     // Messages initialized by an agent
     AgentHeartbeatV1 heartbeat_v1 = 1;
-    AgentAppsV1 apps_v1 = 2;
 
     // Responses for commands initialized by the server
-    GetAppResponseV1 get_app_response_v1 = 3;
-    SaveAppResponseV1 save_app_response_v1 = 4;
-    DeleteAppResponseV1 delete_app_response_v1 = 5;
-    ControlAppResponseV1 control_app_response_v1 = 6;
+    GetAppResponseV1 get_app_response_v1 = 2;
+    SaveAppResponseV1 save_app_response_v1 = 3;
+    DeleteAppResponseV1 delete_app_response_v1 = 4;
+    ControlAppResponseV1 control_app_response_v1 = 5;
   }
 }
 

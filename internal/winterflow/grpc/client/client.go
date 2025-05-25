@@ -49,8 +49,9 @@ type Client struct {
 	queryBus   cqrs.QueryBus
 
 	// Certificate paths
-	certPath string
-	keyPath  string
+	caCertPath string
+	certPath   string
+	keyPath    string
 }
 
 // setupConnection creates a new gRPC connection and client
@@ -78,7 +79,7 @@ func (c *Client) setupConnection() error {
 	if err != nil {
 		host = c.serverAddress
 	}
-	creds, err := certs.LoadTLSCredentials(c.certPath, c.keyPath, host)
+	creds, err := certs.LoadTLSCredentials(c.caCertPath, c.certPath, c.keyPath, host)
 	if err != nil {
 		return log.Errorf("Failed to load TLS credentials: %v", err)
 	}
@@ -101,8 +102,9 @@ func (c *Client) setupConnection() error {
 func NewClient(config *config.Config) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	serverAddress := config.GRPCServerAddress
-	certPath := config.CertificatePath
-	keyPath := config.PrivateKeyPath
+	caCertPath := config.GetCACertificatePath()
+	certPath := config.GetCertificatePath()
+	keyPath := config.GetPrivateKeyPath()
 
 	log.Printf("Creating new gRPC client for %s", serverAddress)
 
@@ -121,8 +123,12 @@ func NewClient(config *config.Config) (*Client, error) {
 	}
 
 	// Always use TLS and fail if certificates don't exist
-	if certPath == "" || keyPath == "" {
+	if caCertPath == "" || certPath == "" || keyPath == "" {
 		return nil, log.Errorf("TLS is required but certificate paths are not configured")
+	}
+
+	if !certs.CertificateExists(caCertPath) {
+		return nil, log.Errorf("TLS is required but CA certificate does not exist at path: %s", caCertPath)
 	}
 
 	if !certs.CertificateExists(certPath) {
@@ -146,6 +152,7 @@ func NewClient(config *config.Config) (*Client, error) {
 		backoffStrategy:   backoff.New(DefaultReconnectInterval, DefaultMaximumReconnectInterval),
 		commandBus:        commandBus,
 		queryBus:          queryBus,
+		caCertPath:        caCertPath,
 		certPath:          certPath,
 		keyPath:           keyPath,
 	}
@@ -440,7 +447,7 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 
 // StartAgentStream starts a bidirectional stream
 func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[string]string, capabilities map[string]string, features map[string]bool) error {
-	log.Printf("Starting Agent stream with server ID: %s", agentID)
+	log.Printf("Starting Agent stream with agent ID: %s", agentID)
 	log.Printf("Current registration state: %v", c.IsRegistered())
 
 	// Start goroutine to maintain the heartbeat stream
@@ -558,7 +565,6 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			saveAppRequestCh := make(chan *pb.SaveAppRequestV1)
 			deleteAppRequestCh := make(chan *pb.DeleteAppRequestV1)
 			controlAppRequestCh := make(chan *pb.ControlAppRequestV1)
-			agentAppsResponseCh := make(chan *pb.AgentAppsResponseV1)
 
 			// Start goroutine to receive responses
 			go func() {
@@ -639,15 +645,6 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						case controlAppRequestCh <- cmd.ControlAppRequestV1:
 						default:
 							log.Printf("Warning: Control app request channel full, dropping request")
-						}
-
-					case *pb.ServerCommand_AppsResponseV1:
-						log.Printf("Received apps response: %s", cmd.AppsResponseV1.Base.MessageId)
-						// Forward the response to be handled by the main loop
-						select {
-						case agentAppsResponseCh <- cmd.AppsResponseV1:
-						default:
-							log.Printf("Warning: Apps response channel full, dropping response")
 						}
 
 					default:
@@ -745,9 +742,6 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						continue
 					}
 					log.Info("Control app response sent successfully")
-
-				case agentAppsResponse := <-agentAppsResponseCh:
-					log.Info("Received agent apps response: %s", agentAppsResponse.Base.MessageId)
 
 				case <-streamDone:
 					log.Printf("Stream receiver stopped, recreating stream")

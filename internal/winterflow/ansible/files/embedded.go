@@ -22,7 +22,7 @@ func NewManager(embeddedFS fs.FS, configPath string) *Manager {
 	}
 
 	return &Manager{
-		embeddedManager: embedded.NewManager(embeddedFS, cfg.AnsiblePath, agent.GetVersion(), []string{
+		embeddedManager: embedded.NewManager(embeddedFS, cfg.GetAnsibleFolder(), agent.GetVersion(), []string{
 			"inventory/defaults.yml",
 			"playbooks",
 			"roles",

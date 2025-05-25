@@ -22,35 +22,41 @@ const (
 )
 
 var (
-	// DefaultGRPCServerAddress is the default gRPC server address for agent communication
-	DefaultGRPCServerAddress = "grpc.winterflow.io:50051"
-	// DefaultAPIBaseURL is the default HTTP API server URL for web interface
-	DefaultAPIBaseURL = "https://app.winterflow.io"
+	GRPCServerAddress string
+	APIBaseURL        string
+	BasePath          string
+	LogsPath          string
+	Orchestrator      string
 )
 
 const (
-	// DefaultAnsiblePath is the default path for Ansible files
-	DefaultAnsiblePath = "ansible"
-	// AnsibleAppsRolesFolder defines the folder name where Ansible application role files are stored.
-	AnsibleAppsRolesFolder               = "apps_roles"
-	AnsibleAppsRolesCurrentVersionFolder = "current"
+	// defaultGRPCServerAddress is the default gRPC server address for agent communication
+	defaultGRPCServerAddress = "grpc.winterflow.io:50051"
+	// defaultAPIBaseURL is the default HTTP API server URL for web interface
+	defaultAPIBaseURL = "https://app.winterflow.io"
+	// defaultBasePath defines the default file system path used by the application for storing and accessing resources.
+	defaultBasePath = "/opt/winterflow"
+	// defaultLogsPath is the default directory path where application log files are stored.
+	defaultLogsPath = "/var/log/winterflow"
+	// defaultOrchestrator defines the default container orchestration tool used by the system.
+	defaultOrchestrator = "docker_compose"
 
-	// DefaultLogsPath is the default directory path where application log files are stored.
-	DefaultLogsPath = "/var/log/winterflow"
+	// ansibleFolder is the path for Ansible files
+	ansibleFolder = "ansible"
+	// ansibleAppsRolesFolder defines the folder name where Ansible application role files are stored.
+	ansibleAppsRolesFolder               = "apps_roles"
+	ansibleAppsRolesCurrentVersionFolder = "current"
 
-	// DefaultOrchestrator defines the default container orchestration tool used by the system.
-	DefaultOrchestrator = "docker_compose"
-
-	// DefaultCertificatesPath is the default directory path for storing certificates.
-	DefaultCertificatesPath = ".certs"
-	// DefaultAgentPrivateKeyPath is the default path for the agent's private key
-	DefaultAgentPrivateKeyPath = ".certs/agent.key"
-	// DefaultCSRPath is the default path for the Certificate Signing Request
-	DefaultCSRPath = ".certs/agent.csr"
-	// DefaultCertificatePath is the default path for the signed certificate
-	DefaultCertificatePath = ".certs/agent.crt"
-	// DefaultCACertificatePath is the default filesystem path for the trusted Certificate Authority (CA) certificate.
-	DefaultCACertificatePath = ".certs/ca.crt"
+	// agentCertificatesFolder is the default directory path for storing certificates.
+	agentCertificatesFolder = ".certs"
+	// agentPrivateKeyFile is the default path for the agent's private key
+	agentPrivateKeyFile = "agent.key"
+	// agentCSRFile is the default path for the Certificate Signing Request
+	agentCSRFile = "agent.csr"
+	// agentCertificateFile is the default path for the signed certificate
+	agentCertificateFile = "agent.crt"
+	// agentCACertificateFile is the default filesystem path for the trusted Certificate Authority (CA) certificate.
+	agentCACertificateFile = "ca.crt"
 )
 
 // Config holds the application configuration
@@ -62,22 +68,12 @@ type Config struct {
 	GRPCServerAddress string `json:"grpc_server_address,omitempty"`
 	// APIBaseURL is the base HTTP API URL for web interface
 	APIBaseURL string `json:"api_base_url,omitempty"`
-	// AnsiblePath is the path where ansible files are stored
-	AnsiblePath string `json:"ansible_path,omitempty"`
+	// BasePath specifies the root directory used to store application-related files and configurations.
+	BasePath string `json:"base_path,omitempty"`
 	// LogsPath specifies the directory where log files are stored.
 	LogsPath string `json:"logs_path,omitempty"`
 	// Orchestrator specifies the orchestration platform or tool used for managing deployments and configurations.
 	Orchestrator string `json:"orchestrator,omitempty"`
-	// CertificatesPath is the path where certificate-related files are stored.
-	CertificatesPath string `json:"certificates_path,omitempty"`
-	// CACertificatePath is the path where the Certificate Authority's certificate is stored.
-	CACertificatePath string `json:"ca_certificate_path,omitempty"`
-	// PrivateKeyPath is the path where the agent's private key is stored
-	PrivateKeyPath string `json:"private_key_path,omitempty"`
-	// CSRPath is the path where the Certificate Signing Request is stored
-	CSRPath string `json:"csr_path,omitempty"`
-	// CertificatePath is the path where the signed certificate is stored
-	CertificatePath string `json:"certificate_path,omitempty"`
 }
 
 // applyDefaults ensures that all necessary fields have default values if they are empty.
@@ -86,34 +82,19 @@ func applyDefaults(cfg *Config) {
 		cfg.AgentStatus = AgentStatusUnknown
 	}
 	if cfg.GRPCServerAddress == "" {
-		cfg.GRPCServerAddress = DefaultGRPCServerAddress
+		cfg.GRPCServerAddress = defaultGRPCServerAddress
 	}
 	if cfg.APIBaseURL == "" {
-		cfg.APIBaseURL = DefaultAPIBaseURL
+		cfg.APIBaseURL = defaultAPIBaseURL
 	}
-	if cfg.AnsiblePath == "" {
-		cfg.AnsiblePath = DefaultAnsiblePath
+	if cfg.BasePath == "" {
+		cfg.BasePath = defaultBasePath
 	}
 	if cfg.LogsPath == "" {
-		cfg.LogsPath = DefaultLogsPath
+		cfg.LogsPath = defaultLogsPath
 	}
 	if cfg.Orchestrator == "" {
-		cfg.Orchestrator = DefaultOrchestrator
-	}
-	if cfg.CertificatesPath == "" {
-		cfg.CertificatesPath = DefaultCertificatesPath
-	}
-	if cfg.PrivateKeyPath == "" {
-		cfg.PrivateKeyPath = DefaultAgentPrivateKeyPath
-	}
-	if cfg.CSRPath == "" {
-		cfg.CSRPath = DefaultCSRPath
-	}
-	if cfg.CertificatePath == "" {
-		cfg.CertificatePath = DefaultCertificatePath
-	}
-	if cfg.CACertificatePath == "" {
-		cfg.CACertificatePath = DefaultCACertificatePath
+		cfg.Orchestrator = defaultOrchestrator
 	}
 }
 
@@ -138,12 +119,20 @@ func validateAndMergeFeatures(configFeatures map[string]bool) map[string]bool {
 	return mergedFeatures
 }
 
+func NewConfig() *Config {
+	return &Config{
+		Features:          make(map[string]bool),
+		GRPCServerAddress: GRPCServerAddress,
+		APIBaseURL:        APIBaseURL,
+		BasePath:          BasePath,
+		LogsPath:          LogsPath,
+		Orchestrator:      Orchestrator,
+	}
+}
+
 // LoadConfig loads the configuration from a JSON file
 func LoadConfig(configPath string) (*Config, error) {
-	// Create a new config struct (defaults will be applied later)
-	config := &Config{
-		Features: make(map[string]bool),
-	}
+	config := NewConfig()
 
 	// Set default features initially
 	config.Features = validateAndMergeFeatures(nil)
@@ -223,6 +212,42 @@ func SaveConfig(config *Config, configPath string) error {
 	return nil
 }
 
+func (c *Config) GetAnsibleFolder() string {
+	return ansibleFolder
+}
+
+func (c *Config) GetAnsiblePath() string {
+	return fmt.Sprintf("%s/%s", c.BasePath, c.GetAnsibleFolder())
+}
+
 func (c *Config) GetAnsibleAppsRolesPath() string {
-	return fmt.Sprintf("%s/%s", c.AnsiblePath, AnsibleAppsRolesFolder)
+	return fmt.Sprintf("%s/%s", c.GetAnsibleFolder(), ansibleAppsRolesFolder)
+}
+
+func (c *Config) GetAnsibleAppRoleCurrentVersionFolder() string {
+	return ansibleAppsRolesCurrentVersionFolder
+}
+
+func (c *Config) GetCertificateFolder() string {
+	return agentCertificatesFolder
+}
+
+func (c *Config) GetCertificatePath() string {
+	return fmt.Sprintf("%s/%s/%s", c.BasePath, agentCertificatesFolder, agentCertificateFile)
+}
+
+func (c *Config) GetPrivateKeyPath() string {
+	return fmt.Sprintf("%s/%s/%s", c.BasePath, agentCertificatesFolder, agentPrivateKeyFile)
+}
+
+func (c *Config) GetCSRPath() string {
+	return fmt.Sprintf("%s/%s/%s", c.BasePath, agentCertificatesFolder, agentCSRFile)
+}
+
+func (c *Config) GetCACertificatePath() string {
+	return fmt.Sprintf("%s/%s/%s", c.BasePath, agentCertificatesFolder, agentCACertificateFile)
+}
+
+func (c *Config) GetCACertificateFile() string {
+	return agentCACertificateFile
 }

@@ -145,7 +145,7 @@ func CreateCSR(certificateID string, privateKeyPath, csrPath string) (string, er
 }
 
 // LoadTLSCredentials loads TLS credentials from certificate and private key files
-func LoadTLSCredentials(certPath, keyPath, host string) (credentials.TransportCredentials, error) {
+func LoadTLSCredentials(caCertPath, certPath, keyPath, host string) (credentials.TransportCredentials, error) {
 	// Load certificate and private key
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
@@ -153,7 +153,7 @@ func LoadTLSCredentials(certPath, keyPath, host string) (credentials.TransportCr
 	}
 
 	// Load your CA certificate
-	caCert, err := os.ReadFile(".certs/ca.crt")
+	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
 		log.Fatalf("failed to read CA certificate: %v", err)
 	}

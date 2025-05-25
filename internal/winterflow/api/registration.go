@@ -37,15 +37,15 @@ func RegisterAgent(configPath string) error {
 	}
 
 	// Generate agent private key
-	log.Printf("[DEBUG] Generating agent private key at: %s", cfg.PrivateKeyPath)
-	if err := certs.GeneratePrivateKey(cfg.PrivateKeyPath); err != nil {
+	log.Printf("[DEBUG] Generating agent private key at: %s", cfg.GetPrivateKeyPath())
+	if err := certs.GeneratePrivateKey(cfg.GetPrivateKeyPath()); err != nil {
 		return log.Errorf("failed to generate agent private key: %v", err)
 	}
 
 	// Create CSR
-	log.Printf("[DEBUG] Creating CSR at: %s", cfg.CSRPath)
+	log.Printf("[DEBUG] Creating CSR at: %s", cfg.GetCSRPath())
 	certificateID := uuid.New().String()
-	csrData, err := certs.CreateCSR(certificateID, cfg.PrivateKeyPath, cfg.CSRPath)
+	csrData, err := certs.CreateCSR(certificateID, cfg.GetPrivateKeyPath(), cfg.GetCSRPath())
 	if err != nil {
 		return log.Errorf("failed to create CSR: %v", err)
 	}
@@ -81,8 +81,8 @@ func RegisterAgent(configPath string) error {
 		}
 	}
 
-	log.Printf("[DEBUG] Saving certificate at: %s", cfg.CertificatePath)
-	if err := certs.SaveCertificate(resp.Data.CertificateData, cfg.CertificatePath); err != nil {
+	log.Printf("[DEBUG] Saving certificate at: %s", cfg.GetCertificatePath())
+	if err := certs.SaveCertificate(resp.Data.CertificateData, cfg.GetCertificatePath()); err != nil {
 		return log.Errorf("failed to save certificate: %v", err)
 	}
 

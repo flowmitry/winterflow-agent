@@ -120,14 +120,14 @@ func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) 
 		return err
 	}
 
-	fsysAnsible, err := fs.Sub(ansibleFS, cfg.AnsiblePath)
+	fsysAnsible, err := fs.Sub(ansibleFS, cfg.GetAnsibleFolder())
 	ansibleManager := ansiblefiles.NewManager(fsysAnsible, configPath)
 	if err := ansibleManager.SyncFiles(); err != nil {
 		log.Fatalf("Error syncing ansible files: %v", err)
 		return err
 	}
 
-	fsysCerts, err := fs.Sub(certsFS, cfg.CertificatesPath)
+	fsysCerts, err := fs.Sub(certsFS, cfg.GetCertificateFolder())
 	certsManager := certs.NewManager(fsysCerts, configPath)
 	if err := certsManager.SyncFiles(); err != nil {
 		log.Fatalf("Error syncing ansible files: %v", err)
