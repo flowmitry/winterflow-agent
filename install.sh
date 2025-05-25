@@ -132,12 +132,22 @@ create_directories() {
         log "info" "Created directory ${INSTALL_DIR}"
     fi
 
+    # Create logs directory if it doesn't exist
+    if [ -d "${LOGS_DIR}" ]; then
+        log "info" "Directory ${LOGS_DIR} already exists"
+    else
+        mkdir -p "${LOGS_DIR}"
+        log "info" "Created directory ${LOGS_DIR}"
+    fi
+
     # Change ownership to service user
     if id "${USER}" &>/dev/null; then
         chown -R ${USER}:${USER} "${INSTALL_DIR}"
         log "info" "Changed ownership of ${INSTALL_DIR} to ${USER} user"
+        chown -R ${USER}:${USER} "${LOGS_DIR}"
+        log "info" "Changed ownership of ${LOGS_DIR} to ${USER} user"
     else
-        log "warn" "Could not change ownership of ${INSTALL_DIR}: ${USER} user does not exist"
+        log "warn" "Could not change ownership of directories: ${USER} user does not exist"
     fi
 }
 
