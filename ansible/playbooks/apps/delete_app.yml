@@ -38,6 +38,7 @@
       include_tasks: "{{ playbook_dir }}/{{ orchestrator }}/tasks/stop_app.yml"
       vars:
         app_dir: "{{ _app_output_dir }}"
+      ignore_errors: true
 
     - name: Delete application folder
       include_tasks: "{{ playbook_dir }}/{{ orchestrator }}/tasks/delete_app.yml"
