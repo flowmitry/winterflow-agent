@@ -34,11 +34,11 @@ const (
 )
 
 var (
-	GRPCServerAddress string
-	APIBaseURL        string
-	BasePath          string
-	LogsPath          string
-	Orchestrator      OrchestratorType
+	grpcServerAddress string
+	apiBaseURL        string
+	basePath          string
+	logsPath          string
+	orchestrator      OrchestratorType
 )
 
 const (
@@ -85,8 +85,9 @@ type Config struct {
 	Orchestrator OrchestratorType `json:"orchestrator,omitempty"`
 }
 
-// applyDefaults ensures that all necessary fields have default values if they are empty.
-func applyDefaults(cfg *Config) {
+// prepareConfig ensures the configuration is valid by applying defaults and validating features
+func prepareConfig(cfg *Config) {
+	// Apply defaults for required fields
 	if cfg.AgentStatus == "" {
 		cfg.AgentStatus = AgentStatusUnknown
 	}
@@ -99,6 +100,9 @@ func applyDefaults(cfg *Config) {
 	if cfg.Orchestrator == "" || !isValidOrchestratorType(cfg.Orchestrator) {
 		cfg.Orchestrator = defaultOrchestrator
 	}
+
+	// Validate and merge features
+	cfg.Features = validateAndMergeFeatures(cfg.Features)
 }
 
 // validateAndMergeFeatures ensures only supported features are used and merges with defaults
@@ -123,12 +127,30 @@ func validateAndMergeFeatures(configFeatures map[string]bool) map[string]bool {
 }
 
 func NewConfig() *Config {
-	return &Config{
-		Features:     make(map[string]bool),
-		BasePath:     BasePath,
-		LogsPath:     LogsPath,
-		Orchestrator: Orchestrator,
+	config := &Config{
+		Features: make(map[string]bool),
 	}
+
+	// Apply build-time overrides or defaults
+	if basePath != "" {
+		config.BasePath = basePath
+	} else {
+		config.BasePath = defaultBasePath
+	}
+
+	if logsPath != "" {
+		config.LogsPath = logsPath
+	} else {
+		config.LogsPath = defaultLogsPath
+	}
+
+	if orchestrator != "" {
+		config.Orchestrator = orchestrator
+	} else {
+		config.Orchestrator = defaultOrchestrator
+	}
+
+	return config
 }
 
 // LoadConfig loads the configuration from a JSON file
@@ -143,19 +165,14 @@ func LoadConfig(configPath string) (*Config, error) {
 		data, err := os.ReadFile(configPath)
 		if err == nil {
 			if err := json.Unmarshal(data, config); err == nil {
-				// Validate and merge features from the loaded config
-				config.Features = validateAndMergeFeatures(config.Features)
-				// Apply defaults to the loaded config (overwriting empty fields)
-				applyDefaults(config)
-				// Config loaded and defaults applied, return it
+				// Prepare the config (apply defaults and validate features)
+				prepareConfig(config)
 				return config, nil
 			}
 		}
 	}
 
-	// If file doesn't exist or any error occurred during loading,
-	// apply defaults to the initial empty config structure.
-	applyDefaults(config)
+	prepareConfig(config)
 	return config, nil
 }
 
@@ -170,11 +187,7 @@ func WaitUntilReady(configPath string) (*Config, error) {
 				if err := json.Unmarshal(data, &config); err == nil {
 					// Check if required fields are filled and agent is registered
 					if config.AgentID != "" && config.AgentStatus == AgentStatusRegistered {
-						// All required fields are present and agent is registered, proceed
-						// Validate and merge features
-						config.Features = validateAndMergeFeatures(config.Features)
-						// Apply defaults for optional fields
-						applyDefaults(&config)
+						prepareConfig(&config)
 						return &config, nil
 					}
 				}
@@ -193,11 +206,8 @@ func SaveConfig(config *Config, configPath string) error {
 		return log.Errorf("failed to create config directory: %v", err)
 	}
 
-	// Ensure default values are set before saving
-	applyDefaults(config)
-
-	// Validate and merge features before saving
-	config.Features = validateAndMergeFeatures(config.Features)
+	// Prepare the config (apply defaults and validate features)
+	prepareConfig(config)
 
 	// Create a copy of the config for saving
 	configToSave := *config
@@ -230,17 +240,17 @@ func SaveConfig(config *Config, configPath string) error {
 }
 
 func (c *Config) GetGRPCServerAddress() string {
-	if GRPCServerAddress == "" {
+	if grpcServerAddress == "" {
 		return defaultGRPCServerAddress
 	}
-	return GRPCServerAddress
+	return grpcServerAddress
 }
 
 func (c *Config) GetAPIBaseURL() string {
-	if APIBaseURL == "" {
+	if apiBaseURL == "" {
 		return defaultAPIBaseURL
 	}
-	return APIBaseURL
+	return apiBaseURL
 }
 
 func (c *Config) GetAnsibleFolder() string {
@@ -248,11 +258,11 @@ func (c *Config) GetAnsibleFolder() string {
 }
 
 func (c *Config) GetAnsiblePath() string {
-	return fmt.Sprintf("%s/%s", c.BasePath, c.GetAnsibleFolder())
+	return c.buildPath(ansibleFolder)
 }
 
 func (c *Config) GetAnsibleAppsRolesPath() string {
-	return fmt.Sprintf("%s/%s", c.GetAnsibleFolder(), ansibleAppsRolesFolder)
+	return filepath.Join(c.GetAnsibleFolder(), ansibleAppsRolesFolder)
 }
 
 func (c *Config) GetAnsibleAppRoleCurrentVersionFolder() string {
@@ -263,20 +273,26 @@ func (c *Config) GetCertificateFolder() string {
 	return agentCertificatesFolder
 }
 
+// buildPath constructs a file path from base path and components
+func (c *Config) buildPath(components ...string) string {
+	parts := append([]string{c.BasePath}, components...)
+	return filepath.Join(parts...)
+}
+
 func (c *Config) GetCertificatePath() string {
-	return fmt.Sprintf("%s/%s/%s", c.BasePath, agentCertificatesFolder, agentCertificateFile)
+	return c.buildPath(agentCertificatesFolder, agentCertificateFile)
 }
 
 func (c *Config) GetPrivateKeyPath() string {
-	return fmt.Sprintf("%s/%s/%s", c.BasePath, agentCertificatesFolder, agentPrivateKeyFile)
+	return c.buildPath(agentCertificatesFolder, agentPrivateKeyFile)
 }
 
 func (c *Config) GetCSRPath() string {
-	return fmt.Sprintf("%s/%s/%s", c.BasePath, agentCertificatesFolder, agentCSRFile)
+	return c.buildPath(agentCertificatesFolder, agentCSRFile)
 }
 
 func (c *Config) GetCACertificatePath() string {
-	return fmt.Sprintf("%s/%s/%s", c.BasePath, agentCertificatesFolder, agentCACertificateFile)
+	return c.buildPath(agentCertificatesFolder, agentCACertificateFile)
 }
 
 func (c *Config) GetCACertificateFile() string {

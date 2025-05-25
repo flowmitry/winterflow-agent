@@ -9,12 +9,13 @@ var DefaultFeatureValues = map[string]bool{
 	FeatureUpdateAgent: true,
 }
 
-// IsFeatureEnabled returns the GitHub releases URL defined for agent binaries.
+// IsFeatureEnabled checks if a feature is enabled in the configuration.
 func (c *Config) IsFeatureEnabled(feature string) bool {
-	for key, value := range c.Features {
-		if feature == key {
-			return value
-		}
+	value, exists := c.Features[feature]
+	if !exists {
+		// If the feature doesn't exist in the map, check if it has a default value
+		defaultValue, hasDefault := DefaultFeatureValues[feature]
+		return hasDefault && defaultValue
 	}
-	return false
+	return value
 }
