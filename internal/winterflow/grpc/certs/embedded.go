@@ -2,9 +2,9 @@ package certs
 
 import (
 	"io/fs"
+	"winterflow-agent/internal/version"
 	log "winterflow-agent/pkg/log"
 
-	"winterflow-agent/internal/agent"
 	"winterflow-agent/internal/config"
 	"winterflow-agent/pkg/embedded"
 )
@@ -22,7 +22,7 @@ func NewManager(embeddedFS fs.FS, configPath string) *Manager {
 	}
 
 	return &Manager{
-		embeddedManager: embedded.NewManager(embeddedFS, cfg.GetCertificateFolder(), agent.GetVersion(), []string{
+		embeddedManager: embedded.NewManager(embeddedFS, cfg.GetCertificateFolder(), version.GetVersion(), []string{
 			cfg.GetCACertificateFile(),
 		}),
 	}

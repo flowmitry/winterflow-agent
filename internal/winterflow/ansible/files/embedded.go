@@ -4,8 +4,8 @@ import (
 	"io/fs"
 	log "winterflow-agent/pkg/log"
 
-	"winterflow-agent/internal/agent"
 	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/version"
 	"winterflow-agent/pkg/embedded"
 )
 
@@ -22,7 +22,7 @@ func NewManager(embeddedFS fs.FS, configPath string) *Manager {
 	}
 
 	return &Manager{
-		embeddedManager: embedded.NewManager(embeddedFS, cfg.GetAnsibleFolder(), agent.GetVersion(), []string{
+		embeddedManager: embedded.NewManager(embeddedFS, cfg.GetAnsibleFolder(), version.GetVersion(), []string{
 			"inventory/defaults.yml",
 			"playbooks",
 			"roles",

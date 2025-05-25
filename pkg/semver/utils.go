@@ -1,20 +1,12 @@
-package agent
+package semver
 
 import (
 	"strconv"
 	"strings"
 )
 
-var (
-	version = "0.0.0"
-)
-
-func GetVersion() string {
-	return version
-}
-
-func GetNumericVersion() int {
-	parts := strings.Split(version, ".")
+func GetNumericVersion(semVer string) int {
+	parts := strings.Split(semVer, ".")
 	result := 0
 	for _, part := range parts {
 		num, _ := strconv.Atoi(part)

@@ -15,6 +15,7 @@ import (
 
 	"winterflow-agent/internal/agent"
 	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/version"
 	ansiblefiles "winterflow-agent/internal/winterflow/ansible/files"
 	"winterflow-agent/internal/winterflow/api"
 )
@@ -35,7 +36,7 @@ func main() {
 
 	// Show version if requested
 	if *showVersion {
-		fmt.Printf("WinterFlow.io Agent version: %s (#%d)\n", agent.GetVersion(), agent.GetNumericVersion())
+		fmt.Printf("WinterFlow.io Agent version: %s (#%d)\n", version.GetVersion(), version.GetNumericVersion())
 		os.Exit(0)
 	}
 
