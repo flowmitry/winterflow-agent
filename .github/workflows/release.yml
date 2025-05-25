@@ -14,7 +14,7 @@ on:
         default: false
 
 concurrency:
-  group: "agent-release"
+  group: "winterflow-agent-release"
   cancel-in-progress: false
 
 permissions:

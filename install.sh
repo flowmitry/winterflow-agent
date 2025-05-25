@@ -5,14 +5,14 @@
 # This script installs the Winterflow Agent on Ubuntu 20.04+ or Debian 12+
 #
 # Quick Install:
-#   curl -fsSL https://winterflowio.github.io/agent/install.sh | sudo bash
+#   curl -fsSL https://get.winterflow.io/agent | sudo bash
 #
 # Manual Install:
-#   curl -fsSL https://winterflowio.github.io/agent/install.sh > winterflow-install.sh
+#   curl -fsSL https://get.winterflow.io/agent > winterflow-install.sh
 #   chmod +x winterflow-install.sh
 #   sudo ./winterflow-install.sh
 #
-# Source Code: https://github.com/winterflowio/agent
+# Source Code: https://github.com/flowmitry/winterflow-agent
 
 # Exit on any error
 set -e
@@ -26,12 +26,10 @@ INSTALL_DIR="/opt/winterflow"
 AGENT_BINARY="${INSTALL_DIR}/agent"
 CONFIG_FILE="${INSTALL_DIR}/agent.config.json"
 SERVICE_FILE="/etc/systemd/system/winterflow-agent.service"
-INSTALL_SCRIPT="${INSTALL_DIR}/install.sh"
 LOGS_DIR="/var/log/winterflow/"
 
 # URLs
-GITHUB_API="https://api.github.com/repos/winterflowio/agent/releases"
-INSTALL_SCRIPT_URL="https://winterflowio.github.io/agent/install.sh"
+GITHUB_API="https://api.github.com/repos/flowmitry/winterflow-agent/releases"
 
 # Required packages
 REQUIRED_PACKAGES="curl ansible"
@@ -86,14 +84,14 @@ check_os_version() {
         . /etc/os-release
         if [ "$ID" = "ubuntu" ]; then
             version=$(echo "$VERSION_ID" | awk -F. '{print $1}')
-            if [ "$version" -lt 20 ]; then
+            if [ "$version" -lt $MIN_UBUNTU_VERSION ]; then
                 log "error" "This script requires Ubuntu 20.04 or newer"
                 exit 1
             fi
             log "info" "Detected Ubuntu $VERSION_ID"
         elif [ "$ID" = "debian" ]; then
             version=$(echo "$VERSION_ID" | awk -F. '{print $1}')
-            if [ "$version" -lt 12 ]; then
+            if [ "$version" -lt $MIN_DEBIAN_VERSION ]; then
                 log "error" "This script requires Debian 12 or newer"
                 exit 1
             fi
@@ -306,21 +304,6 @@ create_service_user() {
     fi
 }
 
-# Function to save installation script
-save_installation_script() {
-    log "info" "Saving installation script to ${INSTALL_SCRIPT}"
-
-    # Download the installation script
-    if ! curl -fsSL "${INSTALL_SCRIPT_URL}" > "${INSTALL_SCRIPT}"; then
-        log "error" "Failed to download installation script"
-        return 1
-    fi
-
-    # Make the saved script executable
-    chmod +x "${INSTALL_SCRIPT}"
-    log "info" "Installation script saved and made executable"
-}
-
 # Main installation process
 log "info" "Starting Winterflow Agent installation..."
 
@@ -366,11 +349,6 @@ fi
 
 # Manage systemd service
 manage_systemd_service "${SERVICE_WAS_RUNNING}"
-
-# Save installation and uninstallation scripts for future use
-if ! save_installation_script; then
-    log "warn" "Failed to save installation script, but agent installation was successful"
-fi
 
 # Display next steps
 display_next_steps
