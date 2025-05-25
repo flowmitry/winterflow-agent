@@ -19,6 +19,10 @@ type UpdateAgentHandler struct {
 
 // Handle executes the UpdateAgentCommand
 func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
+	if h.config.IsFeatureEnabled(config.FeatureUpdateAgent) == false {
+		return log.Errorf("Update agent feature is disabled")
+	}
+
 	if cmd.Request == nil {
 		return log.Errorf("invalid request: request is nil")
 	}
