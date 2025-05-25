@@ -7,6 +7,7 @@ import (
 	"winterflow-agent/internal/winterflow/handlers/delete_app"
 	"winterflow-agent/internal/winterflow/handlers/get_app"
 	"winterflow-agent/internal/winterflow/handlers/save_app"
+	"winterflow-agent/internal/winterflow/handlers/update_agent"
 	"winterflow-agent/pkg/cqrs"
 	"winterflow-agent/pkg/log"
 )
@@ -24,6 +25,10 @@ func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config) error {
 
 	if err := b.Register(control_app.NewControlAppHandler(&ansibleClient, config.GetAnsibleAppsRolesPath(), config.GetOrchestrator())); err != nil {
 		return log.Errorf("failed to register control app handler: %v", err)
+	}
+
+	if err := b.Register(update_agent.NewUpdateAgentHandler(config)); err != nil {
+		return log.Errorf("failed to register update agent handler: %v", err)
 	}
 
 	return nil

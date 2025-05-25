@@ -121,6 +121,15 @@ message GetAppResponseV1 {
   uint32 app_version = 3;
 }
 
+message UpdateAgentRequestV1 {
+  BaseMessage base = 1;
+  string version = 2;
+}
+
+message UpdateAgentResponseV1 {
+  BaseResponse base = 1;
+}
+
 message SaveAppRequestV1 {
   BaseMessage base = 1;
   AppV1 app = 2;
@@ -164,10 +173,11 @@ message ServerCommand {
     HeartbeatResponseV1 heartbeat_response_v1 = 1;
 
     // Commands initialized by the server
-    GetAppRequestV1 get_app_request_v1 = 2;
-    SaveAppRequestV1 save_app_request_v1 = 3;
-    DeleteAppRequestV1 delete_app_request_v1 = 4;
-    ControlAppRequestV1 control_app_request_v1 = 5;
+    UpdateAgentRequestV1 update_agent_request_v1 = 2;
+    GetAppRequestV1 get_app_request_v1 = 3;
+    SaveAppRequestV1 save_app_request_v1 = 4;
+    DeleteAppRequestV1 delete_app_request_v1 = 5;
+    ControlAppRequestV1 control_app_request_v1 = 6;
   }
 }
 
@@ -177,10 +187,11 @@ message AgentMessage {
     AgentHeartbeatV1 heartbeat_v1 = 1;
 
     // Responses for commands initialized by the server
-    GetAppResponseV1 get_app_response_v1 = 2;
-    SaveAppResponseV1 save_app_response_v1 = 3;
-    DeleteAppResponseV1 delete_app_response_v1 = 4;
-    ControlAppResponseV1 control_app_response_v1 = 5;
+    UpdateAgentResponseV1 update_agent_response_v1 = 2;
+    GetAppResponseV1 get_app_response_v1 = 3;
+    SaveAppResponseV1 save_app_response_v1 = 4;
+    DeleteAppResponseV1 delete_app_response_v1 = 5;
+    ControlAppResponseV1 control_app_response_v1 = 6;
   }
 }
 

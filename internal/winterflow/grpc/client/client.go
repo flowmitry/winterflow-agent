@@ -611,6 +611,21 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							log.Error("Heartbeat failed with code %v: %s", response.ResponseCode, response.Message)
 						}
 
+					case *pb.ServerCommand_UpdateAgentRequestV1:
+						log.Printf("Received update agent request: %s", cmd.UpdateAgentRequestV1.Base.MessageId)
+						// Handle the update agent request directly since it will exit the process
+						agentMsg, err := HandleUpdateAgentRequest(c.commandBus, cmd.UpdateAgentRequestV1, agentID)
+						if err != nil {
+							log.Error("Error handling update agent request: %v", err)
+							continue
+						}
+
+						if err := stream.Send(agentMsg); err != nil {
+							log.Warn("Error sending update agent response: %v", err)
+							continue
+						}
+						log.Info("Update agent response sent successfully")
+
 					case *pb.ServerCommand_GetAppRequestV1:
 						log.Printf("Received app request: %s", cmd.GetAppRequestV1.Base.MessageId)
 						// Forward the request to be handled by the main loop

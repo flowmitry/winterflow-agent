@@ -6,6 +6,7 @@ import (
 	"winterflow-agent/internal/winterflow/handlers/control_app"
 	"winterflow-agent/internal/winterflow/handlers/delete_app"
 	"winterflow-agent/internal/winterflow/handlers/save_app"
+	"winterflow-agent/internal/winterflow/handlers/update_agent"
 	"winterflow-agent/pkg/cqrs"
 	log "winterflow-agent/pkg/log"
 )
@@ -102,6 +103,37 @@ func HandleControlAppRequest(commandBus cqrs.CommandBus, controlAppRequest *pb.C
 	agentMsg := &pb.AgentMessage{
 		Message: &pb.AgentMessage_ControlAppResponseV1{
 			ControlAppResponseV1: controlAppResp,
+		},
+	}
+
+	return agentMsg, nil
+}
+
+// HandleUpdateAgentRequest handles the command dispatch and creates the appropriate response message
+func HandleUpdateAgentRequest(commandBus cqrs.CommandBus, updateAgentRequest *pb.UpdateAgentRequestV1, agentID string) (*pb.AgentMessage, error) {
+	log.Debug("Processing update agent request for version: %s", updateAgentRequest.Version)
+
+	// Create and dispatch the command
+	cmd := update_agent.UpdateAgentCommand{Request: updateAgentRequest}
+
+	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	var responseMessage string = "Agent update initiated successfully"
+
+	// Dispatch the command to the handler
+	if err := commandBus.Dispatch(cmd); err != nil {
+		log.Error("Error updating agent: %v", err)
+		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		responseMessage = fmt.Sprintf("Error updating agent: %v", err)
+	}
+
+	baseResp := createBaseResponse(updateAgentRequest.Base.MessageId, agentID, responseCode, responseMessage)
+	updateAgentResp := &pb.UpdateAgentResponseV1{
+		Base: &baseResp,
+	}
+
+	agentMsg := &pb.AgentMessage{
+		Message: &pb.AgentMessage_UpdateAgentResponseV1{
+			UpdateAgentResponseV1: updateAgentResp,
 		},
 	}
 

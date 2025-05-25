@@ -24,6 +24,15 @@ const (
 	AgentStatusUnknown AgentStatus = "unknown"
 )
 
+const (
+	// OrchestratorTypeDockerCompose represents Docker Compose orchestration
+	OrchestratorTypeDockerCompose OrchestratorType = "docker_compose"
+	// OrchestratorTypeDockerSwarm represents Docker Swarm orchestration
+	OrchestratorTypeDockerSwarm OrchestratorType = "docker_swarm"
+	// defaultOrchestrator defines the default container orchestration tool used by the system.
+	defaultOrchestrator = OrchestratorTypeDockerCompose
+)
+
 var (
 	GRPCServerAddress string
 	APIBaseURL        string
@@ -42,13 +51,6 @@ const (
 	// defaultLogsPath is the default directory path where application log files are stored.
 	defaultLogsPath = "/var/log/winterflow"
 
-	// OrchestratorTypeDockerCompose represents Docker Compose orchestration
-	OrchestratorTypeDockerCompose OrchestratorType = "docker_compose"
-	// OrchestratorTypeDockerSwarm represents Docker Swarm orchestration
-	OrchestratorTypeDockerSwarm OrchestratorType = "docker_swarm"
-	// defaultOrchestrator defines the default container orchestration tool used by the system.
-	defaultOrchestrator = OrchestratorTypeDockerCompose
-
 	// ansibleFolder is the path for Ansible files
 	ansibleFolder = "ansible"
 	// ansibleAppsRolesFolder defines the folder name where Ansible application role files are stored.
@@ -65,6 +67,9 @@ const (
 	agentCertificateFile = "agent.crt"
 	// agentCACertificateFile is the default filesystem path for the trusted Certificate Authority (CA) certificate.
 	agentCACertificateFile = "ca.crt"
+
+	// gitHubReleasesURL is the default URL for GitHub releases where agent binaries can be downloaded.
+	gitHubReleasesURL = "https://github.com/winterflowio/agent/releases/download"
 )
 
 // Config holds the application configuration
@@ -303,4 +308,9 @@ func (c *Config) SetOrchestrator(orchestratorType OrchestratorType) error {
 	orchestratorType.Validate()
 	c.Orchestrator = orchestratorType
 	return nil
+}
+
+// GetGitHubReleasesURL returns the GitHub releases URL
+func (c *Config) GetGitHubReleasesURL() string {
+	return gitHubReleasesURL
 }
