@@ -1,0 +1,65 @@
+---
+- name: Validate required variables
+  assert:
+    that:
+      - app_dir is defined
+      - status_output_dir is defined
+    fail_msg: >
+      Required variables must be defined:
+      - app_dir: The directory with the app files
+      - status_output_dir: The directory to store statuses
+
+- name: Check if compose.custom.yml exists
+  stat:
+    path: "{{ app_dir }}/compose.custom.yml"
+  register: custom_compose_file
+
+- name: Check if compose.override.yml exists
+  stat:
+    path: "{{ app_dir }}/compose.override.yml"
+  register: override_compose_file
+
+- name: Run docker compose ps with compose.custom.yml and compose.override.yml
+  shell: docker compose -f compose.custom.yml -f compose.override.yml ps --format json | jq -s .
+  args:
+    chdir: "{{ app_dir }}"
+  register: docker_compose_status_json
+  changed_when: docker_compose_status_json.rc == 0
+  when: custom_compose_file.stat.exists and override_compose_file.stat.exists
+
+- name: Run docker compose ps with compose.custom.yml only
+  shell: docker compose -f compose.custom.yml ps --format json | jq -s .
+  args:
+    chdir: "{{ app_dir }}"
+  register: docker_compose_status_json
+  changed_when: docker_compose_status_json.rc == 0
+  when: custom_compose_file.stat.exists and not override_compose_file.stat.exists
+
+- name: Run docker compose ps with compose.yml and compose.override.yml
+  shell: docker compose -f compose.yml -f compose.override.yml ps --format json | jq -s .
+  args:
+    chdir: "{{ app_dir }}"
+  register: docker_compose_status_json
+  changed_when: docker_compose_status_json.rc == 0
+  when: not custom_compose_file.stat.exists and override_compose_file.stat.exists
+
+- name: Run docker compose ps with compose.yml only
+  shell: docker compose ps --format json | jq -s .
+  args:
+    chdir: "{{ app_dir }}"
+  register: docker_compose_status_json
+  changed_when: docker_compose_status_json.rc == 0
+  when: not custom_compose_file.stat.exists and not override_compose_file.stat.exists
+
+- name: Set status fact
+  set_fact:
+    app_status_json: "{{ docker_compose_status_json.stdout }}"
+
+- name: Display docker compose status in JSON format
+  debug:
+    var: app_status_json
+
+- name: Save app status to file
+  copy:
+    content: "{{ app_status_json | to_nice_json }}"
+    dest: "{{ status_output_dir }}/{{ app_dir | basename }}.json"

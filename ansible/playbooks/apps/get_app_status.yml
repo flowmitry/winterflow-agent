@@ -1,0 +1,54 @@
+---
+- name: Get applications status
+  hosts: localhost
+  become: false
+  gather_facts: true
+
+  #  roles:
+  #    - role: check_requirements
+  #
+  #    - role: docker
+  #      when: orchestrator == 'docker-compose'
+  #
+  #    - role: docker_compose
+  #      when: orchestrator == 'docker-compose'
+
+  pre_tasks:
+    - name: Validate required variables
+      assert:
+        that:
+          - apps_output_dir is defined
+          - orchestrator is defined
+          - orchestrator in ['docker_compose']
+          - apps_status_output_dir is defined
+        fail_msg: >
+          Required variables must be defined:
+          - apps_output_dir: The directory to store the apps files
+          - orchestrator: The orchestrator type
+          - orchestrator: Must be one of 'docker-compose'
+          - apps_status_output_dir: The directory to store the apps statuses
+
+  tasks:
+    - name: Create status output directory if not exists
+      file:
+        path: "{{ apps_status_output_dir }}"
+        state: directory
+        mode: '0755'
+      register: status_dir_result
+
+    - name: Clean status output directory
+      shell: "rm -rf {{ apps_status_output_dir }}/*"
+      when: status_dir_result.changed == false
+
+    - name: Find all app directories
+      find:
+        paths: "{{ apps_output_dir }}"
+        file_type: directory
+      register: app_directories
+
+    - name: Get status for each application
+      include_tasks: "{{ playbook_dir }}/{{ orchestrator }}/tasks/get_app_status.yml"
+      vars:
+        app_dir: "{{ item.path }}"
+        status_output_dir: "{{ apps_status_output_dir }}"
+      loop: "{{ app_directories.files }}"
