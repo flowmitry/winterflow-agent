@@ -1,0 +1,30 @@
+---
+- name: Validate required variables
+  assert:
+    that:
+      - apps_ingress is defined
+      - apps_ingress_mode is defined
+      - apps_ingress_dir is defined
+    fail_msg: >
+      Required variables must be defined:
+      - apps_ingress: The ingress system to use
+      - apps_ingress_mode: The ingress mode (notls, custom)
+      - apps_ingress_dir: The directory to store the ingress files
+
+- name: Run docker compose down
+  command: docker compose down --remove-orphans
+  args:
+    chdir: "{{ apps_ingress_dir }}"
+  register: docker_compose_down_result
+  changed_when: docker_compose_down_result.rc == 0
+
+- name: Get docker compose status
+  command: docker compose ps
+  args:
+    chdir: "{{ apps_ingress_dir }}"
+  register: docker_compose_status
+  changed_when: false
+
+- name: Display docker compose status
+  debug:
+    var: docker_compose_status.stdout_lines

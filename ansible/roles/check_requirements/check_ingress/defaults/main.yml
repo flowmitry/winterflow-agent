@@ -1,0 +1,13 @@
+---
+# List of supported ingress controllers
+supported_ingress:
+  - "custom"
+  - "traefik-notls"
+  - "traefik-letsencrypt"
+
+# Variable descriptions for documentation
+supported_ingress_description: >
+  WinterFlow playbooks supports the following ingress controllers:
+  - traefik-notls
+  - traefik-letsencrypt
+  - custom

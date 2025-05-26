@@ -19,3 +19,7 @@
 - name: Include disk space check
   ansible.builtin.include_role:
     name: check_requirements/check_disk_space
+
+- name: Include ingress controller check
+  ansible.builtin.include_role:
+    name: check_requirements/check_ingress

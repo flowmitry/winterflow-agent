@@ -1,0 +1,53 @@
+---
+# Role: check_requirements/check_ingress
+# Purpose: Validate that the target system meets the ingress controller requirements
+# Usage: Include this role in playbooks that need ingress controller compatibility validation
+#
+# Example:
+#   roles:
+#     - role: check_requirements/check_ingress
+#     - role: your_actual_role
+#
+# Variables:
+#   apps_ingress: The selected ingress controller type
+#   supported_ingress: List of supported ingress controllers
+
+- name: Ensure apps_ingress is defined
+  fail:
+    msg: "apps_ingress variable is not defined. Please specify the ingress controller type."
+  when: apps_ingress is not defined
+
+- name: Validate ingress controller selection
+  fail:
+    msg: >
+      Selected ingress controller '{{ apps_ingress }}' is not supported.
+      Supported controllers: {{ supported_ingress | list | join(', ') }}
+      Please select one of the supported ingress controllers or configure a custom one.
+  when: apps_ingress not in (supported_ingress | list)
+
+- name: Check for required ingress controller components
+  block:
+    - name: Validate traefik-letsencrypt requirements
+      fail:
+        msg: >
+          Required components for traefik-letsencrypt are not available:
+          - apps_notifications_email environment variable must be set
+          Please ensure all required components are installed and configured.
+      when:
+        - apps_ingress == 'traefik-letsencrypt'
+        - not (lookup('env', 'apps_notifications_email') is defined and lookup('env', 'apps_notifications_email') != '')
+
+    - name: Validate custom ingress configuration
+      fail:
+        msg: >
+          Custom ingress controller requires additional configuration.
+          Please ensure you have configured all necessary components for your custom ingress setup.
+      when: apps_ingress == 'custom'
+
+    - name: Log ingress controller validation success
+      debug:
+        msg: "Successfully validated ingress controller configuration for {{ apps_ingress }}"
+  rescue:
+    - name: Handle validation errors
+      fail:
+        msg: "Failed to validate ingress controller configuration: {{ ansible_failed_result.msg }}"
