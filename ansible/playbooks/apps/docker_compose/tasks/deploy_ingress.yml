@@ -19,7 +19,7 @@
 
 - name: Create compose.yml from template
   template:
-    src: "../templates/compose.{{ apps_ingress }}.yml.j2"
+    src: "../templates/ingress/compose.{{ apps_ingress }}.yml.j2"
     dest: "{{ apps_ingress_dir }}/compose.yml"
     mode: '0644'
   when: apps_ingress != "custom"

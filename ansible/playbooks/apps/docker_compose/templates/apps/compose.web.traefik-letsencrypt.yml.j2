@@ -1,0 +1,14 @@
+services:
+  {{ APP_SERVICE_NAME }}:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dozzle.rule=Host(`{{ APP_DOMAIN_NAME }}`)"
+      - "traefik.http.routers.dozzle.entrypoints=websecure"
+      - "traefik.http.routers.dozzle.tls.certresolver=le"
+      - "traefik.http.services.dozzle.loadbalancer.server.port={{ APP_PORT }}"
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
