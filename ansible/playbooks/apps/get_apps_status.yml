@@ -17,32 +17,32 @@
     - name: Validate required variables
       assert:
         that:
-          - apps_output_dir is defined
+          - apps_path is defined
           - orchestrator is defined
           - orchestrator in ['docker_compose']
-          - apps_status_output_dir is defined
+          - apps_status_output_path is defined
         fail_msg: >
           Required variables must be defined:
-          - apps_output_dir: The directory to store the apps files
+          - apps_path: The directory to store the apps files
           - orchestrator: The orchestrator type
           - orchestrator: Must be one of 'docker-compose'
-          - apps_status_output_dir: The directory to store the apps statuses
+          - apps_status_output_path: The directory to store the apps statuses
 
   tasks:
     - name: Create status output directory if not exists
       file:
-        path: "{{ apps_status_output_dir }}"
+        path: "{{ apps_status_output_path }}"
         state: directory
         mode: '0755'
       register: status_dir_result
 
     - name: Clean status output directory
-      shell: "rm -rf {{ apps_status_output_dir }}/*"
+      shell: "rm -rf {{ apps_status_output_path }}/*"
       when: status_dir_result.changed == false
 
     - name: Find all app directories
       find:
-        paths: "{{ apps_output_dir }}"
+        paths: "{{ apps_path }}"
         file_type: directory
       register: app_directories
 
@@ -50,5 +50,5 @@
       include_tasks: "{{ playbook_dir }}/{{ orchestrator }}/tasks/get_app_status.yml"
       vars:
         app_dir: "{{ item.path }}"
-        status_output_dir: "{{ apps_status_output_dir }}"
+        status_output_dir: "{{ apps_status_output_path }}"
       loop: "{{ app_directories.files }}"

@@ -17,13 +17,13 @@
     - name: Validate required variables
       assert:
         that:
-          - apps_output_dir is defined
+          - apps_path is defined
           - apps_ingress is defined
           - orchestrator is defined
           - orchestrator in ['docker_compose']
         fail_msg: >
           Required variables must be defined:
-          - apps_output_dir: The directory to store the apps files
+          - apps_path: The directory to store the apps files
           - apps_ingress: The ingress system to use
           - orchestrator: The orchestrator type
           - orchestrator: Must be one of 'docker-compose'

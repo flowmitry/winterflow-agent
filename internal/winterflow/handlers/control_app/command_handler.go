@@ -12,7 +12,6 @@ import (
 type ControlAppHandler struct {
 	ansible              ansiblepkg.Client
 	AnsibleAppsRolesPath string
-	Orchestrator         string
 }
 
 // Handle executes the ControlAppCommand
@@ -64,10 +63,8 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 
 	// Build environment variables
 	env := map[string]string{
-		"app_id":         fmt.Sprintf("%s", appID),
-		"app_version":    fmt.Sprintf("%s", appVersion),
-		"apps_roles_dir": fmt.Sprintf("%s", h.AnsibleAppsRolesPath),
-		"orchestrator":   fmt.Sprintf("%s", h.Orchestrator),
+		"app_id":      fmt.Sprintf("%s", appID),
+		"app_version": fmt.Sprintf("%s", appVersion),
 	}
 	ansibleCommand := ansiblepkg.Command{
 		Id:       messageID,
@@ -88,10 +85,9 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 }
 
 // NewControlAppHandler creates a new ControlAppHandler
-func NewControlAppHandler(client *ansiblepkg.Client, ansibleAppsRolesPath, orchestrator string) *ControlAppHandler {
+func NewControlAppHandler(client *ansiblepkg.Client, ansibleAppsRolesPath string) *ControlAppHandler {
 	return &ControlAppHandler{
 		ansible:              *client,
 		AnsibleAppsRolesPath: ansibleAppsRolesPath,
-		Orchestrator:         orchestrator,
 	}
 }

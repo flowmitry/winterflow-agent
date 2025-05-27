@@ -6,6 +6,7 @@ import (
 	"winterflow-agent/internal/winterflow/handlers/control_app"
 	"winterflow-agent/internal/winterflow/handlers/delete_app"
 	"winterflow-agent/internal/winterflow/handlers/get_app"
+	"winterflow-agent/internal/winterflow/handlers/get_apps_status"
 	"winterflow-agent/internal/winterflow/handlers/save_app"
 	"winterflow-agent/internal/winterflow/handlers/update_agent"
 	"winterflow-agent/pkg/cqrs"
@@ -23,7 +24,7 @@ func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config) error {
 		return log.Errorf("failed to register delete app handler: %v", err)
 	}
 
-	if err := b.Register(control_app.NewControlAppHandler(&ansibleClient, config.GetAnsibleAppsRolesPath(), config.GetOrchestrator())); err != nil {
+	if err := b.Register(control_app.NewControlAppHandler(&ansibleClient, config.GetAnsibleAppsRolesPath())); err != nil {
 		return log.Errorf("failed to register control app handler: %v", err)
 	}
 
@@ -36,8 +37,15 @@ func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config) error {
 
 // RegisterQueryHandlers registers all query handlers with the query bus
 func RegisterQueryHandlers(b cqrs.QueryBus, config *config.Config) error {
+	ansibleClient := ansible.NewAnsibleClient(config)
+
 	if err := b.Register(get_app.NewGetAppQueryHandler(config.GetAnsibleAppsRolesPath(), config.GetAnsibleAppRoleCurrentVersionFolder())); err != nil {
 		return log.Errorf("failed to register get app query handler: %v", err)
 	}
+
+	if err := b.Register(get_apps_status.NewGetAppsStatusQueryHandler(ansibleClient)); err != nil {
+		return log.Errorf("failed to register get apps status query handler: %v", err)
+	}
+
 	return nil
 }

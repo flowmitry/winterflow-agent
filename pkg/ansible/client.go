@@ -13,14 +13,16 @@ import (
 )
 
 type Config struct {
+	// Orchestrator specifies the orchestration tool to be used, such as Kubernetes or Ansible.
+	Orchestrator string
 	// AnsiblePath is the path where ansible files are stored
 	AnsiblePath string
 	// AnsibleAppsRolesPath is the path where ansible application files are stored
 	AnsibleAppsRolesPath string
-	// AnsibleAppsRolesCurrentVersion represents the current version folder name of Ansible application roles.
-	AnsibleAppsRolesCurrentVersion string
 	// AnsibleLogsPath defines the directory path where ansible log files are stored.
 	AnsibleLogsPath string
+	// AnsibleAppsRolesCurrentVersion represents the current version folder name of Ansible application roles.
+	AnsibleAppsRolesCurrentVersion string
 }
 
 // Result represents the result of an Ansible command execution
@@ -73,6 +75,15 @@ func getLogPath(logsDir, id string) string {
 		log.Printf("Failed to create log directory: %v", err)
 	}
 	return filepath.Join(logsDir, fmt.Sprintf("%s.log", id))
+}
+
+func (c *client) updateEnvironment(cmd *Command) {
+	if cmd.Env["orchestrator"] == "" {
+		cmd.Env["orchestrator"] = c.config.Orchestrator
+	}
+	if cmd.Env["apps_roles_path"] == "" {
+		cmd.Env["apps_roles_path"] = c.config.AnsibleAppsRolesPath
+	}
 }
 
 // RunSync executes an Ansible command synchronously and returns the result

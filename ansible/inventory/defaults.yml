@@ -8,6 +8,6 @@ all:
     # Apps Server
     apps_notifications_email: ""
     apps_ingress: "traefik-notls"
-    apps_output_dir: "/opt/winterflow/apps"
-    apps_status_output_dir: "/tmp/winterflow/status"
+    apps_path: "/opt/winterflow/apps"
+    apps_status_output_path: "/tmp/winterflow/status"
 

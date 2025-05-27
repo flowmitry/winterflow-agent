@@ -565,6 +565,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			saveAppRequestCh := make(chan *pb.SaveAppRequestV1)
 			deleteAppRequestCh := make(chan *pb.DeleteAppRequestV1)
 			controlAppRequestCh := make(chan *pb.ControlAppRequestV1)
+			getAppsStatusRequestCh := make(chan *pb.GetAppsStatusRequestV1)
 
 			// Start goroutine to receive responses
 			go func() {
@@ -662,6 +663,15 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							log.Printf("Warning: Control app request channel full, dropping request")
 						}
 
+					case *pb.ServerCommand_GetAppsStatusRequestV1:
+						log.Printf("Received get apps status request: %s", cmd.GetAppsStatusRequestV1.Base.MessageId)
+						// Forward the request to be handled by the main loop
+						select {
+						case getAppsStatusRequestCh <- cmd.GetAppsStatusRequestV1:
+						default:
+							log.Printf("Warning: Get apps status request channel full, dropping request")
+						}
+
 					default:
 						// Log details about the unknown command type
 						log.Printf("Received unknown command type: %T", cmd)
@@ -757,6 +767,19 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						continue
 					}
 					log.Info("Control app response sent successfully")
+
+				case getAppsStatusRequest := <-getAppsStatusRequestCh:
+					agentMsg, err := HandleGetAppsStatusQuery(c.queryBus, getAppsStatusRequest, agentID)
+					if err != nil {
+						log.Error("Error retrieving apps statuses response: %v", err)
+						continue
+					}
+
+					if err := stream.Send(agentMsg); err != nil {
+						log.Warn("Error sending get apps status response: %v", err)
+						continue
+					}
+					log.Info("Get apps status response sent successfully")
 
 				case <-streamDone:
 					log.Printf("Stream receiver stopped, recreating stream")
