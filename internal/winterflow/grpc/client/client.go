@@ -23,6 +23,11 @@ import (
 	"winterflow-agent/pkg/backoff"
 )
 
+const (
+	// queueChannelSize defines the buffer size for a channel used to queue tasks or data within the system.
+	queueChannelSize = 1
+)
+
 // Client represents a gRPC client for agent communication
 type Client struct {
 	conn   *grpc.ClientConn
@@ -562,11 +567,11 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			streamDone := make(chan struct{})
 			reregisterCh := make(chan struct{})
 			fatalErrorCh := make(chan error)
-			appRequestCh := make(chan *pb.GetAppRequestV1)
-			saveAppRequestCh := make(chan *pb.SaveAppRequestV1)
-			deleteAppRequestCh := make(chan *pb.DeleteAppRequestV1)
-			controlAppRequestCh := make(chan *pb.ControlAppRequestV1)
-			getAppsStatusRequestCh := make(chan *pb.GetAppsStatusRequestV1)
+			appRequestCh := make(chan *pb.GetAppRequestV1, queueChannelSize)
+			saveAppRequestCh := make(chan *pb.SaveAppRequestV1, queueChannelSize)
+			deleteAppRequestCh := make(chan *pb.DeleteAppRequestV1, queueChannelSize)
+			controlAppRequestCh := make(chan *pb.ControlAppRequestV1, queueChannelSize)
+			getAppsStatusRequestCh := make(chan *pb.GetAppsStatusRequestV1, queueChannelSize)
 
 			// Start goroutine to receive responses
 			go func() {
