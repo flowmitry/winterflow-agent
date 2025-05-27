@@ -3,14 +3,13 @@ package delete_app
 import (
 	"os"
 	"path/filepath"
-	"winterflow-agent/internal/winterflow/handlers/utils"
-	ansiblepkg "winterflow-agent/pkg/ansible"
+	"winterflow-agent/internal/winterflow/ansible"
 	log "winterflow-agent/pkg/log"
 )
 
 // DeleteAppHandler handles the DeleteAppCommand
 type DeleteAppHandler struct {
-	ansible                        ansiblepkg.Client
+	ansible                        ansible.Repository
 	AnsibleAppsRolesPath           string
 	AnsibleAppsRolesCurrentVersion string
 }
@@ -42,28 +41,9 @@ func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
 		return nil
 	}
 
-	// Get the app config
-	appConfig, err := utils.GetAppConfig(h.AnsibleAppsRolesPath, appID, h.AnsibleAppsRolesCurrentVersion)
-	if err != nil {
-		return log.Errorf("failed to get app config for app ID %s: %w", appID, err)
-	}
-
-	// Build environment variables
-	env := map[string]string{
-		"app_id":       appID,
-		"orchestrator": appConfig.Type.String(),
-	}
-	ansibleCommand := ansiblepkg.Command{
-		Id:       cmd.Request.Base.MessageId,
-		Playbook: "apps/delete_app.yml",
-		Env:      env,
-	}
-
-	log.Info("Executing delete_app playbook for app %s (ID: %s)", appConfig.Name, appID)
-
-	result := h.ansible.RunSync(ansibleCommand)
+	result := h.ansible.DeleteApp(appID)
 	if result.ExitCode != 0 {
-		return log.Errorf("command failed with exit code %d: %v", result.ExitCode, result.Error)
+		return log.Errorf("Deletion app command failed with exit code %d: %v", result.ExitCode, result.Error)
 	}
 
 	// Delete the app directory
@@ -76,9 +56,9 @@ func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
 }
 
 // NewDeleteAppHandler creates a new DeleteAppHandler
-func NewDeleteAppHandler(client *ansiblepkg.Client, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *DeleteAppHandler {
+func NewDeleteAppHandler(ansible ansible.Repository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *DeleteAppHandler {
 	return &DeleteAppHandler{
-		ansible:                        *client,
+		ansible:                        ansible,
 		AnsibleAppsRolesPath:           ansibleAppsRolesPath,
 		AnsibleAppsRolesCurrentVersion: ansibleAppsRolesCurrentVersion,
 	}

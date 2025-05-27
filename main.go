@@ -16,6 +16,7 @@ import (
 	"winterflow-agent/internal/agent"
 	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/version"
+	ansible "winterflow-agent/internal/winterflow/ansible"
 	ansiblefiles "winterflow-agent/internal/winterflow/ansible/files"
 	"winterflow-agent/internal/winterflow/api"
 )
@@ -73,8 +74,8 @@ func main() {
 	// Handle signals in a separate goroutine
 	go func() {
 		sig := <-sigChan
-		log.Printf("Received signal: %v", sig)
-		log.Printf("Initiating graceful shutdown...")
+		log.Info("Received signal: %v", sig)
+		log.Info("Initiating graceful shutdown...")
 
 		// Cancel the context to abort operations
 		cancel()
@@ -86,19 +87,27 @@ func main() {
 		// after the agent is closed and all commands have completed
 		// Having a timeout to quit if the agent stuck
 		time.Sleep(5 * time.Second)
-		log.Printf("Shutting down agent")
+		log.Info("Shutting down agent")
 		os.Exit(0)
 	}()
 
-	log.Printf("Loading configuration from %s", *configPath)
+	log.Debug("Loading configuration from %s", *configPath)
 	cfg, err := config.WaitUntilReady(*configPath)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
+	ansibleRepo := ansible.NewRepository(cfg)
+	result := ansibleRepo.InitialConfiguration()
+	if result.Error != nil {
+		log.Warn(fmt.Sprintf("Initial configuration playbook failed: %v, log: %s", result.Error, result.LogPath))
+	} else {
+		log.Info(fmt.Sprintf("Initial configuration playbook completed successfully. Logs: %s", result.LogPath))
+	}
+
 	// Create and initialize agent
 	log.Debug("Creating agent")
-	a, err := agent.NewAgent(cfg)
+	a, err := agent.NewAgent(cfg, ansibleRepo)
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
 	}
@@ -122,6 +131,10 @@ func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) 
 	}
 
 	fsysAnsible, err := fs.Sub(ansibleFS, cfg.GetAnsibleFolder())
+	if err != nil {
+		log.Fatalf("Error accessing ansible filesystem: %v", err)
+		return err
+	}
 	ansibleManager := ansiblefiles.NewManager(fsysAnsible, configPath)
 	if err := ansibleManager.SyncFiles(); err != nil {
 		log.Fatalf("Error syncing ansible files: %v", err)
@@ -129,6 +142,10 @@ func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) 
 	}
 
 	fsysCerts, err := fs.Sub(certsFS, cfg.GetCertificateFolder())
+	if err != nil {
+		log.Fatalf("Error accessing certificates filesystem: %v", err)
+		return err
+	}
 	certsManager := certs.NewManager(fsysCerts, configPath)
 	if err := certsManager.SyncFiles(); err != nil {
 		log.Fatalf("Error syncing ansible files: %v", err)

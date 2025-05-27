@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/winterflow/ansible"
 	"winterflow-agent/internal/winterflow/handlers"
 	log "winterflow-agent/pkg/log"
 
@@ -99,7 +100,7 @@ func (c *Client) setupConnection() error {
 }
 
 // NewClient creates a new gRPC client
-func NewClient(config *config.Config) (*Client, error) {
+func NewClient(config *config.Config, ansible ansible.Repository) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	serverAddress := config.GetGRPCServerAddress()
 	caCertPath := config.GetCACertificatePath()
@@ -110,14 +111,14 @@ func NewClient(config *config.Config) (*Client, error) {
 
 	// Create command bus and register handlers
 	commandBus := cqrs.NewCommandBus()
-	if err := handlers.RegisterCommandHandlers(commandBus, config); err != nil {
+	if err := handlers.RegisterCommandHandlers(commandBus, config, ansible); err != nil {
 		cancel()
 		return nil, log.Errorf("failed to register command handlers: %v", err)
 	}
 
 	// Create query bus and register handlers
 	queryBus := cqrs.NewQueryBus()
-	if err := handlers.RegisterQueryHandlers(queryBus, config); err != nil {
+	if err := handlers.RegisterQueryHandlers(queryBus, config, ansible); err != nil {
 		cancel()
 		return nil, log.Errorf("failed to register query handlers: %v", err)
 	}

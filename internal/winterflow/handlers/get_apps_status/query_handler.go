@@ -6,14 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"winterflow-agent/internal/winterflow/ansible"
 	"winterflow-agent/internal/winterflow/grpc/pb"
-	"winterflow-agent/pkg/ansible"
 	log "winterflow-agent/pkg/log"
 )
 
 // GetAppsStatusQueryHandler handles the GetAppsStatusQuery
 type GetAppsStatusQueryHandler struct {
-	ansible ansible.Client
+	ansible ansible.Repository
 }
 
 // Handle executes the GetAppsStatusQuery and returns the result
@@ -27,15 +27,7 @@ func (h *GetAppsStatusQueryHandler) Handle(query GetAppsStatusQuery) ([]*pb.AppS
 	}
 	defer os.RemoveAll(tempAppsStatusDir)
 
-	// Run the Ansible playbook to get app statuses
-	cmd := ansible.Command{
-		Playbook: "apps/get_apps_status.yml",
-		Env: map[string]string{
-			"apps_status_output_path": tempAppsStatusDir,
-		},
-	}
-
-	result := h.ansible.RunSync(cmd)
+	result := h.ansible.GetAppsStatus(tempAppsStatusDir)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to run get_apps_status playbook: %w", result.Error)
 	}
@@ -160,8 +152,8 @@ func determineAppStatus(containers []map[string]interface{}) pb.AppStatusCode {
 }
 
 // NewGetAppsStatusQueryHandler creates a new GetAppsStatusQueryHandler
-func NewGetAppsStatusQueryHandler(client ansible.Client) *GetAppsStatusQueryHandler {
+func NewGetAppsStatusQueryHandler(ansible ansible.Repository) *GetAppsStatusQueryHandler {
 	return &GetAppsStatusQueryHandler{
-		ansible: client,
+		ansible: ansible,
 	}
 }

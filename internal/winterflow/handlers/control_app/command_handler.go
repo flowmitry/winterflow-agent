@@ -2,6 +2,7 @@ package control_app
 
 import (
 	"fmt"
+	"winterflow-agent/internal/winterflow/ansible"
 	"winterflow-agent/internal/winterflow/grpc/pb"
 	"winterflow-agent/internal/winterflow/handlers/utils"
 	ansiblepkg "winterflow-agent/pkg/ansible"
@@ -10,8 +11,9 @@ import (
 
 // ControlAppHandler handles the ControlAppCommand
 type ControlAppHandler struct {
-	ansible              ansiblepkg.Client
-	AnsibleAppsRolesPath string
+	ansible                        ansible.Repository
+	AnsibleAppsRolesPath           string
+	AnsibleAppsRolesCurrentVersion string
 }
 
 // Handle executes the ControlAppCommand
@@ -35,22 +37,9 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	}
 
 	// Get the app config
-	appConfig, err := utils.GetAppConfig(h.AnsibleAppsRolesPath, appID, h.ansible.GetConfig().AnsibleAppsRolesCurrentVersion)
+	appConfig, err := utils.GetAppConfig(h.AnsibleAppsRolesPath, appID, h.AnsibleAppsRolesCurrentVersion)
 	if err != nil {
 		return log.Errorf("failed to get app config for app ID %s: %w", appID, err)
-	}
-
-	// Determine the action to perform
-	var playbook string
-	switch cmd.Request.Action {
-	case pb.AppAction_START:
-		playbook = "deploy_app"
-	case pb.AppAction_STOP:
-		playbook = "stop_app"
-	case pb.AppAction_RESTART:
-		playbook = "restart_app"
-	default:
-		return log.Errorf("unsupported action: %s", cmd.Request.Action.String())
 	}
 
 	// Determine the app version to use
@@ -58,24 +47,26 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	if cmd.Request.AppVersion > 0 {
 		appVersion = fmt.Sprintf("%d", cmd.Request.AppVersion)
 	} else {
-		appVersion = h.ansible.GetConfig().AnsibleAppsRolesCurrentVersion
+		appVersion = h.AnsibleAppsRolesCurrentVersion
 	}
 
-	// Build environment variables
-	env := map[string]string{
-		"app_id":      fmt.Sprintf("%s", appID),
-		"app_version": fmt.Sprintf("%s", appVersion),
-	}
-	ansibleCommand := ansiblepkg.Command{
-		Id:       messageID,
-		Playbook: fmt.Sprintf("apps/%s.yml", playbook),
-		Env:      env,
+	// Determine the action to perform
+	var playbook string
+	var result ansiblepkg.Result
+	switch cmd.Request.Action {
+	case pb.AppAction_START:
+		playbook = "deploy_app"
+		result = h.ansible.DeployApp(appID, appVersion)
+	case pb.AppAction_STOP:
+		playbook = "stop_app"
+		result = h.ansible.StopApp(appID)
+	case pb.AppAction_RESTART:
+		playbook = "restart_app"
+		result = h.ansible.RestartApp(appID, appVersion)
+	default:
+		return log.Errorf("unsupported action: %s", cmd.Request.Action.String())
 	}
 
-	log.Printf("Executing %s playbook for app %s (ID: %s, Version: %s)",
-		playbook, appConfig.Name, appID, appVersion)
-
-	result := h.ansible.RunSync(ansibleCommand)
 	if result.ExitCode != 0 {
 		return log.Errorf("command failed with exit code %d: %v", result.ExitCode, result.Error)
 	}
@@ -85,9 +76,10 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 }
 
 // NewControlAppHandler creates a new ControlAppHandler
-func NewControlAppHandler(client *ansiblepkg.Client, ansibleAppsRolesPath string) *ControlAppHandler {
+func NewControlAppHandler(ansible ansible.Repository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *ControlAppHandler {
 	return &ControlAppHandler{
-		ansible:              *client,
-		AnsibleAppsRolesPath: ansibleAppsRolesPath,
+		ansible:                        ansible,
+		AnsibleAppsRolesPath:           ansibleAppsRolesPath,
+		AnsibleAppsRolesCurrentVersion: ansibleAppsRolesCurrentVersion,
 	}
 }
