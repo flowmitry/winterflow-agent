@@ -56,7 +56,7 @@ func (r *repository) GetRunner() pkgansible.Client {
 func (r *repository) InitialConfiguration() pkgansible.Result {
 	log.Debug("Running initial configuration playbook")
 	cmd := pkgansible.Command{
-		Playbook: "system/initial_configuration.yml",
+		Playbook: "agent_startup.yml",
 	}
 	return r.client.RunSync(cmd)
 }

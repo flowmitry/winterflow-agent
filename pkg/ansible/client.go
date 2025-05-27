@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -122,9 +121,9 @@ func (c *client) RunSync(cmd Command) Result {
 	runner := exec.Command("ansible-playbook", cmdArgs...)
 	runner.Dir = c.config.AnsiblePath
 
-	// Set up output to both log file and standard output
-	runner.Stdout = io.MultiWriter(logFile, os.Stdout)
-	runner.Stderr = io.MultiWriter(logFile, os.Stderr)
+	// Set up output to log file
+	runner.Stdout = logFile
+	runner.Stderr = logFile
 
 	// Execute command
 	err = runner.Run()
@@ -135,14 +134,14 @@ func (c *client) RunSync(cmd Command) Result {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()
 			fmt.Fprintf(logFile, "\n=== Error (Exit Code: %d) ===\n%v\n", exitCode, err)
-			log.Printf("Ansible command failed with exit code %d: %v", exitCode, err)
+			log.Info(fmt.Sprintf("Ansible playbook %s failed with exit code %d: %v", cmd.Playbook, exitCode, err))
 		} else {
 			exitCode = -1
 			fmt.Fprintf(logFile, "\n=== Error (Unknown) ===\n%v\n", err)
-			log.Printf("Ansible command failed with unknown error: %v", err)
+			log.Info(fmt.Sprintf("Ansible playbook %s failed with unknown error: %v", cmd.Playbook, err))
 		}
 	} else {
-		log.Printf("Ansible command completed successfully")
+		log.Info(fmt.Sprintf("Ansible playbook %s completed successfully", cmd.Playbook))
 	}
 
 	// Write footer to log file
