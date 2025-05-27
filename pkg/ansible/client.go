@@ -107,7 +107,7 @@ func (c *client) RunSync(cmd Command) Result {
 	}
 	defer logFile.Close()
 
-	cmdArgs := commandArgs(cmd)
+	cmdArgs := commandArgs(c.config.AnsiblePath, cmd)
 
 	// Write header to log file
 	fmt.Fprintf(logFile, "=== Ansible Command Execution (ID: %s) ===\n", id)
@@ -174,7 +174,7 @@ func (c *client) RunAsync(cmd Command) (string, context.CancelFunc, error) {
 	fmt.Fprintf(logFile, "=== Output ===\n\n")
 
 	// Create command
-	cmdArgs := commandArgs(cmd)
+	cmdArgs := commandArgs(c.config.AnsiblePath, cmd)
 	runner := exec.Command("ansible-playbook", cmdArgs...)
 	runner.Dir = c.config.AnsiblePath
 
@@ -259,12 +259,16 @@ func (c *client) GetConfig() *Config {
 	return c.config
 }
 
-func commandArgs(cmd Command) []string {
+func commandArgs(ansiblePath string, cmd Command) []string {
 	cmdArgs := []string{
 		fmt.Sprintf("playbooks/%s", cmd.Playbook),
 		"-i", "inventory/defaults.yml",
-		"-i", "inventory/custom.yml",
 	}
+
+	if _, err := os.Stat(fmt.Sprintf("%s/inventory/custom.yml", ansiblePath)); err == nil {
+		cmdArgs = append(cmdArgs, "-i", "inventory/custom.yml")
+	}
+
 	for k, v := range cmd.Env {
 		cmdArgs = append(cmdArgs, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
