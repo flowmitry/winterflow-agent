@@ -77,7 +77,10 @@ func getLogPath(logsDir, id string) string {
 	return filepath.Join(logsDir, fmt.Sprintf("%s.log", id))
 }
 
-func (c *client) updateEnvironment(cmd *Command) {
+func (c *client) updateEnvironment(cmd Command) {
+	if cmd.Env == nil {
+		cmd.Env = make(map[string]string)
+	}
 	if cmd.Env["orchestrator"] == "" {
 		cmd.Env["orchestrator"] = c.config.Orchestrator
 	}
@@ -107,6 +110,7 @@ func (c *client) RunSync(cmd Command) Result {
 	}
 	defer logFile.Close()
 
+	c.updateEnvironment(cmd)
 	cmdArgs := commandArgs(c.config.AnsiblePath, cmd)
 
 	// Write header to log file
@@ -174,6 +178,7 @@ func (c *client) RunAsync(cmd Command) (string, context.CancelFunc, error) {
 	fmt.Fprintf(logFile, "=== Output ===\n\n")
 
 	// Create command
+	c.updateEnvironment(cmd)
 	cmdArgs := commandArgs(c.config.AnsiblePath, cmd)
 	runner := exec.Command("ansible-playbook", cmdArgs...)
 	runner.Dir = c.config.AnsiblePath

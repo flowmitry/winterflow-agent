@@ -18,10 +18,13 @@ type Repository interface {
 	// DeployApp deploys an application with the specified ID and version
 	DeployApp(appID, appVersion string) pkgansible.Result
 
+	// StopApp stops the application specified by the given app ID and returns the result of the operation.
 	StopApp(appID string) pkgansible.Result
 
+	// RestartApp restarts the specified application by its app ID and version and returns the result of the operation.
 	RestartApp(appID, appVersion string) pkgansible.Result
 
+	// DeleteApp removes an application identified by the provided appID and returns the result of the operation.
 	DeleteApp(appID string) pkgansible.Result
 
 	// GetAppsStatus gets the status of all applications

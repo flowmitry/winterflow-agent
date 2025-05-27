@@ -25,7 +25,7 @@
           Required variables must be defined:
           - apps_path: The directory to store the apps files
           - orchestrator: The orchestrator type
-          - orchestrator: Must be one of 'docker-compose'
+          - orchestrator: Must be one of 'docker_compose'
           - apps_status_output_path: The directory to store the apps statuses
 
   tasks:
