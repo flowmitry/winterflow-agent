@@ -453,33 +453,33 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 
 // StartAgentStream starts a bidirectional stream
 func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[string]string, capabilities map[string]string, features map[string]bool) error {
-	log.Printf("Starting Agent stream with agent ID: %s", agentID)
-	log.Printf("Current registration state: %v", c.IsRegistered())
+	log.Info("Starting Agent stream", "agentID", agentID)
+	log.Debug("Current registration state", "registered", c.IsRegistered())
 
 	// Start goroutine to maintain the heartbeat stream
 	go func() {
-		log.Printf("Agent stream goroutine started")
+		log.Debug("Agent stream goroutine started")
 	outerLoop:
 		for {
 			// Check if we should stop
 			select {
 			case <-c.streamCleanup:
-				log.Printf("Agent stream cleanup requested")
+				log.Info("Agent stream cleanup requested")
 				return
 			default:
 			}
 
 			// Check if agent is still registered
 			if !c.IsRegistered() {
-				log.Printf("Agent is not registered, stopping Agent stream")
+				log.Warn("Agent is not registered, stopping Agent stream")
 				return
 			}
 
 			// Ensure connection is ready before starting the stream
 			if err := c.waitForReady(); err != nil {
-				log.Printf("Connection not ready before starting Agent stream: %v", err)
+				log.Warn("Connection not ready before starting Agent stream", "error", err)
 				if err := c.reconnect(); err != nil {
-					log.Printf("Failed to reconnect, will retry: %v", err)
+					log.Error("Failed to reconnect, will retry", "error", err)
 
 					// Use a timer so we can interrupt the wait
 					timer := time.NewTimer(c.getNextReconnectInterval())
@@ -489,7 +489,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					case <-c.ctx.Done():
 						// Context cancelled, abort reconnection
 						timer.Stop()
-						log.Printf("Stream cancelled during reconnection: %v", c.ctx.Err())
+						log.Warn("Stream cancelled during reconnection", "error", c.ctx.Err())
 						return
 					}
 					continue
@@ -497,12 +497,12 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				continue
 			}
 
-			log.Printf("Creating Agent stream")
+			log.Debug("Creating Agent stream")
 			stream, err := c.client.AgentStream(c.ctx)
 			if err != nil {
-				log.Printf("Failed to create Agent stream: %v", err)
+				log.Error("Failed to create Agent stream", "error", err)
 				if err := c.reconnect(); err != nil {
-					log.Printf("Failed to reconnect, will retry: %v", err)
+					log.Warn("Failed to reconnect, will retry", "error", err)
 
 					// Use a timer so we can interrupt the wait
 					timer := time.NewTimer(c.getNextReconnectInterval())
@@ -512,7 +512,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					case <-c.ctx.Done():
 						// Context cancelled, abort reconnection
 						timer.Stop()
-						log.Printf("Stream cancelled during reconnection: %v", c.ctx.Err())
+						log.Warn("Stream cancelled during reconnection", "error", c.ctx.Err())
 						return
 					}
 					continue
@@ -520,7 +520,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				continue
 			}
 
-			log.Printf("Agent stream established successfully")
+			log.Info("Agent stream established successfully")
 
 			// Send initial heartbeat
 			baseMsg := &pb.BaseMessage{
@@ -541,9 +541,9 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			}
 
 			if err := stream.Send(agentMsg); err != nil {
-				log.Printf("Failed to send initial heartbeat: %v", err)
+				log.Error("Failed to send initial heartbeat", "error", err)
 				if err := c.reconnect(); err != nil {
-					log.Printf("Failed to reconnect, will retry: %v", err)
+					log.Warn("Failed to reconnect, will retry", "error", err)
 
 					// Use a timer so we can interrupt the wait
 					timer := time.NewTimer(c.getNextReconnectInterval())
@@ -553,7 +553,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					case <-c.ctx.Done():
 						// Context cancelled, abort reconnection
 						timer.Stop()
-						log.Printf("Stream cancelled during reconnection: %v", c.ctx.Err())
+						log.Warn("Stream cancelled during reconnection", "error", c.ctx.Err())
 						return
 					}
 					continue
@@ -561,7 +561,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				continue
 			}
 
-			log.Printf("Initial heartbeat sent successfully")
+			log.Debug("Initial heartbeat sent successfully")
 
 			// Create channels for stream management
 			streamDone := make(chan struct{})
@@ -580,10 +580,11 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					serverCmd, err := stream.Recv()
 					if err != nil {
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
-							log.Printf("Connection unavailable or stream closed: %v", err)
+							log.Error("Connection unavailable or stream closed", "error", err)
+							log.Warn("Stream receiver stopping, will recreate stream")
 							return
 						}
-						log.Printf("Error receiving server command: %v", err)
+						log.Error("Error receiving server command", "error", err)
 						continue
 					}
 
@@ -595,7 +596,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						// Handle response codes
 						switch response.ResponseCode {
 						case pb.ResponseCode_RESPONSE_CODE_AGENT_NOT_FOUND:
-							log.Printf("Agent not found, triggering re-registration")
+							log.Warn("Agent not found, triggering re-registration")
 							select {
 							case reregisterCh <- struct{}{}:
 							default:
@@ -603,7 +604,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							return
 
 						case pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
-							log.Printf("Received response code %v, triggering re-registration", response.ResponseCode)
+							log.Warn("Received response code, triggering re-registration", "code", response.ResponseCode)
 							select {
 							case reregisterCh <- struct{}{}:
 							default:
@@ -611,34 +612,38 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							return
 
 						case pb.ResponseCode_RESPONSE_CODE_SUCCESS:
-							log.Printf("Heartbeat response received: %s", response.Message)
+							log.Debug("Heartbeat response received", "message", response.Message)
 
 						default:
-							log.Error("Heartbeat failed with code %v: %s", response.ResponseCode, response.Message)
+							log.Error("Heartbeat failed", "code", response.ResponseCode, "message", response.Message)
 						}
 
 					case *pb.ServerCommand_UpdateAgentRequestV1:
-						log.Printf("Received update agent request: %s", cmd.UpdateAgentRequestV1.Base.MessageId)
+						log.Info("Received update agent request", "messageId", cmd.UpdateAgentRequestV1.Base.MessageId)
 						// Handle the update agent request directly since it will exit the process
 						agentMsg, err := HandleUpdateAgentRequest(c.commandBus, cmd.UpdateAgentRequestV1, agentID)
 						if err != nil {
-							log.Error("Error handling update agent request: %v", err)
+							log.Error("Error handling update agent request", "error", err)
 							continue
 						}
 
 						if err := stream.Send(agentMsg); err != nil {
-							log.Warn("Error sending update agent response: %v", err)
+							log.Error("Error sending update agent response", "error", err)
+							if status.Code(err) == codes.Unavailable || err == io.EOF {
+								log.Warn("Connection unavailable or stream closed, recreating stream")
+								return
+							}
 							continue
 						}
 						log.Info("Update agent response sent successfully")
 
 					case *pb.ServerCommand_GetAppRequestV1:
-						log.Printf("Received app request: %s", cmd.GetAppRequestV1.Base.MessageId)
+						log.Info("Received app request", "messageId", cmd.GetAppRequestV1.Base.MessageId)
 						// Forward the request to be handled by the main loop
 						select {
 						case appRequestCh <- cmd.GetAppRequestV1:
 						default:
-							log.Printf("Warning: App request channel full, dropping request")
+							log.Warn("App request channel full, dropping request")
 							// Create and send error response immediately
 							baseResp := createBaseResponse(cmd.GetAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
 							getAppResp := &pb.GetAppResponseV1{
@@ -661,12 +666,12 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						}
 
 					case *pb.ServerCommand_SaveAppRequestV1:
-						log.Printf("Received save app request: %s", cmd.SaveAppRequestV1.Base.MessageId)
+						log.Info("Received save app request", "messageId", cmd.SaveAppRequestV1.Base.MessageId)
 						// Forward the request to be handled by the main loop
 						select {
 						case saveAppRequestCh <- cmd.SaveAppRequestV1:
 						default:
-							log.Printf("Warning: Save app request channel full, dropping request")
+							log.Warn("Save app request channel full, dropping request")
 							// Create and send error response immediately
 							baseResp := createBaseResponse(cmd.SaveAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
 							saveAppResp := &pb.SaveAppResponseV1{
@@ -688,12 +693,12 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						}
 
 					case *pb.ServerCommand_DeleteAppRequestV1:
-						log.Printf("Received delete app request: %s", cmd.DeleteAppRequestV1.Base.MessageId)
+						log.Info("Received delete app request", "messageId", cmd.DeleteAppRequestV1.Base.MessageId)
 						// Forward the request to be handled by the main loop
 						select {
 						case deleteAppRequestCh <- cmd.DeleteAppRequestV1:
 						default:
-							log.Printf("Warning: Delete app request channel full, dropping request")
+							log.Warn("Delete app request channel full, dropping request")
 							// Create and send error response immediately
 							baseResp := createBaseResponse(cmd.DeleteAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
 							deleteAppResp := &pb.DeleteAppResponseV1{
@@ -714,12 +719,12 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						}
 
 					case *pb.ServerCommand_ControlAppRequestV1:
-						log.Printf("Received control app request: %s", cmd.ControlAppRequestV1.Base.MessageId)
+						log.Info("Received control app request", "messageId", cmd.ControlAppRequestV1.Base.MessageId)
 						// Forward the request to be handled by the main loop
 						select {
 						case controlAppRequestCh <- cmd.ControlAppRequestV1:
 						default:
-							log.Printf("Warning: Control app request channel full, dropping request")
+							log.Warn("Control app request channel full, dropping request")
 							// Create and send error response immediately
 							baseResp := createBaseResponse(cmd.ControlAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
 							controlAppResp := &pb.ControlAppResponseV1{
@@ -743,12 +748,12 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						}
 
 					case *pb.ServerCommand_GetAppsStatusRequestV1:
-						log.Printf("Received get apps status request: %s", cmd.GetAppsStatusRequestV1.Base.MessageId)
+						log.Info("Received get apps status request", "messageId", cmd.GetAppsStatusRequestV1.Base.MessageId)
 						// Forward the request to be handled by the main loop
 						select {
 						case getAppsStatusRequestCh <- cmd.GetAppsStatusRequestV1:
 						default:
-							log.Printf("Warning: Get apps status request channel full, dropping request")
+							log.Warn("Get apps status request channel full, dropping request")
 							// Create and send error response immediately
 							baseResp := createBaseResponse(cmd.GetAppsStatusRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
 							getAppsStatusResp := &pb.GetAppsStatusResponseV1{
@@ -771,7 +776,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 
 					default:
 						// Log details about the unknown command type
-						log.Printf("Received unknown command type: %T", cmd)
+						log.Warn("Received unknown command type", "type", fmt.Sprintf("%T", cmd))
 					}
 				}
 			}()
@@ -783,7 +788,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				select {
 				case <-ticker.C:
 					if !c.IsRegistered() {
-						log.Printf("Agent is not registered, stopping heartbeat sender")
+						log.Warn("Agent is not registered, stopping heartbeat sender")
 						return
 					}
 
@@ -805,23 +810,28 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					}
 
 					if err := stream.Send(agentMsg); err != nil {
-						log.Printf("Error sending heartbeat: %v", err)
+						log.Error("Error sending heartbeat", "error", err)
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
 							return
 						}
 						continue
 					}
-					log.Printf("Periodic heartbeat sent successfully")
+					log.Debug("Periodic heartbeat sent successfully")
 
 				case appRequest := <-appRequestCh:
 					agentMsg, err := HandleGetAppQuery(c.queryBus, appRequest, agentID)
 					if err != nil {
-						log.Error("Error retrieving app response: %v", err)
+						log.Error("Error retrieving app response", "error", err)
 						continue
 					}
 
 					if err := stream.Send(agentMsg); err != nil {
-						log.Warn("Error sending app response: %v", err)
+						log.Error("Error sending app response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							return
+						}
 						continue
 					}
 					log.Info("App response sent successfully")
@@ -829,12 +839,16 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				case saveAppRequest := <-saveAppRequestCh:
 					agentMsg, err := HandleSaveAppRequest(c.commandBus, saveAppRequest, agentID)
 					if err != nil {
-						log.Error("Error saving app response: %v", err)
+						log.Error("Error saving app response", "error", err)
 						continue
 					}
 
 					if err := stream.Send(agentMsg); err != nil {
-						log.Warn("Error sending save app response: %v", err)
+						log.Error("Error sending save app response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							return
+						}
 						continue
 					}
 					log.Info("Save app response sent successfully")
@@ -842,12 +856,16 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				case deleteAppRequest := <-deleteAppRequestCh:
 					agentMsg, err := HandleDeleteAppRequest(c.commandBus, deleteAppRequest, agentID)
 					if err != nil {
-						log.Error("Error deleting app response: %v", err)
+						log.Error("Error deleting app response", "error", err)
 						continue
 					}
 
 					if err := stream.Send(agentMsg); err != nil {
-						log.Warn("Error sending delete app response: %v", err)
+						log.Error("Error sending delete app response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							return
+						}
 						continue
 					}
 					log.Info("Delete app response sent successfully")
@@ -855,12 +873,16 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				case controlAppRequest := <-controlAppRequestCh:
 					agentMsg, err := HandleControlAppRequest(c.commandBus, controlAppRequest, agentID)
 					if err != nil {
-						log.Error("Error controlling app response: %v", err)
+						log.Error("Error controlling app response", "error", err)
 						continue
 					}
 
 					if err := stream.Send(agentMsg); err != nil {
-						log.Warn("Error sending control app response: %v", err)
+						log.Error("Error sending control app response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							return
+						}
 						continue
 					}
 					log.Info("Control app response sent successfully")
@@ -868,27 +890,31 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				case getAppsStatusRequest := <-getAppsStatusRequestCh:
 					agentMsg, err := HandleGetAppsStatusQuery(c.queryBus, getAppsStatusRequest, agentID)
 					if err != nil {
-						log.Error("Error retrieving apps statuses response: %v", err)
+						log.Error("Error retrieving apps statuses response", "error", err)
 						continue
 					}
 
 					if err := stream.Send(agentMsg); err != nil {
-						log.Warn("Error sending get apps status response: %v", err)
+						log.Error("Error sending get apps status response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							return
+						}
 						continue
 					}
 					log.Info("Get apps status response sent successfully")
 
 				case <-streamDone:
-					log.Printf("Stream receiver stopped, recreating stream")
+					log.Warn("Stream receiver stopped, recreating stream")
 					ticker.Stop()
 					continue outerLoop
 
 				case <-reregisterCh:
-					log.Printf("Re-registering agent due to agent not found")
+					log.Warn("Re-registering agent due to agent not found")
 					stream.CloseSend()
 					_, err := c.RegisterAgent(capabilities, features, agentID)
 					if err != nil {
-						log.Printf("Failed to re-register agent: %v", err)
+						log.Error("Failed to re-register agent", "error", err)
 						ticker.Stop()
 
 						// Use a timer so we can interrupt the wait
@@ -899,17 +925,17 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						case <-c.ctx.Done():
 							// Context cancelled, abort reconnection
 							timer.Stop()
-							log.Printf("Stream cancelled during re-registration: %v", c.ctx.Err())
+							log.Warn("Stream cancelled during re-registration", "error", c.ctx.Err())
 							return
 						}
 						continue outerLoop
 					}
-					log.Printf("Successfully re-registered agent")
+					log.Info("Successfully re-registered agent")
 					ticker.Stop()
 					continue outerLoop
 
 				case err := <-fatalErrorCh:
-					log.Printf("Fatal error in heartbeat stream: %v", err)
+					log.Error("Fatal error in heartbeat stream", "error", err)
 					stream.CloseSend()
 					ticker.Stop()
 					return
