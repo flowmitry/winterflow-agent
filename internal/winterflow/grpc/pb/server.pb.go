@@ -90,12 +90,12 @@ func (ResponseCode) EnumDescriptor() ([]byte, []int) {
 type AppStatusCode int32
 
 const (
-	AppStatusCode_STATUS_CODE_UNKNOWN       AppStatusCode = 0
-	AppStatusCode_STATUS_CODE_ACTIVE        AppStatusCode = 1
-	AppStatusCode_STATUS_CODE_IDLE          AppStatusCode = 2
-	AppStatusCode_STATUS_CODE_TRANSITIONING AppStatusCode = 3
-	AppStatusCode_STATUS_CODE_PROBLEMATIC   AppStatusCode = 4
-	AppStatusCode_STATUS_CODE_STOPPED       AppStatusCode = 5
+	AppStatusCode_STATUS_CODE_UNKNOWN     AppStatusCode = 0
+	AppStatusCode_STATUS_CODE_ACTIVE      AppStatusCode = 1
+	AppStatusCode_STATUS_CODE_IDLE        AppStatusCode = 2
+	AppStatusCode_STATUS_CODE_RESTARTING  AppStatusCode = 3
+	AppStatusCode_STATUS_CODE_PROBLEMATIC AppStatusCode = 4
+	AppStatusCode_STATUS_CODE_STOPPED     AppStatusCode = 5
 )
 
 // Enum value maps for AppStatusCode.
@@ -104,17 +104,17 @@ var (
 		0: "STATUS_CODE_UNKNOWN",
 		1: "STATUS_CODE_ACTIVE",
 		2: "STATUS_CODE_IDLE",
-		3: "STATUS_CODE_TRANSITIONING",
+		3: "STATUS_CODE_RESTARTING",
 		4: "STATUS_CODE_PROBLEMATIC",
 		5: "STATUS_CODE_STOPPED",
 	}
 	AppStatusCode_value = map[string]int32{
-		"STATUS_CODE_UNKNOWN":       0,
-		"STATUS_CODE_ACTIVE":        1,
-		"STATUS_CODE_IDLE":          2,
-		"STATUS_CODE_TRANSITIONING": 3,
-		"STATUS_CODE_PROBLEMATIC":   4,
-		"STATUS_CODE_STOPPED":       5,
+		"STATUS_CODE_UNKNOWN":     0,
+		"STATUS_CODE_ACTIVE":      1,
+		"STATUS_CODE_IDLE":        2,
+		"STATUS_CODE_RESTARTING":  3,
+		"STATUS_CODE_PROBLEMATIC": 4,
+		"STATUS_CODE_STOPPED":     5,
 	}
 )
 
@@ -1925,12 +1925,12 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x1aRESPONSE_CODE_UNAUTHORIZED\x10\x04\x12\x1e\n" +
 	"\x1aRESPONSE_CODE_SERVER_ERROR\x10\x05\x12!\n" +
 	"\x1dRESPONSE_CODE_AGENT_NOT_FOUND\x10\x06\x12)\n" +
-	"%RESPONSE_CODE_AGENT_ALREADY_CONNECTED\x10\a*\xab\x01\n" +
+	"%RESPONSE_CODE_AGENT_ALREADY_CONNECTED\x10\a*\xa8\x01\n" +
 	"\rAppStatusCode\x12\x17\n" +
 	"\x13STATUS_CODE_UNKNOWN\x10\x00\x12\x16\n" +
 	"\x12STATUS_CODE_ACTIVE\x10\x01\x12\x14\n" +
-	"\x10STATUS_CODE_IDLE\x10\x02\x12\x1d\n" +
-	"\x19STATUS_CODE_TRANSITIONING\x10\x03\x12\x1b\n" +
+	"\x10STATUS_CODE_IDLE\x10\x02\x12\x1a\n" +
+	"\x16STATUS_CODE_RESTARTING\x10\x03\x12\x1b\n" +
 	"\x17STATUS_CODE_PROBLEMATIC\x10\x04\x12\x17\n" +
 	"\x13STATUS_CODE_STOPPED\x10\x05*-\n" +
 	"\tAppAction\x12\b\n" +
