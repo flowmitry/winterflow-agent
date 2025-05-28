@@ -27,8 +27,8 @@ type Repository interface {
 	// DeleteApp removes an application identified by the provided appID and returns the result of the operation.
 	DeleteApp(appID string) pkgansible.Result
 
-	// GetAppsStatus gets the status of all applications
-	GetAppsStatus(statusOutputPath string) pkgansible.Result
+	// GenerateAppsStatus generate json files with the status of all applications
+	GenerateAppsStatus(statusOutputPath string) pkgansible.Result
 }
 
 // repository implements the Repository interface
@@ -45,14 +45,12 @@ func NewRepository(config *config.Config) *repository {
 	}
 }
 
-// GetRunner returns the Ansible client
 func (r *repository) GetRunner() pkgansible.Client {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.client
 }
 
-// InitialConfiguration runs the initial configuration playbook
 func (r *repository) InitialConfiguration() pkgansible.Result {
 	log.Debug("Running initial configuration playbook")
 	cmd := pkgansible.Command{
@@ -61,7 +59,6 @@ func (r *repository) InitialConfiguration() pkgansible.Result {
 	return r.client.RunSync(cmd)
 }
 
-// DeployApp deploys an application with the specified ID and version
 func (r *repository) DeployApp(appID, appVersion string) pkgansible.Result {
 	log.Debug("Deploying application with ID %s and version %s", appID, appVersion)
 	env := map[string]string{
@@ -75,7 +72,6 @@ func (r *repository) DeployApp(appID, appVersion string) pkgansible.Result {
 	return r.client.RunSync(cmd)
 }
 
-// RestartApp restarts an application with the specified ID and version
 func (r *repository) RestartApp(appID, appVersion string) pkgansible.Result {
 	log.Debug("Restarting application with ID %s and version %s", appID, appVersion)
 	env := map[string]string{
@@ -89,7 +85,6 @@ func (r *repository) RestartApp(appID, appVersion string) pkgansible.Result {
 	return r.client.RunSync(cmd)
 }
 
-// StopApp stops an application with the specified ID and version
 func (r *repository) StopApp(appID string) pkgansible.Result {
 	log.Debug("Stoping application with ID %s", appID)
 	env := map[string]string{
@@ -102,7 +97,6 @@ func (r *repository) StopApp(appID string) pkgansible.Result {
 	return r.client.RunSync(cmd)
 }
 
-// DeleteApp deletes an application with the specified ID
 func (r *repository) DeleteApp(appID string) pkgansible.Result {
 	log.Debug("Deleting application with ID %s and version %s", appID)
 	env := map[string]string{
@@ -115,8 +109,7 @@ func (r *repository) DeleteApp(appID string) pkgansible.Result {
 	return r.client.RunSync(cmd)
 }
 
-// GetAppsStatus gets the status of all applications
-func (r *repository) GetAppsStatus(statusOutputPath string) pkgansible.Result {
+func (r *repository) GenerateAppsStatus(statusOutputPath string) pkgansible.Result {
 	log.Debug("Getting status of all applications")
 	env := map[string]string{
 		"apps_status_output_path": statusOutputPath,
