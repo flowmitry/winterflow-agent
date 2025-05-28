@@ -29,10 +29,10 @@ const (
 	ResponseCode_RESPONSE_CODE_UNSPECIFIED             ResponseCode = 0
 	ResponseCode_RESPONSE_CODE_SUCCESS                 ResponseCode = 1
 	ResponseCode_RESPONSE_CODE_INVALID_REQUEST         ResponseCode = 2
-	ResponseCode_RESPONSE_CODE_UNAUTHORIZED            ResponseCode = 3
-	ResponseCode_RESPONSE_CODE_SERVER_ERROR            ResponseCode = 4
-	ResponseCode_RESPONSE_CODE_AGENT_NOT_FOUND         ResponseCode = 5
-	ResponseCode_RESPONSE_CODE_SERVER_NOT_FOUND        ResponseCode = 6
+	ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS       ResponseCode = 3
+	ResponseCode_RESPONSE_CODE_UNAUTHORIZED            ResponseCode = 4
+	ResponseCode_RESPONSE_CODE_SERVER_ERROR            ResponseCode = 5
+	ResponseCode_RESPONSE_CODE_AGENT_NOT_FOUND         ResponseCode = 6
 	ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED ResponseCode = 7
 )
 
@@ -42,20 +42,20 @@ var (
 		0: "RESPONSE_CODE_UNSPECIFIED",
 		1: "RESPONSE_CODE_SUCCESS",
 		2: "RESPONSE_CODE_INVALID_REQUEST",
-		3: "RESPONSE_CODE_UNAUTHORIZED",
-		4: "RESPONSE_CODE_SERVER_ERROR",
-		5: "RESPONSE_CODE_AGENT_NOT_FOUND",
-		6: "RESPONSE_CODE_SERVER_NOT_FOUND",
+		3: "RESPONSE_CODE_TOO_MANY_REQUESTS",
+		4: "RESPONSE_CODE_UNAUTHORIZED",
+		5: "RESPONSE_CODE_SERVER_ERROR",
+		6: "RESPONSE_CODE_AGENT_NOT_FOUND",
 		7: "RESPONSE_CODE_AGENT_ALREADY_CONNECTED",
 	}
 	ResponseCode_value = map[string]int32{
 		"RESPONSE_CODE_UNSPECIFIED":             0,
 		"RESPONSE_CODE_SUCCESS":                 1,
 		"RESPONSE_CODE_INVALID_REQUEST":         2,
-		"RESPONSE_CODE_UNAUTHORIZED":            3,
-		"RESPONSE_CODE_SERVER_ERROR":            4,
-		"RESPONSE_CODE_AGENT_NOT_FOUND":         5,
-		"RESPONSE_CODE_SERVER_NOT_FOUND":        6,
+		"RESPONSE_CODE_TOO_MANY_REQUESTS":       3,
+		"RESPONSE_CODE_UNAUTHORIZED":            4,
+		"RESPONSE_CODE_SERVER_ERROR":            5,
+		"RESPONSE_CODE_AGENT_NOT_FOUND":         6,
 		"RESPONSE_CODE_AGENT_ALREADY_CONNECTED": 7,
 	}
 )
@@ -1916,15 +1916,15 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x16delete_app_response_v1\x18\x05 \x01(\v2\x17.pb.DeleteAppResponseV1H\x00R\x13deleteAppResponseV1\x12Q\n" +
 	"\x17control_app_response_v1\x18\x06 \x01(\v2\x18.pb.ControlAppResponseV1H\x00R\x14controlAppResponseV1\x12[\n" +
 	"\x1bget_apps_status_response_v1\x18\a \x01(\v2\x1b.pb.GetAppsStatusResponseV1H\x00R\x17getAppsStatusResponseV1B\t\n" +
-	"\amessage*\x9d\x02\n" +
+	"\amessage*\x9e\x02\n" +
 	"\fResponseCode\x12\x1d\n" +
 	"\x19RESPONSE_CODE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15RESPONSE_CODE_SUCCESS\x10\x01\x12!\n" +
-	"\x1dRESPONSE_CODE_INVALID_REQUEST\x10\x02\x12\x1e\n" +
-	"\x1aRESPONSE_CODE_UNAUTHORIZED\x10\x03\x12\x1e\n" +
-	"\x1aRESPONSE_CODE_SERVER_ERROR\x10\x04\x12!\n" +
-	"\x1dRESPONSE_CODE_AGENT_NOT_FOUND\x10\x05\x12\"\n" +
-	"\x1eRESPONSE_CODE_SERVER_NOT_FOUND\x10\x06\x12)\n" +
+	"\x1dRESPONSE_CODE_INVALID_REQUEST\x10\x02\x12#\n" +
+	"\x1fRESPONSE_CODE_TOO_MANY_REQUESTS\x10\x03\x12\x1e\n" +
+	"\x1aRESPONSE_CODE_UNAUTHORIZED\x10\x04\x12\x1e\n" +
+	"\x1aRESPONSE_CODE_SERVER_ERROR\x10\x05\x12!\n" +
+	"\x1dRESPONSE_CODE_AGENT_NOT_FOUND\x10\x06\x12)\n" +
 	"%RESPONSE_CODE_AGENT_ALREADY_CONNECTED\x10\a*\xab\x01\n" +
 	"\rAppStatusCode\x12\x17\n" +
 	"\x13STATUS_CODE_UNKNOWN\x10\x00\x12\x16\n" +

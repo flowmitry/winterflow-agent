@@ -602,8 +602,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							}
 							return
 
-						case pb.ResponseCode_RESPONSE_CODE_SERVER_NOT_FOUND,
-							pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
+						case pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
 							log.Printf("Received response code %v, triggering re-registration", response.ResponseCode)
 							select {
 							case reregisterCh <- struct{}{}:
@@ -640,6 +639,25 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						case appRequestCh <- cmd.GetAppRequestV1:
 						default:
 							log.Printf("Warning: App request channel full, dropping request")
+							// Create and send error response immediately
+							baseResp := createBaseResponse(cmd.GetAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							getAppResp := &pb.GetAppResponseV1{
+								Base:       &baseResp,
+								App:        nil,
+								AppVersion: cmd.GetAppRequestV1.AppVersion,
+							}
+
+							agentMsg := &pb.AgentMessage{
+								Message: &pb.AgentMessage_GetAppResponseV1{
+									GetAppResponseV1: getAppResp,
+								},
+							}
+
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response: %v", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
 						}
 
 					case *pb.ServerCommand_SaveAppRequestV1:
@@ -649,6 +667,24 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						case saveAppRequestCh <- cmd.SaveAppRequestV1:
 						default:
 							log.Printf("Warning: Save app request channel full, dropping request")
+							// Create and send error response immediately
+							baseResp := createBaseResponse(cmd.SaveAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							saveAppResp := &pb.SaveAppResponseV1{
+								Base: &baseResp,
+								App:  cmd.SaveAppRequestV1.App,
+							}
+
+							agentMsg := &pb.AgentMessage{
+								Message: &pb.AgentMessage_SaveAppResponseV1{
+									SaveAppResponseV1: saveAppResp,
+								},
+							}
+
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response: %v", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
 						}
 
 					case *pb.ServerCommand_DeleteAppRequestV1:
@@ -658,6 +694,23 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						case deleteAppRequestCh <- cmd.DeleteAppRequestV1:
 						default:
 							log.Printf("Warning: Delete app request channel full, dropping request")
+							// Create and send error response immediately
+							baseResp := createBaseResponse(cmd.DeleteAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							deleteAppResp := &pb.DeleteAppResponseV1{
+								Base: &baseResp,
+							}
+
+							agentMsg := &pb.AgentMessage{
+								Message: &pb.AgentMessage_DeleteAppResponseV1{
+									DeleteAppResponseV1: deleteAppResp,
+								},
+							}
+
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response: %v", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
 						}
 
 					case *pb.ServerCommand_ControlAppRequestV1:
@@ -667,6 +720,26 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						case controlAppRequestCh <- cmd.ControlAppRequestV1:
 						default:
 							log.Printf("Warning: Control app request channel full, dropping request")
+							// Create and send error response immediately
+							baseResp := createBaseResponse(cmd.ControlAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							controlAppResp := &pb.ControlAppResponseV1{
+								Base:       &baseResp,
+								AppId:      cmd.ControlAppRequestV1.AppId,
+								AppVersion: cmd.ControlAppRequestV1.AppVersion,
+								StatusCode: pb.AppStatusCode_STATUS_CODE_PROBLEMATIC,
+							}
+
+							agentMsg := &pb.AgentMessage{
+								Message: &pb.AgentMessage_ControlAppResponseV1{
+									ControlAppResponseV1: controlAppResp,
+								},
+							}
+
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response: %v", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
 						}
 
 					case *pb.ServerCommand_GetAppsStatusRequestV1:
@@ -676,6 +749,24 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						case getAppsStatusRequestCh <- cmd.GetAppsStatusRequestV1:
 						default:
 							log.Printf("Warning: Get apps status request channel full, dropping request")
+							// Create and send error response immediately
+							baseResp := createBaseResponse(cmd.GetAppsStatusRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							getAppsStatusResp := &pb.GetAppsStatusResponseV1{
+								Base: &baseResp,
+								Apps: nil,
+							}
+
+							agentMsg := &pb.AgentMessage{
+								Message: &pb.AgentMessage_GetAppsStatusResponseV1{
+									GetAppsStatusResponseV1: getAppsStatusResp,
+								},
+							}
+
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response: %v", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
 						}
 
 					default:
