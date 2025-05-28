@@ -18,7 +18,7 @@ type GetAppsStatusQueryHandler struct {
 
 // Handle executes the GetAppsStatusQuery and returns the result
 func (h *GetAppsStatusQueryHandler) Handle(query GetAppsStatusQuery) ([]*pb.AppStatusV1, error) {
-	log.Printf("Processing get apps status request")
+	log.Info("Processing get apps status request")
 
 	// Create a temporary directory for app status files
 	tempAppsStatusDir, err := os.MkdirTemp("", "apps_status_*")
@@ -53,14 +53,14 @@ func (h *GetAppsStatusQueryHandler) Handle(query GetAppsStatusQuery) ([]*pb.AppS
 		statusFilePath := filepath.Join(tempAppsStatusDir, file.Name())
 		statusData, err := os.ReadFile(statusFilePath)
 		if err != nil {
-			log.Printf("Error reading status file %s: %v", statusFilePath, err)
+			log.Error("Error reading status file", "path", statusFilePath, "error", err)
 			continue
 		}
 
 		// Parse the JSON data
 		var containers []map[string]interface{}
 		if err := json.Unmarshal(statusData, &containers); err != nil {
-			log.Printf("Error parsing JSON from status file %s: %v", statusFilePath, err)
+			log.Error("Error parsing JSON from status file", "path", statusFilePath, "error", err)
 			continue
 		}
 

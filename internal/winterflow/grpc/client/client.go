@@ -80,7 +80,7 @@ func (c *Client) setupConnection() error {
 		return log.Errorf("TLS is required but key does not exist at path: %s", c.keyPath)
 	}
 
-	log.Printf("Setting up secure gRPC connection with TLS credentials")
+	log.Info("Setting up secure gRPC connection with TLS credentials")
 	host, _, err := net.SplitHostPort(c.serverAddress)
 	if err != nil {
 		host = c.serverAddress
@@ -112,7 +112,7 @@ func NewClient(config *config.Config, ansible ansible.Repository) (*Client, erro
 	certPath := config.GetCertificatePath()
 	keyPath := config.GetPrivateKeyPath()
 
-	log.Printf("Creating new gRPC client for %s", serverAddress)
+	log.Info("Creating new gRPC client", "serverAddress", serverAddress)
 
 	// Create command bus and register handlers
 	commandBus := cqrs.NewCommandBus()
@@ -145,7 +145,7 @@ func NewClient(config *config.Config, ansible ansible.Repository) (*Client, erro
 		return nil, log.Errorf("TLS is required but key does not exist at path: %s", keyPath)
 	}
 
-	log.Printf("TLS enabled with certificate: %s", certPath)
+	log.Info("TLS enabled", "certificate", certPath)
 
 	client := &Client{
 		ctx:               ctx,
@@ -234,12 +234,12 @@ func (c *Client) waitForConnectionReady() error {
 		}
 
 		state := c.conn.GetState()
-		log.Printf("Current connection state: %v (attempt #%d)", state, attemptCount)
+		log.Debug("Current connection state", "state", state, "attempt", attemptCount)
 
 		// Log detailed information based on connection state
 		switch state {
 		case connectivity.Ready:
-			log.Printf("Connection is ready after %d attempts (total time: %v)", attemptCount, time.Since(startTime))
+			log.Info("Connection is ready", "attempts", attemptCount, "totalTime", time.Since(startTime))
 			// Reset the backoff sequence because the connection has been
 			// successfully re-established. This prevents the next transient
 			// failure from starting with an unnecessarily long delay and keeps
@@ -251,11 +251,11 @@ func (c *Client) waitForConnectionReady() error {
 			return log.Errorf("connection is shutdown after %d attempts (total time: %v)", attemptCount, time.Since(startTime))
 
 		case connectivity.TransientFailure:
-			log.Printf("Connection attempt #%d failed with TransientFailure, retrying with exponential backoff", attemptCount)
+			log.Warn("Connection attempt failed with TransientFailure", "attempt", attemptCount, "action", "retrying with exponential backoff")
 
 			// Wait before retrying using exponential backoff
 			nextInterval := c.getNextReconnectInterval()
-			log.Printf("Waiting %v before next connection attempt (attempt #%d)", nextInterval, attemptCount+1)
+			log.Info("Waiting before next connection attempt", "waitTime", nextInterval, "nextAttempt", attemptCount+1)
 
 			// Use a timer so we can interrupt the wait
 			timer := time.NewTimer(nextInterval)
@@ -303,7 +303,7 @@ func (c *Client) waitForReady() error {
 	startTime := time.Now()
 
 	state := c.conn.GetState()
-	log.Printf("Current connection state to %s: %v (checked in %v)", c.serverAddress, state, time.Since(startTime))
+	log.Info("Current connection state", "serverAddress", c.serverAddress, "state", state, "checkTime", time.Since(startTime))
 
 	switch state {
 	case connectivity.Ready:
@@ -345,7 +345,7 @@ func (c *Client) SetRegistered(registered bool) {
 
 // RegisterAgent registers the agent with the server
 func (c *Client) RegisterAgent(capabilities map[string]string, features map[string]bool, agentID string) (*pb.RegisterAgentResponseV1, error) {
-	log.Printf("Starting agent registration process")
+	log.Info("Starting agent registration process")
 
 	// Create a unique message ID
 	messageID := GenerateUUID()
@@ -371,9 +371,9 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 
 		// Ensure connection is ready before making the request
 		if err := c.waitForReady(); err != nil {
-			log.Printf("Connection not ready before registration: %v", err)
+			log.Warn("Connection not ready before registration", "error", err)
 			if err := c.reconnect(); err != nil {
-				log.Printf("Failed to reconnect, will retry: %v", err)
+				log.Warn("Failed to reconnect, will retry", "error", err)
 
 				// Use a timer so we can interrupt the wait
 				timer := time.NewTimer(c.getNextReconnectInterval())
@@ -390,7 +390,7 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 			}
 		}
 
-		log.Printf("Sending RegisterAgentV1 request")
+		log.Info("Sending RegisterAgentV1 request")
 		resp, err := c.client.RegisterAgentV1(c.ctx, req)
 		if err != nil {
 			grpcCode := status.Code(err)
@@ -400,9 +400,9 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 			case codes.AlreadyExists:
 				return nil, ErrUnrecoverableAgentAlreadyConnected
 			case codes.Unavailable:
-				log.Printf("Connection unavailable during registration, attempting to reconnect")
+				log.Warn("Connection unavailable during registration", "action", "attempting to reconnect")
 				if err := c.reconnect(); err != nil {
-					log.Printf("Failed to reconnect, will retry: %v", err)
+					log.Warn("Failed to reconnect, will retry", "error", err)
 					timer := time.NewTimer(c.getNextReconnectInterval())
 					select {
 					case <-timer.C:
@@ -413,7 +413,7 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 				}
 				continue
 			default:
-				log.Printf("Error during registration, will retry: %v", err)
+				log.Warn("Error during registration", "error", err, "action", "will retry")
 				timer := time.NewTimer(c.getNextReconnectInterval())
 				select {
 				case <-timer.C:
@@ -431,7 +431,7 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 			case pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
 				return nil, ErrUnrecoverableAgentAlreadyConnected
 			default:
-				log.Printf("Registration failed with response code %v, retrying", resp.Base.ResponseCode)
+				log.Warn("Registration failed", "responseCode", resp.Base.ResponseCode, "action", "retrying")
 				timer := time.NewTimer(c.getNextReconnectInterval())
 				select {
 				case <-timer.C:
@@ -444,7 +444,7 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 		}
 
 		// Success path.
-		log.Printf("Registration successful, setting registered state")
+		log.Info("Registration successful", "action", "setting registered state")
 		c.SetRegistered(true)
 
 		return resp, nil
@@ -659,7 +659,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							}
 
 							if err := stream.Send(agentMsg); err != nil {
-								log.Warn("Error sending dropped request response: %v", err)
+								log.Warn("Error sending dropped request response", "error", err)
 							} else {
 								log.Info("Dropped request response sent successfully")
 							}
@@ -686,7 +686,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							}
 
 							if err := stream.Send(agentMsg); err != nil {
-								log.Warn("Error sending dropped request response: %v", err)
+								log.Warn("Error sending dropped request response", "error", err)
 							} else {
 								log.Info("Dropped request response sent successfully")
 							}
@@ -712,7 +712,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							}
 
 							if err := stream.Send(agentMsg); err != nil {
-								log.Warn("Error sending dropped request response: %v", err)
+								log.Warn("Error sending dropped request response", "error", err)
 							} else {
 								log.Info("Dropped request response sent successfully")
 							}
@@ -741,7 +741,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							}
 
 							if err := stream.Send(agentMsg); err != nil {
-								log.Warn("Error sending dropped request response: %v", err)
+								log.Warn("Error sending dropped request response", "error", err)
 							} else {
 								log.Info("Dropped request response sent successfully")
 							}
@@ -768,7 +768,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							}
 
 							if err := stream.Send(agentMsg); err != nil {
-								log.Warn("Error sending dropped request response: %v", err)
+								log.Warn("Error sending dropped request response", "error", err)
 							} else {
 								log.Info("Dropped request response sent successfully")
 							}
@@ -954,7 +954,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 
 // reconnect attempts to reconnect to the server
 func (c *Client) reconnect() error {
-	log.Printf("Attempting to reconnect to %s", c.serverAddress)
+	log.Info("Attempting to reconnect", "serverAddress", c.serverAddress)
 	startTime := time.Now()
 
 	// Close existing connection if it exists
@@ -1005,6 +1005,6 @@ func (c *Client) reconnect() error {
 	c.backoffStrategy.Reset()
 	log.Debug("Backoff strategy reset after successful reconnection")
 
-	log.Printf("Successfully reconnected to %s (total time: %v)", c.serverAddress, time.Since(startTime))
+	log.Info("Successfully reconnected", "serverAddress", c.serverAddress, "totalTime", time.Since(startTime))
 	return nil
 }
