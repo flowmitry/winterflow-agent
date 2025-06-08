@@ -6,25 +6,25 @@ import (
 	log "winterflow-agent/pkg/log"
 )
 
-// IPAddressCapability represents the IP Address capability
-type IPAddressCapability struct {
+// ServerIPCapability represents the IP Address capability
+type ServerIPCapability struct {
 	ipAddress string
 }
 
-// NewIPAddressCapability creates a new IP Address capability
-func NewIPAddressCapability() *IPAddressCapability {
-	return &IPAddressCapability{
+// NewServerIPCapability creates a new IP Address capability
+func NewServerIPCapability() *ServerIPCapability {
+	return &ServerIPCapability{
 		ipAddress: "unknown", // Default value
 	}
 }
 
 // Name returns the name of the capability
-func (c *IPAddressCapability) Name() string {
-	return CapabilityIPAddress
+func (c *ServerIPCapability) Name() string {
+	return CapabilityServerIP
 }
 
 // Value returns the value of the capability
-func (c *IPAddressCapability) Value() string {
+func (c *ServerIPCapability) Value() string {
 	// If we already have the IP address, return it
 	if c.ipAddress != "unknown" {
 		return c.ipAddress
@@ -36,7 +36,7 @@ func (c *IPAddressCapability) Value() string {
 }
 
 // fetchIPAddress fetches the IP address from the API
-func (c *IPAddressCapability) fetchIPAddress() {
+func (c *ServerIPCapability) fetchIPAddress() {
 	// Create a new config to get the API base URL
 	cfg := config.NewConfig()
 
