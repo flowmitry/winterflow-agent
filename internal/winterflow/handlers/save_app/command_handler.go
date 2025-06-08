@@ -276,21 +276,29 @@ func (h *SaveAppHandler) processMap(filePath string, appConfig *models.AppConfig
 		}
 	}
 
-	// Convert to JSON and then to YAML
-	valuesJSON, err := json.Marshal(existingNamedValues)
-	if err != nil {
-		return fmt.Errorf("error marshaling values to JSON: %w", err)
-	}
+	// If the map is empty, create an empty file
+	if len(existingNamedValues) == 0 {
+		// Create empty file
+		if err := os.WriteFile(filePath, []byte{}, 0644); err != nil {
+			return fmt.Errorf("error creating empty %s file: %w", filePath, err)
+		}
+	} else {
+		// Convert to JSON and then to YAML
+		valuesJSON, err := json.Marshal(existingNamedValues)
+		if err != nil {
+			return fmt.Errorf("error marshaling values to JSON: %w", err)
+		}
 
-	// Convert from JSON to YAML
-	valuesYAML, err := yaml.JSONToYAML(valuesJSON)
-	if err != nil {
-		return fmt.Errorf("error converting values to YAML: %w", err)
-	}
+		// Convert from JSON to YAML
+		valuesYAML, err := yaml.JSONToYAML(valuesJSON)
+		if err != nil {
+			return fmt.Errorf("error converting values to YAML: %w", err)
+		}
 
-	// Create file
-	if err := os.WriteFile(filePath, valuesYAML, 0644); err != nil {
-		return fmt.Errorf("error creating %s file: %w", filePath, err)
+		// Create file
+		if err := os.WriteFile(filePath, valuesYAML, 0644); err != nil {
+			return fmt.Errorf("error creating %s file: %w", filePath, err)
+		}
 	}
 
 	return nil
