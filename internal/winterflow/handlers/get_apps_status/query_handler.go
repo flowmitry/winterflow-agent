@@ -106,7 +106,7 @@ func determineAppStatus(containers []map[string]interface{}) pb.AppStatusCode {
 
 		// Map Docker container states to app status codes
 		switch {
-		case state == "active":
+		case state == "active" || state == "running":
 			if strings.Contains(status, "unhealthy") {
 				problematic++
 			} else {

@@ -266,7 +266,7 @@ func (c *Config) GetLogsPath() string {
 }
 
 func (c *Config) GetAnsibleAppsRolesPath() string {
-	return filepath.Join(c.GetAnsibleFolder(), ansibleAppsRolesFolder)
+	return c.buildPath(c.GetAnsibleFolder(), ansibleAppsRolesFolder)
 }
 
 func (c *Config) GetAnsibleAppRoleCurrentVersionFolder() string {

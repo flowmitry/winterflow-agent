@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"winterflow-agent/internal/winterflow/grpc/pb"
 	"winterflow-agent/internal/winterflow/models"
 	"winterflow-agent/pkg/certs"
@@ -79,7 +78,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 		// Create config file
 		roleConfigFile := filepath.Join(versionDir, "config.json")
 
-		// Store config.json in roles/{APP_ID}/config.json
+		// Store config.json in app_roles/{APP_ID}/config.json
 		if err := os.WriteFile(roleConfigFile, cmd.Request.App.Config, 0644); err != nil {
 			log.Error("Error creating role config file: %v", err)
 			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
@@ -229,23 +228,9 @@ func (h *SaveAppHandler) processMap(filePath string, appConfig *models.AppConfig
 			return fmt.Errorf("error reading existing %s file: %w", filePath, err)
 		}
 
-		// Parse YAML manually since it's a simple key-value format
-		lines := strings.Split(string(yamlData), "\n")
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if line == "" || line == "{}" {
-				continue
-			}
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				key := strings.TrimSpace(parts[0])
-				value := strings.TrimSpace(parts[1])
-				// Remove any trailing characters like '%'
-				if len(value) > 0 && value[len(value)-1] == '%' {
-					value = value[:len(value)-1]
-				}
-				existingNamedValues[key] = value
-			}
+		// Parse YAML using pkg/yaml
+		if err := yaml.UnmarshalYAML(yamlData, &existingNamedValues); err != nil {
+			return fmt.Errorf("error parsing existing %s file: %w", filePath, err)
 		}
 
 		// Keep only values that are in the appConfig
@@ -261,6 +246,15 @@ func (h *SaveAppHandler) processMap(filePath string, appConfig *models.AppConfig
 	for id, value := range variableMap {
 		// Only process values that are in the appConfig
 		if configVarIDs[id] {
+			// If the value is "<encrypted>", use the current value from the secrets file
+			if value == "<encrypted>" && decrypt {
+				name, ok := idToName[id]
+				if ok && existingNamedValues[name] != "" {
+					// Skip this value as we'll keep the existing one
+					continue
+				}
+			}
+
 			// Decrypt the value if needed
 			if decrypt && h.PrivateKeyPath != "" {
 				decryptedValue, err := certs.DecryptWithPrivateKey(h.PrivateKeyPath, value)

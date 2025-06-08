@@ -40,7 +40,12 @@
 
   tasks:
     - name: Stop application
-      include_tasks: "./stop_app.yml"
+      include_tasks: "{{ playbook_dir }}/{{ orchestrator }}/tasks/stop_app.yml"
+      vars:
+        app_dir: "{{ _app_output_dir }}"
 
     - name: Deploy application
-      include_tasks: "./deploy_app.yml"
+      include_tasks: "{{ playbook_dir }}/{{ orchestrator }}/tasks/deploy_app.yml"
+      vars:
+        app_id: "{{ app_id }}"
+        app_dir: "{{ _app_output_dir }}"
