@@ -7,15 +7,22 @@
       Required variables must be defined:
       - app_dir: The directory with the app files
 
+- name: Check if app_dir exists
+  stat:
+    path: "{{ app_dir }}"
+  register: app_dir_stat
+
 - name: Check if compose.custom.yml exists
   stat:
     path: "{{ app_dir }}/compose.custom.yml"
   register: custom_compose_file
+  when: app_dir_stat.stat.exists and app_dir_stat.stat.isdir
 
 - name: Check if compose.override.yml exists
   stat:
     path: "{{ app_dir }}/compose.override.yml"
   register: override_compose_file
+  when: app_dir_stat.stat.exists and app_dir_stat.stat.isdir
 
 - name: Run docker compose down with compose.custom.yml and compose.override.yml
   command: docker compose -f compose.custom.yml -f compose.override.yml down --remove-orphans
@@ -23,7 +30,10 @@
     chdir: "{{ app_dir }}"
   register: docker_compose_down_result
   changed_when: docker_compose_down_result.rc == 0
-  when: custom_compose_file.stat.exists and override_compose_file.stat.exists
+  when:
+    - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    - custom_compose_file.stat is defined and custom_compose_file.stat.exists
+    - override_compose_file.stat is defined and override_compose_file.stat.exists
 
 - name: Run docker compose down with compose.custom.yml only
   command: docker compose -f compose.custom.yml down --remove-orphans
@@ -31,7 +41,10 @@
     chdir: "{{ app_dir }}"
   register: docker_compose_down_result
   changed_when: docker_compose_down_result.rc == 0
-  when: custom_compose_file.stat.exists and not override_compose_file.stat.exists
+  when:
+    - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    - custom_compose_file.stat is defined and custom_compose_file.stat.exists
+    - not (override_compose_file.stat is defined and override_compose_file.stat.exists)
 
 - name: Run docker compose down with compose.yml and compose.override.yml
   command: docker compose -f compose.yml -f compose.override.yml down --remove-orphans
@@ -39,7 +52,10 @@
     chdir: "{{ app_dir }}"
   register: docker_compose_down_result
   changed_when: docker_compose_down_result.rc == 0
-  when: not custom_compose_file.stat.exists and override_compose_file.stat.exists
+  when:
+    - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    - not (custom_compose_file.stat is defined and custom_compose_file.stat.exists)
+    - override_compose_file.stat is defined and override_compose_file.stat.exists
 
 - name: Run docker compose down with compose.yml only
   command: docker compose down --remove-orphans
@@ -47,7 +63,10 @@
     chdir: "{{ app_dir }}"
   register: docker_compose_down_result
   changed_when: docker_compose_down_result.rc == 0
-  when: not custom_compose_file.stat.exists and not override_compose_file.stat.exists
+  when:
+    - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    - not (custom_compose_file.stat is defined and custom_compose_file.stat.exists)
+    - not (override_compose_file.stat is defined and override_compose_file.stat.exists)
 
 - name: Get docker compose status
   command: docker compose ps
@@ -55,7 +74,14 @@
     chdir: "{{ app_dir }}"
   register: docker_compose_status
   changed_when: false
+  when: app_dir_stat.stat.exists and app_dir_stat.stat.isdir
 
 - name: Display docker compose status
   debug:
     var: docker_compose_status.stdout_lines
+  when: app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+
+- name: Display message when app_dir does not exist
+  debug:
+    msg: "The directory {{ app_dir }} does not exist. Skipping docker compose operations."
+  when: not app_dir_stat.stat.exists or not app_dir_stat.stat.isdir
