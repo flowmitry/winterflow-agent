@@ -17,6 +17,7 @@ const (
 	CapabilityOSArch = "os_arch"
 	// Agent capabilities
 	CapabilityAgentVersion = "agent_version"
+	CapabilityIPAddress    = "ip"
 )
 
 // Capability represents a system capability that can be detected

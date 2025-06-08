@@ -32,6 +32,7 @@ func NewCapabilityFactory() *CapabilityFactory {
 			capabilities.NewSystemOSArchCapability(),
 			// Agent capabilities
 			capabilities.NewAgentVersionCapability(),
+			capabilities.NewIPAddressCapability(),
 		},
 	}
 }

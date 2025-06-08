@@ -91,8 +91,8 @@ func (c *Client) RequestRegistrationCode(agentID string, csrData string) (*Regis
 	}
 
 	url := fmt.Sprintf("%s/api/v1/agents/request-registration-code", c.baseURL)
-	log.Printf("[DEBUG] Sending registration request to: %s", url)
-	log.Printf("[DEBUG] Request body: %s", string(jsonData))
+	log.Debug("[DEBUG] Sending registration request to: %s", url)
+	log.Debug("[DEBUG] Request body: %s", string(jsonData))
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -113,8 +113,8 @@ func (c *Client) RequestRegistrationCode(agentID string, csrData string) (*Regis
 		return nil, fmt.Errorf("failed to read response body: %v", err)
 	}
 
-	log.Printf("[DEBUG] Response status: %d", resp.StatusCode)
-	log.Printf("[DEBUG] Response body: %s", string(body))
+	log.Debug("[DEBUG] Response status: %d", resp.StatusCode)
+	log.Debug("[DEBUG] Response body: %s", string(body))
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, &APIError{
@@ -143,7 +143,7 @@ func (c *Client) RequestRegistrationCode(agentID string, csrData string) (*Regis
 // GetRegistrationStatus checks the registration status
 func (c *Client) GetRegistrationStatus(agentID string) (*RegistrationStatusResponse, error) {
 	url := fmt.Sprintf("%s/api/v1/agents/get-registration-status?agent_id=%s", c.baseURL, agentID)
-	log.Printf("[DEBUG] Checking registration status at: %s", url)
+	log.Debug("[DEBUG] Checking registration status at: %s", url)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -162,8 +162,8 @@ func (c *Client) GetRegistrationStatus(agentID string) (*RegistrationStatusRespo
 		return nil, fmt.Errorf("failed to read response body: %v", err)
 	}
 
-	log.Printf("[DEBUG] Response status: %d", resp.StatusCode)
-	log.Printf("[DEBUG] Response body: %s", string(body))
+	log.Debug("[DEBUG] Response status: %d", resp.StatusCode)
+	log.Debug("[DEBUG] Response body: %s", string(body))
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, &APIError{
@@ -178,4 +178,39 @@ func (c *Client) GetRegistrationStatus(agentID string) (*RegistrationStatusRespo
 	}
 
 	return &response, nil
+}
+
+// GetIPAddress gets the IP address of the agent
+func (c *Client) GetIPAddress() (string, error) {
+	url := fmt.Sprintf("%s/api/v1/agents/get-ip", c.baseURL)
+	log.Debug("[DEBUG] Getting IP address from: %s", url)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %v", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	log.Debug("[DEBUG] Response status: %d", resp.StatusCode)
+	log.Debug("[DEBUG] Response body: %s", string(body))
+
+	if resp.StatusCode != http.StatusOK {
+		return "", &APIError{
+			StatusCode: resp.StatusCode,
+			Body:       string(body),
+		}
+	}
+
+	return string(body), nil
 }
