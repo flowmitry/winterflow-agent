@@ -24,6 +24,12 @@
   register: override_compose_file
   when: app_dir_stat.stat.exists and app_dir_stat.stat.isdir
 
+- name: Check if compose.yml exists
+  stat:
+    path: "{{ app_dir }}/compose.yml"
+  register: compose_file
+  when: app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+
 - name: Run docker compose down with compose.custom.yml and compose.override.yml
   command: docker compose -f compose.custom.yml -f compose.override.yml down --remove-orphans
   args:
@@ -56,6 +62,7 @@
     - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
     - not (custom_compose_file.stat is defined and custom_compose_file.stat.exists)
     - override_compose_file.stat is defined and override_compose_file.stat.exists
+    - compose_file.stat is defined and compose_file.stat.exists
 
 - name: Run docker compose down with compose.yml only
   command: docker compose down --remove-orphans
@@ -67,6 +74,15 @@
     - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
     - not (custom_compose_file.stat is defined and custom_compose_file.stat.exists)
     - not (override_compose_file.stat is defined and override_compose_file.stat.exists)
+    - compose_file.stat is defined and compose_file.stat.exists
+
+- name: Display message when no compose file exists
+  debug:
+    msg: "No compose file (compose.yml, compose.custom.yml) found in {{ app_dir }}. Skipping docker compose down operation."
+  when:
+    - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    - not (custom_compose_file.stat is defined and custom_compose_file.stat.exists)
+    - not (compose_file.stat is defined and compose_file.stat.exists)
 
 - name: Get docker compose status
   command: docker compose ps
@@ -74,12 +90,25 @@
     chdir: "{{ app_dir }}"
   register: docker_compose_status
   changed_when: false
+  ignore_errors: yes
   when: app_dir_stat.stat.exists and app_dir_stat.stat.isdir
 
 - name: Display docker compose status
   debug:
-    var: docker_compose_status.stdout_lines
-  when: app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    var: docker_compose_status.stdout_lines | default(['No docker compose status available'])
+  when:
+    - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    - docker_compose_status is defined
+    - docker_compose_status.stdout is defined
+
+- name: Display message when docker compose status has an error
+  debug:
+    msg: "Error getting docker compose status: {{ docker_compose_status.stderr | default('Unknown error') }}"
+  when:
+    - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    - docker_compose_status is defined
+    - docker_compose_status.stderr is defined
+    - docker_compose_status.stderr != ''
 
 - name: Display message when app_dir does not exist
   debug:

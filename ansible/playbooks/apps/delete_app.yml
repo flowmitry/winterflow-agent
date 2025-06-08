@@ -19,17 +19,20 @@
         that:
           - app_id is defined
           - apps_path is defined
+          - apps_roles_path is defined
           - orchestrator is defined
           - orchestrator in ['docker_compose']
         fail_msg: >
           Required variables must be defined:
           - app_id: The ID of the application to deploy
           - apps_path: The directory to store the apps files
+          - apps_roles_path: Path to the application's Ansible roles
           - orchestrator: The orchestrator type
           - orchestrator: Must be one of 'docker-compose'
 
     - name: Set calculated variables
       set_fact:
+        _app_role_dir: "{{ apps_roles_path }}/{{ app_id }}"
         _app_output_dir: "{{ apps_path }}/{{ app_id }}"
       run_once: true
 
@@ -44,3 +47,8 @@
       include_tasks: "{{ playbook_dir }}/{{ orchestrator }}/tasks/delete_app.yml"
       vars:
         app_dir: "{{ _app_output_dir }}"
+
+    - name: Delete application role's folder
+      file:
+        path: "{{ _app_role_dir }}"
+        state: absent
