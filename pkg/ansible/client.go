@@ -269,8 +269,8 @@ func commandArgs(ansiblePath string, cmd Command) []string {
 		"-i", "inventory/defaults.yml",
 	}
 
-	if _, err := os.Stat(fmt.Sprintf("%s/inventory/custom.yml", ansiblePath)); err == nil {
-		cmdArgs = append(cmdArgs, "-i", "inventory/custom.yml")
+	if _, err := os.Stat(fmt.Sprintf("%s/inventory/defaults.override.yml", ansiblePath)); err == nil {
+		cmdArgs = append(cmdArgs, "-i", "inventory/defaults.override.yml")
 	}
 
 	for k, v := range cmd.Env {

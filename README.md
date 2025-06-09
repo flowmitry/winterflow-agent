@@ -55,7 +55,8 @@ The following directories and files are part of the WinterFlow Agent's directory
 * `/opt/winterflow/ansible` - This directory holds the main Ansible recipes.
 * `/opt/winterflow/ansible/inventory` - This directory holds the main Ansible inventory.
 * `/opt/winterflow/ansible/inventory/defaults.yml` - The default Ansible inventory file
-* `/opt/winterflow/ansible/inventory/custom.yml` - User-defined Ansible inventory file to override the `defaults.yml`
+* `/opt/winterflow/ansible/inventory/defaults.override.yml` - User-defined Ansible inventory file to override the
+  `defaults.yml`
 * `/opt/winterflow/ansible/playbooks` - This directory holds the main Ansible playbooks.
 * `/opt/winterflow/ansible/roles` - This directory holds the main Ansible roles.
 * `/opt/winterflow/ansible/apps_roles/` - This directory contains roles for applications along with their
