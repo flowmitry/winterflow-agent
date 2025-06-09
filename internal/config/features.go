@@ -2,11 +2,13 @@ package config
 
 const (
 	FeatureUpdateAgent = "update_agent"
+	FeatureEarlyAccess = "early_access"
 )
 
 // DefaultFeatureValues defines the default values for each feature
 var DefaultFeatureValues = map[string]bool{
 	FeatureUpdateAgent: true,
+	FeatureEarlyAccess: false,
 }
 
 // IsFeatureEnabled checks if a feature is enabled in the configuration.
