@@ -13,6 +13,7 @@
 #   sudo ./winterflow-install.sh
 #
 # Source Code: https://github.com/flowmitry/winterflow-agent
+# Website: https://winterflow.io
 
 # Exit on any error
 set -e
@@ -283,12 +284,9 @@ display_next_steps() {
     log "info" "Installation completed successfully!"
     echo ""
     echo "Next steps:"
-    echo "1. Configure your agent by editing ${CONFIG_FILE}"
-    echo "2. Start the agent with: sudo systemctl start winterflow-agent"
-    echo "3. Enable auto-start on boot with: sudo systemctl enable winterflow-agent"
-    echo "4. Check agent status with: sudo systemctl status winterflow-agent"
+    echo "1. Run `${AGENT_BINARY} --register`"
+    echo "2. Visit https://app.winterflow.io to register your agent"
     echo ""
-    echo "For more information, visit: https://docs.winterflow.com"
 }
 
 # Function to create service user and group
