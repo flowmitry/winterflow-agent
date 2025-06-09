@@ -16,8 +16,9 @@ const (
 	CapabilityOS     = "os"
 	CapabilityOSArch = "os_arch"
 	// Agent capabilities
-	CapabilityAgentVersion = "agent_version"
-	CapabilityServerIP     = "server_ip"
+	CapabilityAgentVersion     = "agent_version"
+	CapabilityAgentEarlyAccess = "agent_early_access"
+	CapabilityServerIP         = "server_ip"
 )
 
 // Capability represents a system capability that can be detected
