@@ -158,8 +158,11 @@ create_directories() {
     # Change ownership to service user
     if id "${USER}" &>/dev/null; then
         chown -R ${USER}:${USER} "${INSTALL_DIR}"
+        chmod 755 "${INSTALL_DIR}"
         log "info" "Changed ownership of ${INSTALL_DIR} to ${USER} user"
+        
         chown -R ${USER}:${USER} "${LOGS_DIR}"
+        chmod 755 "${LOGS_DIR}"
         log "info" "Changed ownership of ${LOGS_DIR} to ${USER} user"
     else
         log "warn" "Could not change ownership of directories: ${USER} user does not exist"
@@ -172,8 +175,22 @@ create_config_file() {
         log "info" "Creating empty configuration file..."
         echo "{}" > "${CONFIG_FILE}"
         chmod 600 "${CONFIG_FILE}"
+        
+        # Set ownership to service user
+        if id "${USER}" &>/dev/null; then
+            chown ${USER}:${USER} "${CONFIG_FILE}"
+            log "info" "Changed ownership of ${CONFIG_FILE} to ${USER} user"
+        else
+            log "warn" "Could not change ownership of config file: ${USER} user does not exist"
+        fi
     else
         log "info" "Configuration file already exists"
+        
+        # Ensure existing config file has correct ownership
+        if id "${USER}" &>/dev/null; then
+            chown ${USER}:${USER} "${CONFIG_FILE}"
+            log "info" "Ensured ownership of ${CONFIG_FILE} is set to ${USER} user"
+        fi
     fi
 }
 
@@ -340,6 +357,16 @@ handle_agent_binary() {
         return 1
     fi
 
+    # Set ownership and permissions for the agent binary
+    if id "${USER}" &>/dev/null; then
+        chown ${USER}:${USER} "${AGENT_BINARY}"
+        chmod 755 "${AGENT_BINARY}"
+        log "info" "Set ownership of ${AGENT_BINARY} to ${USER} user"
+    else
+        log "warn" "Could not change ownership of agent binary: ${USER} user does not exist"
+        chmod 755 "${AGENT_BINARY}"
+    fi
+
     log "info" "Agent binary successfully installed"
     return 0
 }
@@ -386,14 +413,77 @@ EOF
     fi
 }
 
-# Function to display next steps
-display_next_steps() {
+# Function to ensure all content in INSTALL_DIR is owned by USER
+ensure_ownership() {
+    log "info" "Ensuring all content in ${INSTALL_DIR} is owned by ${USER} user..."
+    
+    if id "${USER}" &>/dev/null; then
+        # Set ownership recursively for the entire install directory
+        chown -R ${USER}:${USER} "${INSTALL_DIR}"
+        log "info" "Ensured ownership of all content in ${INSTALL_DIR} is set to ${USER} user"
+        
+        # Also ensure logs directory ownership
+        if [ -d "${LOGS_DIR}" ]; then
+            chown -R ${USER}:${USER} "${LOGS_DIR}"
+            log "info" "Ensured ownership of ${LOGS_DIR} is set to ${USER} user"
+        fi
+        
+        # Verify key files have correct ownership
+        log "info" "Ownership verification for key files:"
+        if [ -f "${AGENT_BINARY}" ]; then
+            agent_perms=$(ls -la "${AGENT_BINARY}")
+            log "info" "  Agent binary: ${agent_perms}"
+        fi
+        if [ -f "${CONFIG_FILE}" ]; then
+            config_perms=$(ls -la "${CONFIG_FILE}")
+            log "info" "  Config file: ${config_perms}"
+        fi
+        
+        # Show directory contents ownership
+        log "info" "All files in ${INSTALL_DIR}:"
+        ls -la "${INSTALL_DIR}" | while read -r line; do
+            log "info" "  ${line}"
+        done
+    else
+        log "error" "Cannot set ownership: ${USER} user does not exist!"
+        return 1
+    fi
+}
+
+# Function to run agent registration
+run_agent_registration() {
     log "info" "Installation completed successfully!"
-    echo ""
-    echo "Next steps:"
-    echo "1. Run `${AGENT_BINARY} --register`"
-    echo "2. Visit https://app.winterflow.io to register your agent"
-    echo ""
+    log "info" "Running agent registration as ${USER} user..."
+    
+    # Verify the agent binary exists and is executable
+    if [ ! -f "${AGENT_BINARY}" ]; then
+        log "error" "Agent binary not found at ${AGENT_BINARY}"
+        return 1
+    fi
+    
+    if [ ! -x "${AGENT_BINARY}" ]; then
+        log "error" "Agent binary is not executable"
+        return 1
+    fi
+    
+    # Verify the config file exists
+    if [ ! -f "${CONFIG_FILE}" ]; then
+        log "error" "Config file not found at ${CONFIG_FILE}"
+        return 1
+    fi
+    
+    # Run the registration command as the winterflow user with proper working directory
+    if sudo -u "${USER}" -H --set-home bash -c "cd ${INSTALL_DIR} && ${AGENT_BINARY} --register"; then
+        echo ""
+    else
+        log "warn" "Agent registration failed or was interrupted"
+        echo ""
+        echo "Manual steps:"
+        echo "1. Run: sudo -u ${USER} ${AGENT_BINARY} --register\""
+        echo "2. Visit https://app.winterflow.io to complete agent registration"
+        echo ""
+        return 1
+    fi
 }
 
 # Function to create service user and group
@@ -472,6 +562,14 @@ fi
 # Manage systemd service
 manage_systemd_service "${SERVICE_WAS_RUNNING}"
 
-# Display next steps
-display_next_steps
+# Ensure all content in INSTALL_DIR is owned by USER
+ensure_ownership
+
+# Run agent registration automatically
+if ! run_agent_registration; then
+    log "warn" "Installation completed but registration failed"
+    log "info" "You can manually register the agent later using the instructions above"
+else
+    log "info" "Installation and registration completed successfully!"
+fi
 
