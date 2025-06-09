@@ -18,6 +18,17 @@
 # Exit on any error
 set -e
 
+# Cleanup function
+cleanup() {
+    if [ -n "${TEMP_AGENT_BINARY}" ] && [ -f "${TEMP_AGENT_BINARY}" ]; then
+        log "info" "Cleaning up temporary files..."
+        rm -f "${TEMP_AGENT_BINARY}"
+    fi
+}
+
+# Set trap for cleanup on script exit
+trap cleanup EXIT
+
 #######################
 # Configuration Variables
 #######################
@@ -33,7 +44,7 @@ LOGS_DIR="/var/log/winterflow/"
 GITHUB_API="https://api.github.com/repos/flowmitry/winterflow-agent/releases"
 
 # Required packages
-REQUIRED_PACKAGES="curl ansible"
+REQUIRED_PACKAGES="curl ansible jq"
 
 # Minimum required versions
 MIN_UBUNTU_VERSION=20
@@ -41,6 +52,9 @@ MIN_DEBIAN_VERSION=12
 
 # User settings
 USER="winterflow"
+
+# Temporary file for downloaded binary
+TEMP_AGENT_BINARY=""
 
 #######################
 # Utility Functions
@@ -163,72 +177,138 @@ create_config_file() {
     fi
 }
 
-# Function to handle agent binary download and installation
-handle_agent_binary() {
-    local service_was_running="$1"
-
+# Function to download agent binary to /tmp/
+download_agent_binary() {
     # Get system architecture
     local arch
     arch=$(get_arch)
-    log "info" "Detected architecture: $arch"
+    log "info" "Detected architecture: $arch (from uname -m: $(uname -m))"
 
-    # Create a temporary file for downloading
-    local temp_binary
-    temp_binary=$(mktemp)
+    # Set temporary file path
+    TEMP_AGENT_BINARY="/tmp/winterflow-agent-$(date +%s)"
 
     # Get the latest stable release download URL for the current architecture (ignoring pre-releases)
     log "info" "Fetching latest stable release information..."
     local download_url
-    download_url=$(curl -s "${GITHUB_API}" | \
-                  grep -A 50 '"prerelease": false' | \
-                  grep -o "\"browser_download_url\": \"[^\"]*winterflow-agent-linux-${arch}[^\"]*\"" | \
-                  head -n 1 | \
-                  cut -d '"' -f4)
+    
+    # Try multiple possible binary name patterns
+    local binary_patterns=(
+        "winterflow-agent-linux-${arch}"
+        "winterflow-agent_linux_${arch}"
+        "winterflow-agent-${arch}"
+        "agent-linux-${arch}"
+        "agent_linux_${arch}"
+        "agent-${arch}"
+    )
+    
+    # Get all releases and filter for non-prerelease
+    local releases_json
+    releases_json=$(curl -s "${GITHUB_API}")
+    
+    # Check if we got valid JSON
+    if [ -z "${releases_json}" ]; then
+        log "error" "Failed to fetch release information from GitHub API - empty response"
+        log "info" "Please check your internet connection and try again"
+        return 1
+    fi
+    
+    if ! echo "${releases_json}" | grep -q '"tag_name"'; then
+        log "error" "Invalid response from GitHub API"
+        log "info" "Response received:"
+        echo "${releases_json}" | head -5
+        return 1
+    fi
+    
+    # Try to find a matching binary for each pattern
+    for pattern in "${binary_patterns[@]}"; do
+        log "info" "Searching for binary pattern: ${pattern}"
+        
+        # Use jq if available for more reliable JSON parsing
+        if command -v jq >/dev/null 2>&1; then
+            download_url=$(echo "${releases_json}" | \
+                          jq -r --arg pattern "${pattern}" \
+                          '.[] | select(.prerelease == false) | .assets[] | select(.name | contains($pattern)) | .browser_download_url' | \
+                          head -n 1)
+        else
+            # Fallback to grep method
+            download_url=$(echo "${releases_json}" | \
+                          grep -v '"prerelease": true' | \
+                          grep -o "\"browser_download_url\": \"[^\"]*${pattern}[^\"]*\"" | \
+                          head -n 1 | \
+                          cut -d '"' -f4)
+        fi
+        
+        if [ -n "${download_url}" ] && [ "${download_url}" != "null" ]; then
+            log "info" "Found matching release with pattern: ${pattern}"
+            log "info" "Download URL: ${download_url}"
+            break
+        fi
+    done
 
     if [ -z "${download_url}" ]; then
-        log "error" "Could not find release for winterflow-agent-linux-${arch}"
+        log "error" "Could not find release for any of the expected binary patterns"
+        log "info" "Searched for patterns:"
+        for pattern in "${binary_patterns[@]}"; do
+            echo "  - ${pattern}"
+        done
         log "info" "Available releases:"
-        curl -s "${GITHUB_API}" | \
-            grep -A 50 '"prerelease": false' | \
-            grep -o "\"browser_download_url\": \"[^\"]*\"" | \
-            head -n 10 | \
-            cut -d '"' -f4
-        rm -f "${temp_binary}"
-        if [ "${service_was_running}" = true ]; then
-            log "info" "Restarting Winterflow Agent service..."
-            systemctl start winterflow-agent
+        if command -v jq >/dev/null 2>&1; then
+            echo "${releases_json}" | \
+                jq -r '.[] | select(.prerelease == false) | .assets[].browser_download_url' | \
+                head -n 10
+        else
+            echo "${releases_json}" | \
+                grep -v '"prerelease": true' | \
+                grep -o "\"browser_download_url\": \"[^\"]*\"" | \
+                head -n 10 | \
+                cut -d '"' -f4
         fi
         return 1
     fi
 
-    log "info" "Downloading Winterflow Agent from ${download_url}"
-    if ! curl -L -f -S --progress-bar -o "${temp_binary}" "${download_url}"; then
+    # Verify the download URL is accessible
+    log "info" "Verifying download URL accessibility..."
+    if ! curl -I -f -s "${download_url}" >/dev/null; then
+        log "error" "Download URL is not accessible: ${download_url}"
+        log "info" "Please check your internet connection or try again later"
+        return 1
+    fi
+
+    log "info" "Downloading Winterflow Agent to ${TEMP_AGENT_BINARY}"
+    if ! curl -L -f -S --progress-bar -o "${TEMP_AGENT_BINARY}" "${download_url}"; then
         log "error" "Failed to download the agent binary"
-        rm -f "${temp_binary}"
-        if [ "${service_was_running}" = true ]; then
-            log "info" "Restarting Winterflow Agent service..."
-            systemctl start winterflow-agent
-        fi
+        log "info" "Please check your internet connection or try again later"
+        rm -f "${TEMP_AGENT_BINARY}"
         return 1
     fi
 
-    if [ ! -s "${temp_binary}" ]; then
+    if [ ! -s "${TEMP_AGENT_BINARY}" ]; then
         log "error" "Downloaded file is empty"
-        rm -f "${temp_binary}"
-        if [ "${service_was_running}" = true ]; then
-            log "info" "Restarting Winterflow Agent service..."
-            systemctl start winterflow-agent
-        fi
+        rm -f "${TEMP_AGENT_BINARY}"
         return 1
     fi
 
     # Make the temporary binary executable
-    chmod +x "${temp_binary}"
+    chmod +x "${TEMP_AGENT_BINARY}"
 
     # Verify the binary is executable
-    if ! [ -x "${temp_binary}" ]; then
+    if ! [ -x "${TEMP_AGENT_BINARY}" ]; then
         log "error" "Failed to make the binary executable"
-        rm -f "${temp_binary}"
+        rm -f "${TEMP_AGENT_BINARY}"
+        return 1
+    fi
+
+    log "info" "Agent binary successfully downloaded to ${TEMP_AGENT_BINARY}"
+    return 0
+}
+
+# Function to handle agent binary installation from /tmp/
+handle_agent_binary() {
+    local service_was_running="$1"
+
+    # Check if the temporary binary exists
+    if [ ! -f "${TEMP_AGENT_BINARY}" ]; then
+        log "error" "Temporary agent binary not found at ${TEMP_AGENT_BINARY}"
         if [ "${service_was_running}" = true ]; then
             log "info" "Restarting Winterflow Agent service..."
             systemctl start winterflow-agent
@@ -236,8 +316,29 @@ handle_agent_binary() {
         return 1
     fi
 
+    # Verify the binary is still executable
+    if ! [ -x "${TEMP_AGENT_BINARY}" ]; then
+        log "error" "Temporary agent binary is not executable"
+        rm -f "${TEMP_AGENT_BINARY}"
+        if [ "${service_was_running}" = true ]; then
+            log "info" "Restarting Winterflow Agent service..."
+            systemctl start winterflow-agent
+        fi
+        return 1
+    fi
+
+    log "info" "Installing agent binary from ${TEMP_AGENT_BINARY} to ${AGENT_BINARY}"
+    
     # Move the temporary binary to the final location
-    mv "${temp_binary}" "${AGENT_BINARY}"
+    if ! mv "${TEMP_AGENT_BINARY}" "${AGENT_BINARY}"; then
+        log "error" "Failed to move agent binary to final location"
+        rm -f "${TEMP_AGENT_BINARY}"
+        if [ "${service_was_running}" = true ]; then
+            log "info" "Restarting Winterflow Agent service..."
+            systemctl start winterflow-agent
+        fi
+        return 1
+    fi
 
     log "info" "Agent binary successfully installed"
     return 0
@@ -332,9 +433,16 @@ check_os_version
 log "info" "Updating package repositories..."
 apt-get update
 
-# Install required packages
+# Install required packages (needed for downloading binary)
 log "info" "Installing required packages..."
 apt-get install -y ${REQUIRED_PACKAGES}
+
+# Download agent binary early
+log "info" "Downloading Winterflow Agent binary..."
+if ! download_agent_binary; then
+    log "error" "Failed to download Winterflow Agent binary"
+    exit 1
+fi
 
 # Create service user and group
 create_service_user
@@ -366,3 +474,4 @@ manage_systemd_service "${SERVICE_WAS_RUNNING}"
 
 # Display next steps
 display_next_steps
+
