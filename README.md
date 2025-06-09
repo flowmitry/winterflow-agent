@@ -4,7 +4,7 @@
 
 ## Agent Installation
 
-Run on your server:
+Run on your server as root (use sudo):
 
 ```sh
 curl -fsSL https://get.winterflow.io/agent | sudo bash
