@@ -1,0 +1,15 @@
+---
+- name: Initial configuration
+  hosts: localhost
+  become: false
+  gather_facts: false
+
+  #  roles:
+  #    - role: check_requirements
+
+  tasks:
+    - name: Install required OS utils
+      include_tasks: "{{ playbook_dir }}/system/configuration/install_utils.yml"
+
+    - name: Deploy ingress
+      include_tasks: "{{ playbook_dir }}/apps/deploy_ingress.yml"

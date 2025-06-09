@@ -1,6 +1,6 @@
 # Project-specific files
 requests/
-agent*
+/agent*
 custom/
 ansible/vault_pass.txt
 ansible/version.txt
