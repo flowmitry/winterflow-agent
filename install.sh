@@ -565,6 +565,11 @@ manage_systemd_service "${SERVICE_WAS_RUNNING}"
 # Ensure all content in INSTALL_DIR is owned by USER
 ensure_ownership
 
+# Start the service before registration
+log "info" "Starting Winterflow Agent service..."
+systemctl enable winterflow-agent
+systemctl start winterflow-agent
+
 # Run agent registration automatically
 if ! run_agent_registration; then
     log "warn" "Installation completed but registration failed"
