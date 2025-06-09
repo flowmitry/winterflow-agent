@@ -181,12 +181,18 @@ handle_agent_binary() {
     local download_url
     download_url=$(curl -s "${GITHUB_API}" | \
                   grep -A 50 '"prerelease": false' | \
-                  grep -o "\"browser_download_url\": \"[^\"]*linux-${arch}[^\"]*\"" | \
+                  grep -o "\"browser_download_url\": \"[^\"]*winterflow-agent-linux-${arch}[^\"]*\"" | \
                   head -n 1 | \
                   cut -d '"' -f4)
 
     if [ -z "${download_url}" ]; then
-        log "error" "Could not find release for linux-${arch}"
+        log "error" "Could not find release for winterflow-agent-linux-${arch}"
+        log "info" "Available releases:"
+        curl -s "${GITHUB_API}" | \
+            grep -A 50 '"prerelease": false' | \
+            grep -o "\"browser_download_url\": \"[^\"]*\"" | \
+            head -n 10 | \
+            cut -d '"' -f4
         rm -f "${temp_binary}"
         if [ "${service_was_running}" = true ]; then
             log "info" "Restarting Winterflow Agent service..."
