@@ -48,12 +48,39 @@ func readMemInfo(key string) (string, bool) {
 		if strings.HasPrefix(line, key+":") {
 			parts := strings.Fields(line)
 			if len(parts) >= 2 {
-				// return number without unit
-				if _, err := strconv.ParseUint(parts[1], 10, 64); err == nil {
-					return parts[1], true
+				// Parse the number
+				value, err := strconv.ParseUint(parts[1], 10, 64)
+				if err != nil {
+					return "", false
 				}
+
+				// Convert to bytes based on unit (default is kB)
+				unit := "kB"
+				if len(parts) >= 3 {
+					unit = parts[2]
+				}
+
+				var bytes uint64
+				switch unit {
+				case "kB":
+					bytes = value * 1024
+				case "MB":
+					bytes = value * 1024 * 1024
+				case "GB":
+					bytes = value * 1024 * 1024 * 1024
+				default:
+					bytes = value // If no unit or unrecognized unit, assume it's already in bytes
+				}
+
+				return strconv.FormatUint(bytes, 10), true
 			}
 		}
 	}
+
+	// Check for errors that occurred during scanning
+	if err := scanner.Err(); err != nil {
+		return "", false
+	}
+
 	return "", false
 }
