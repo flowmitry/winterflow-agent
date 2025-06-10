@@ -22,7 +22,7 @@ func NewManager(embeddedFS fs.FS, configPath string) *Manager {
 	}
 
 	return &Manager{
-		embeddedManager: embedded.NewManager(embeddedFS, cfg.GetEmbeddedCertificateFolder(), version.GetVersion(), []string{
+		embeddedManager: embedded.NewManager(embeddedFS, cfg.GetEmbeddedCertificatesFolder(), version.GetVersion(), []string{
 			cfg.GetCACertificateFile(),
 		}),
 	}

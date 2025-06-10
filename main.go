@@ -141,7 +141,7 @@ func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) 
 		return err
 	}
 
-	fsysCerts, err := fs.Sub(certsFS, cfg.GetEmbeddedCertificateFolder())
+	fsysCerts, err := fs.Sub(certsFS, cfg.GetEmbeddedCertificatesFolder())
 	if err != nil {
 		log.Fatalf("Error accessing certificates filesystem: %v", err)
 		return err
