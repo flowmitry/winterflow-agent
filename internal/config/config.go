@@ -57,8 +57,8 @@ const (
 	ansibleAppsRolesFolder               = "apps_roles"
 	ansibleAppsRolesCurrentVersionFolder = "current"
 
-	// agentCertificatesFolder is the default directory path for storing certificates.
-	agentCertificatesFolder = ".certs"
+	// embeddedCertificatesFolder is the default directory path for storing certificates.
+	embeddedCertificatesFolder = ".certs"
 	// agentPrivateKeyFile is the default path for the agent's private key
 	agentPrivateKeyFile = "agent.key"
 	// agentCSRFile is the default path for the Certificate Signing Request
@@ -83,6 +83,8 @@ type Config struct {
 	LogsPath string `json:"logs_path,omitempty"`
 	// Orchestrator specifies the orchestration platform or tool used for managing deployments and configurations.
 	Orchestrator OrchestratorType `json:"orchestrator,omitempty"`
+	// CertificateFolder specifies the directory where certificate files are stored.
+	CertificateFolder string `json:"certificate_folder,omitempty"`
 }
 
 // prepareConfig ensures the configuration is valid by applying defaults and validating features
@@ -99,6 +101,9 @@ func prepareConfig(cfg *Config) {
 	}
 	if cfg.Orchestrator == "" || !isValidOrchestratorType(cfg.Orchestrator) {
 		cfg.Orchestrator = defaultOrchestrator
+	}
+	if cfg.CertificateFolder == "" {
+		cfg.CertificateFolder = embeddedCertificatesFolder
 	}
 
 	// Validate and merge features
@@ -274,7 +279,14 @@ func (c *Config) GetAnsibleAppRoleCurrentVersionFolder() string {
 }
 
 func (c *Config) GetCertificateFolder() string {
-	return agentCertificatesFolder
+	if c.CertificateFolder == "" {
+		return embeddedCertificatesFolder
+	}
+	return c.CertificateFolder
+}
+
+func (c *Config) GetEmbeddedCertificateFolder() string {
+	return embeddedCertificatesFolder
 }
 
 // buildPath constructs a file path from base path and components
@@ -284,19 +296,19 @@ func (c *Config) buildPath(components ...string) string {
 }
 
 func (c *Config) GetCertificatePath() string {
-	return c.buildPath(agentCertificatesFolder, agentCertificateFile)
+	return c.buildPath(c.GetCertificateFolder(), agentCertificateFile)
 }
 
 func (c *Config) GetPrivateKeyPath() string {
-	return c.buildPath(agentCertificatesFolder, agentPrivateKeyFile)
+	return c.buildPath(c.GetCertificateFolder(), agentPrivateKeyFile)
 }
 
 func (c *Config) GetCSRPath() string {
-	return c.buildPath(agentCertificatesFolder, agentCSRFile)
+	return c.buildPath(c.GetCertificateFolder(), agentCSRFile)
 }
 
 func (c *Config) GetCACertificatePath() string {
-	return c.buildPath(agentCertificatesFolder, agentCACertificateFile)
+	return c.buildPath(c.GetCertificateFolder(), agentCACertificateFile)
 }
 
 func (c *Config) GetCACertificateFile() string {
