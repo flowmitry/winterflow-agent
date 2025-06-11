@@ -10,45 +10,30 @@ Run on your server as root (use sudo):
 curl -fsSL https://get.winterflow.io/agent | sudo bash
 ```
 
+It will generate a 6-character code that you need to enter at https://app.winterflow.io.
+
+### Manual Agent Registration
+
+If automatic registration failed during installation, you can manually register:
+
+```sh
+sudo -u winterflow /opt/winterflow/agent --register
+```
+
 ## Service Management
 
 The WinterFlow Agent runs as a systemd service. Here are the commands to manage it:
 
-### Start the service
+### Manager Winterflow agent service
 ```sh
 sudo systemctl start winterflow-agent
-```
-
-### Stop the service
-```sh
 sudo systemctl stop winterflow-agent
-```
-
-### Restart the service
-```sh
 sudo systemctl restart winterflow-agent
-```
-
-### Check service status
-```sh
 sudo systemctl status winterflow-agent
-```
-
-### Enable service to start on boot
-```sh
-sudo systemctl enable winterflow-agent
-```
-
-### Disable service from starting on boot
-```sh
-sudo systemctl disable winterflow-agent
 ```
 
 ### View service logs
 ```sh
-# View recent logs
-sudo journalctl -u winterflow-agent
-
 # Follow logs in real-time
 sudo journalctl -u winterflow-agent -f
 
@@ -60,11 +45,6 @@ sudo journalctl -u winterflow-agent --since "1 hour ago"
 - Standard output: `/var/log/winterflow/winterflow_agent.log`
 - Error output: `/var/log/winterflow/winterflow_agent_error.log`
 
-### Manual Agent Registration
-If automatic registration failed during installation, you can manually register:
-```sh
-sudo -u winterflow /opt/winterflow/agent --register
-```
 
 ## Agent Uninstallation
 
