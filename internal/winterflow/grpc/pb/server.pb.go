@@ -151,6 +151,7 @@ const (
 	AppAction_STOP    AppAction = 0
 	AppAction_START   AppAction = 1
 	AppAction_RESTART AppAction = 2
+	AppAction_UPDATE  AppAction = 3
 )
 
 // Enum value maps for AppAction.
@@ -159,11 +160,13 @@ var (
 		0: "STOP",
 		1: "START",
 		2: "RESTART",
+		3: "UPDATE",
 	}
 	AppAction_value = map[string]int32{
 		"STOP":    0,
 		"START":   1,
 		"RESTART": 2,
+		"UPDATE":  3,
 	}
 )
 
@@ -1932,11 +1935,13 @@ const file_internal_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x10STATUS_CODE_IDLE\x10\x02\x12\x1a\n" +
 	"\x16STATUS_CODE_RESTARTING\x10\x03\x12\x1b\n" +
 	"\x17STATUS_CODE_PROBLEMATIC\x10\x04\x12\x17\n" +
-	"\x13STATUS_CODE_STOPPED\x10\x05*-\n" +
+	"\x13STATUS_CODE_STOPPED\x10\x05*9\n" +
 	"\tAppAction\x12\b\n" +
 	"\x04STOP\x10\x00\x12\t\n" +
 	"\x05START\x10\x01\x12\v\n" +
-	"\aRESTART\x10\x02*/\n" +
+	"\aRESTART\x10\x02\x12\n" +
+	"\n" +
+	"\x06UPDATE\x10\x03*/\n" +
 	"\aAppType\x12\x12\n" +
 	"\x0eDOCKER_COMPOSE\x10\x00\x12\x10\n" +
 	"\fDOCKER_SWARM\x10\x012\x96\x01\n" +

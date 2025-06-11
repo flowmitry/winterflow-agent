@@ -63,6 +63,9 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	case pb.AppAction_RESTART:
 		playbook = "restart_app"
 		result = h.ansible.RestartApp(appID, appVersion)
+	case pb.AppAction_UPDATE:
+		playbook = "update_app"
+		result = h.ansible.UpdateApp(appID)
 	default:
 		return log.Errorf("unsupported action: %s", cmd.Request.Action.String())
 	}
