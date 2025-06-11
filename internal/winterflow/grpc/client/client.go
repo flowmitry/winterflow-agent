@@ -54,6 +54,8 @@ type Client struct {
 	commandBus cqrs.CommandBus
 	queryBus   cqrs.QueryBus
 
+	config *config.Config
+
 	// Certificate paths
 	caCertPath string
 	certPath   string
@@ -161,6 +163,7 @@ func NewClient(config *config.Config, ansible ansible.Repository) (*Client, erro
 		caCertPath:        caCertPath,
 		certPath:          certPath,
 		keyPath:           keyPath,
+		config:            config,
 	}
 
 	if err := client.setupConnection(); err != nil {
@@ -529,9 +532,16 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				AgentId:   agentID,
 			}
 
+			var metrics map[string]string
+			if c.config.IsFeatureEnabled(config.FeatureSendMetricsDisabled) {
+				metrics = make(map[string]string)
+			} else {
+				metrics = metricsProvider()
+			}
+
 			heartbeat := &pb.AgentHeartbeatV1{
 				Base:    baseMsg,
-				Metrics: metricsProvider(),
+				Metrics: metrics,
 			}
 
 			agentMsg := &pb.AgentMessage{
@@ -798,9 +808,16 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						AgentId:   agentID,
 					}
 
+					var metrics map[string]string
+					if sendMetricsDisabled, exists := features["send_metrics_disabled"]; exists && sendMetricsDisabled {
+						metrics = make(map[string]string)
+					} else {
+						metrics = metricsProvider()
+					}
+
 					heartbeat := &pb.AgentHeartbeatV1{
 						Base:    baseMsg,
-						Metrics: metricsProvider(),
+						Metrics: metrics,
 					}
 
 					agentMsg := &pb.AgentMessage{

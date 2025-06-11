@@ -2,6 +2,7 @@ package config
 
 const (
 	FeatureAgentUpdateDisabled = "agent_update_disabled"
+	FeatureSendMetricsDisabled = "send_metrics_disabled"
 	FeatureEarlyAccessEnabled  = "early_access_enabled"
 )
 
@@ -13,6 +14,7 @@ const (
 var DefaultFeatureValues = map[string]bool{
 	FeatureAgentUpdateDisabled: FeatureDefaultValue,
 	FeatureEarlyAccessEnabled:  FeatureDefaultValue,
+	FeatureSendMetricsDisabled: FeatureDefaultValue,
 }
 
 // IsFeatureEnabled checks if a feature is enabled in the configuration.
