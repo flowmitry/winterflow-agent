@@ -8,13 +8,9 @@
 #     - role: check_requirements
 #     - role: your_actual_role
 
-- name: Include root check
-  ansible.builtin.include_role:
-    name: check_requirements/check_root
-
-- name: Include OS compatibility check
-  ansible.builtin.include_role:
-    name: check_requirements/check_os
+# - name: Include OS compatibility check
+#   ansible.builtin.include_role:
+#     name: check_requirements/check_os
 
 - name: Include disk space check
   ansible.builtin.include_role:

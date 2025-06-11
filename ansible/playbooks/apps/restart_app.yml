@@ -4,14 +4,12 @@
   become: false
   gather_facts: true
 
-  #  roles:
-  #    - role: check_requirements
-  #
-  #    - role: docker
-  #      when: orchestrator == 'docker-compose'
-  #
-  #    - role: docker_compose
-  #      when: orchestrator == 'docker-compose'
+  roles:
+    - role: check_requirements
+    - role: docker
+      when: orchestrator == 'docker-compose'
+    - role: docker_compose
+      when: orchestrator == 'docker-compose'
 
   pre_tasks:
     - name: Validate required variables
