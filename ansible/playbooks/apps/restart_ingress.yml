@@ -29,8 +29,9 @@
           - orchestrator: Must be one of 'docker-compose'
 
   tasks:
-    - name: Stop ingress controller
-      include_tasks: "./stop_ingress.yml"
-
-    - name: Deploy ingress controller
-      include_tasks: "./deploy_ingress.yml"
+    - name: Restart ingress controller
+      include_tasks: "{{ playbook_dir }}/{{ orchestrator }}/tasks/restart_ingress.yml"
+      vars:
+        apps_ingress_dir: "{{ apps_ingress_dir }}"
+        apps_ingress_mode: "{{ apps_ingress_mode }}"
+        apps_ingress: "{{ apps_ingress }}"

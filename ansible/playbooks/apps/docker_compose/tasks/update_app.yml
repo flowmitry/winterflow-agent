@@ -30,46 +30,92 @@
   register: compose_file
   when: app_dir_stat.stat.exists and app_dir_stat.stat.isdir
 
-- name: Run docker compose down with compose.custom.yml and compose.override.yml
-  command: docker compose -f compose.custom.yml -f compose.override.yml down --remove-orphans
+- name: Pull latest images with compose.custom.yml and compose.override.yml
+  command: docker compose -f compose.custom.yml -f compose.override.yml pull
   args:
     chdir: "{{ app_dir }}"
-  register: docker_compose_down_result
-  changed_when: docker_compose_down_result.rc == 0
+  register: docker_compose_pull_result
+  changed_when: docker_compose_pull_result.rc == 0
   when:
     - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
     - custom_compose_file.stat is defined and custom_compose_file.stat.exists
     - override_compose_file.stat is defined and override_compose_file.stat.exists
 
-- name: Run docker compose down with compose.custom.yml only
-  command: docker compose -f compose.custom.yml down --remove-orphans
+- name: Pull latest images with compose.custom.yml only
+  command: docker compose -f compose.custom.yml pull
   args:
     chdir: "{{ app_dir }}"
-  register: docker_compose_down_result
-  changed_when: docker_compose_down_result.rc == 0
+  register: docker_compose_pull_result
+  changed_when: docker_compose_pull_result.rc == 0
   when:
     - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
     - custom_compose_file.stat is defined and custom_compose_file.stat.exists
     - not (override_compose_file.stat is defined and override_compose_file.stat.exists)
 
-- name: Run docker compose down with compose.yml and compose.override.yml
-  command: docker compose -f compose.yml -f compose.override.yml down --remove-orphans
+- name: Pull latest images with compose.yml and compose.override.yml
+  command: docker compose -f compose.yml -f compose.override.yml pull
   args:
     chdir: "{{ app_dir }}"
-  register: docker_compose_down_result
-  changed_when: docker_compose_down_result.rc == 0
+  register: docker_compose_pull_result
+  changed_when: docker_compose_pull_result.rc == 0
   when:
     - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
     - not (custom_compose_file.stat is defined and custom_compose_file.stat.exists)
     - override_compose_file.stat is defined and override_compose_file.stat.exists
     - compose_file.stat is defined and compose_file.stat.exists
 
-- name: Run docker compose down with compose.yml only
-  command: docker compose down --remove-orphans
+- name: Pull latest images with compose.yml only
+  command: docker compose pull
   args:
     chdir: "{{ app_dir }}"
-  register: docker_compose_down_result
-  changed_when: docker_compose_down_result.rc == 0
+  register: docker_compose_pull_result
+  changed_when: docker_compose_pull_result.rc == 0
+  when:
+    - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    - not (custom_compose_file.stat is defined and custom_compose_file.stat.exists)
+    - not (override_compose_file.stat is defined and override_compose_file.stat.exists)
+    - compose_file.stat is defined and compose_file.stat.exists
+
+- name: Restart services with compose.custom.yml and compose.override.yml
+  command: docker compose -f compose.custom.yml -f compose.override.yml up -d
+  args:
+    chdir: "{{ app_dir }}"
+  register: docker_compose_up_result
+  changed_when: docker_compose_up_result.rc == 0
+  when:
+    - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    - custom_compose_file.stat is defined and custom_compose_file.stat.exists
+    - override_compose_file.stat is defined and override_compose_file.stat.exists
+
+- name: Restart services with compose.custom.yml only
+  command: docker compose -f compose.custom.yml up -d
+  args:
+    chdir: "{{ app_dir }}"
+  register: docker_compose_up_result
+  changed_when: docker_compose_up_result.rc == 0
+  when:
+    - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    - custom_compose_file.stat is defined and custom_compose_file.stat.exists
+    - not (override_compose_file.stat is defined and override_compose_file.stat.exists)
+
+- name: Restart services with compose.yml and compose.override.yml
+  command: docker compose -f compose.yml -f compose.override.yml up -d
+  args:
+    chdir: "{{ app_dir }}"
+  register: docker_compose_up_result
+  changed_when: docker_compose_up_result.rc == 0
+  when:
+    - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
+    - not (custom_compose_file.stat is defined and custom_compose_file.stat.exists)
+    - override_compose_file.stat is defined and override_compose_file.stat.exists
+    - compose_file.stat is defined and compose_file.stat.exists
+
+- name: Restart services with compose.yml only
+  command: docker compose up -d
+  args:
+    chdir: "{{ app_dir }}"
+  register: docker_compose_up_result
+  changed_when: docker_compose_up_result.rc == 0
   when:
     - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
     - not (custom_compose_file.stat is defined and custom_compose_file.stat.exists)
@@ -78,7 +124,7 @@
 
 - name: Display message when no compose file exists
   debug:
-    msg: "No compose file (compose.yml, compose.custom.yml) found in {{ app_dir }}. Skipping docker compose down operation."
+    msg: "No compose file (compose.yml, compose.custom.yml) found in {{ app_dir }}. Skipping docker compose operations."
   when:
     - app_dir_stat.stat.exists and app_dir_stat.stat.isdir
     - not (custom_compose_file.stat is defined and custom_compose_file.stat.exists)
