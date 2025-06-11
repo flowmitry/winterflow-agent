@@ -3,23 +3,21 @@
   assert:
     that:
       - apps_ingress is defined
-      - apps_ingress_mode is defined
-      - apps_ingress_dir is defined
+      - apps_ingress_path is defined
     fail_msg: >
       Required variables must be defined:
       - apps_ingress: The ingress system to use
-      - apps_ingress_mode: The ingress mode (notls, custom)
-      - apps_ingress_dir: The directory to store the ingress files
+      - apps_ingress_path: The directory to store the ingress files
 
 - name: Create ingress directory
   file:
-    path: "{{ apps_ingress_dir }}"
+    path: "{{ apps_ingress_path }}"
     state: directory
     mode: '0755'
 
 - name: Find all template files
   find:
-    paths: "../templates/ingress/{{ apps_ingress }}"
+    paths: "{{ playbook_dir }}/docker_compose/templates/ingress/{{ apps_ingress }}"
     patterns: "*.j2"
   register: template_files
   when: apps_ingress != "custom"
@@ -27,29 +25,37 @@
 - name: Process all template files
   template:
     src: "{{ item.path }}"
-    dest: "{{ apps_ingress_dir }}/{{ item.path | basename | regex_replace('\\.j2$', '') }}"
+    dest: "{{ apps_ingress_path }}/{{ item.path | basename | regex_replace('\\.j2$', '') }}"
     mode: '0644'
   with_items: "{{ template_files.files }}"
   when: apps_ingress != "custom"
 
+- name: Create external web network
+  command: docker network create web
+  register: network_create_result
+  failed_when:
+    - network_create_result.rc != 0
+    - "'already exists' not in network_create_result.stderr"
+  changed_when: network_create_result.rc == 0
+
 - name: Run docker compose pull
   command: docker compose pull
   args:
-    chdir: "{{ apps_ingress_dir }}"
+    chdir: "{{ apps_ingress_path }}"
   register: docker_compose_up_result
   changed_when: docker_compose_up_result.rc == 0
 
 - name: Run docker compose up
   command: docker compose up -d
   args:
-    chdir: "{{ apps_ingress_dir }}"
+    chdir: "{{ apps_ingress_path }}"
   register: docker_compose_up_result
   changed_when: docker_compose_up_result.rc == 0
 
 - name: Get docker compose status
   command: docker compose ps
   args:
-    chdir: "{{ apps_ingress_dir }}"
+    chdir: "{{ apps_ingress_path }}"
   register: docker_compose_status
   changed_when: false
 

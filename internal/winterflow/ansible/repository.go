@@ -56,10 +56,15 @@ func (r *repository) GetRunner() pkgansible.Client {
 
 func (r *repository) InitialConfiguration() pkgansible.Result {
 	log.Debug("Running initial configuration playbook")
-	cmd := pkgansible.Command{
-		Playbook: "agent_startup.yml",
+	res := r.client.RunSync(pkgansible.Command{
+		Playbook: "ingress/stop_ingress.yml",
+	})
+	if res.Error != nil {
+		log.Warn("Error running ingress/stop_ingress.yml playbook", res.Error)
 	}
-	return r.client.RunSync(cmd)
+	return r.client.RunSync(pkgansible.Command{
+		Playbook: "ingress/deploy_ingress.yml",
+	})
 }
 
 func (r *repository) DeployApp(appID, appVersion string) pkgansible.Result {

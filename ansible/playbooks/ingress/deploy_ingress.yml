@@ -15,20 +15,18 @@
     - name: Validate required variables
       assert:
         that:
-          - apps_path is defined
           - apps_ingress is defined
+          - apps_ingress_path is defined
           - orchestrator is defined
           - orchestrator in ['docker_compose']
         fail_msg: >
           Required variables must be defined:
-          - apps_path: The directory to store the apps files
           - apps_ingress: The ingress system to use
+          - apps_ingress_path: The directory to store the ingress files
           - orchestrator: The orchestrator type
           - orchestrator: Must be one of 'docker-compose'
 
   tasks:
     - name: Deploy ingress controller
       include_tasks: "{{ playbook_dir }}/{{ orchestrator }}/tasks/deploy_ingress.yml"
-      vars:
-        apps_ingress: "{{ apps_ingress }}"
-        apps_ingress_dir: "{{ apps_path }}/ingress"
+

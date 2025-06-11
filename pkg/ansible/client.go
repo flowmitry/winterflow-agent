@@ -76,7 +76,7 @@ func getLogPath(logsDir, id string) string {
 	return filepath.Join(logsDir, fmt.Sprintf("%s.log", id))
 }
 
-func (c *client) updateEnvironment(cmd Command) {
+func (c *client) updateEnvironment(cmd Command) Command {
 	if cmd.Env == nil {
 		cmd.Env = make(map[string]string)
 	}
@@ -86,6 +86,8 @@ func (c *client) updateEnvironment(cmd Command) {
 	if cmd.Env["apps_roles_path"] == "" {
 		cmd.Env["apps_roles_path"] = c.config.AnsibleAppsRolesPath
 	}
+
+	return cmd
 }
 
 // RunSync executes an Ansible command synchronously and returns the result
@@ -109,7 +111,7 @@ func (c *client) RunSync(cmd Command) Result {
 	}
 	defer logFile.Close()
 
-	c.updateEnvironment(cmd)
+	cmd = c.updateEnvironment(cmd)
 	cmdArgs := commandArgs(c.config.AnsiblePath, cmd)
 
 	// Write header to log file
