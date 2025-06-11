@@ -8,7 +8,7 @@ services:
       - --providers.file.directory=/certs
       - --providers.file.watch=true
     ports:
-      - "443:443"
+      - "{{ apps_ingress_https_port }}:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./certs:/certs:ro

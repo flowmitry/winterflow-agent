@@ -9,9 +9,11 @@ services:
       - --certificatesresolvers.le.acme.tlschallenge=true
       - --certificatesresolvers.le.acme.email={{ apps_notifications_email }}
       - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.http.tls.certresolver=le
     ports:
-      - "80:80"
-      - "443:443"
+      - "{{ apps_ingress_http_port }}:80"
+      - "{{ apps_ingress_https_port }}:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt

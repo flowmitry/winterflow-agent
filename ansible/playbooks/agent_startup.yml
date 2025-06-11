@@ -4,12 +4,12 @@
   become: false
   gather_facts: false
 
-  #  roles:
-  #    - role: check_requirements
+  roles:
+    - role: check_requirements
 
   tasks:
     - name: Install required OS utils
       include_tasks: "{{ playbook_dir }}/system/configuration/install_utils.yml"
 
     - name: Deploy ingress
-      include_tasks: "{{ playbook_dir }}/apps/deploy_ingress.yml"
+      include_tasks: "{{ playbook_dir }}/ingress/deploy_ingress.yml"

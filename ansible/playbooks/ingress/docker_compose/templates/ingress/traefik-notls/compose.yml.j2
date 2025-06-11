@@ -6,7 +6,7 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
     ports:
-      - "80:80"
+      - "{{ apps_ingress_http_port }}:80"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
