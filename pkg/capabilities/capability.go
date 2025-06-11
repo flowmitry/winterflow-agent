@@ -9,7 +9,6 @@ const (
 	CapabilityDockerSwarm   = "docker_swarm"
 	// System info capabilities
 	SystemCapabilityCpuCores    = "system_cpu_cores"
-	CapabilitySystemUptime      = "system_uptime"
 	CapabilitySystemMemoryTotal = "system_memory_total"
 	CapabilitySystemDiskTotal   = "system_disk_total"
 	// OS capabilities

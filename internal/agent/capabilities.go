@@ -24,7 +24,6 @@ func NewCapabilityFactory() *CapabilityFactory {
 		capabilities.NewDockerSwarmCapability(),
 		// System info capabilities
 		capabilities.NewSystemCpuCoresCapability(),
-		capabilities.NewSystemUptimeCapability(),
 		capabilities.NewSystemMemoryTotalCapability(),
 		capabilities.NewSystemDiskTotalCapability("/"),
 		// OS capabilities

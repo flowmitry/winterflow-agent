@@ -46,6 +46,7 @@ func NewMetricsFactory(startTime time.Time) *MetricFactory {
 			NewSystemLoadavgMetric(),
 			NewSystemMemoryAvailableMetric(),
 			NewSystemDiskAvailableMetric("/"),
+			NewSystemUptimeMetric(),
 		},
 	}
 }
