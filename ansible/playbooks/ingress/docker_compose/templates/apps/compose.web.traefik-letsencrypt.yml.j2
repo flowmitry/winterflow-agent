@@ -1,9 +1,9 @@
 services:
-  {{ APP_SERVICE_NAME }}:
+  {{ APP_WEB_SERVICE_NAME }}:
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dozzle.rule=Host(`{{ APP_DOMAIN_NAME }}`)"
-      - "traefik.http.services.dozzle.loadbalancer.server.port={{ APP_PORT }}"
+      - "traefik.http.routers.dozzle.rule=Host(`{{ APP_WEB_DOMAIN_NAME }}`)"
+      - "traefik.http.services.dozzle.loadbalancer.server.port={{ APP_WEB_PORT }}"
     networks:
       - web
 
