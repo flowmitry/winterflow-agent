@@ -57,6 +57,12 @@
     groups: docker
     append: yes
 
+- name: Add winterflow user to docker group
+  user:
+    name: winterflow
+    groups: docker
+    append: yes
+
 - name: Configure Docker daemon
   template:
     src: daemon.json.j2

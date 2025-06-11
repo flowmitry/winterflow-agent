@@ -8,7 +8,9 @@
     - role: check_requirements
     - role: docker
       when: orchestrator == 'docker-compose'
+      become: true
     - role: docker_compose
+      become: true
       when: orchestrator == 'docker-compose'
 
   pre_tasks:
