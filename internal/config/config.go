@@ -270,6 +270,10 @@ func (c *Config) GetLogsPath() string {
 	return c.LogsPath
 }
 
+func (c *Config) GetAnsibleLogsPath() string {
+	return filepath.Join(c.GetLogsPath(), ansibleFolder)
+}
+
 func (c *Config) GetAnsibleAppsRolesPath() string {
 	return c.buildPath(c.GetAnsibleFolder(), ansibleAppsRolesFolder)
 }

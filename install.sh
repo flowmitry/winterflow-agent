@@ -391,8 +391,8 @@ RestartSec=10
 User=${USER}
 Group=${USER}
 WorkingDirectory=${INSTALL_DIR}
-StandardOutput=${LOGS_DIR}/winterflow_agent.log
-StandardError=${LOGS_DIR}/winterflow_agent_error.log
+StandardOutput=${LOGS_DIR}/agent.log
+StandardError=${LOGS_DIR}/agent_error.log
 SyslogIdentifier=winterflow-agent
 
 [Install]

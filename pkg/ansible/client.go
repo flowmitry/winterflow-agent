@@ -3,12 +3,15 @@ package ansible
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
+	"time"
 	log "winterflow-agent/pkg/log"
+
+	"github.com/google/uuid"
 )
 
 type Config struct {
@@ -68,12 +71,23 @@ func NewClient(config *Config) Client {
 	}
 }
 
-// getLogPath returns the path to the log file for the given ID
-func getLogPath(logsDir, id string) string {
+// getLogPath returns the path to the log file for the given ID with timestamp and playbook name
+func getLogPath(logsDir, playbook, id string) string {
 	if err := os.MkdirAll(logsDir, 0755); err != nil {
 		log.Printf("Failed to create log directory: %v", err)
 	}
-	return filepath.Join(logsDir, fmt.Sprintf("%s.log", id))
+
+	// Generate timestamp in YYYYMMDDHHIISS format
+	timestamp := time.Now().Format("20060102150405")
+
+	// Clean playbook name to be filesystem-safe
+	cleanPlaybook := strings.ReplaceAll(playbook, "/", "_")
+	cleanPlaybook = strings.ReplaceAll(cleanPlaybook, "\\", "_")
+	cleanPlaybook = strings.ReplaceAll(cleanPlaybook, ".yml", "")
+	cleanPlaybook = strings.ReplaceAll(cleanPlaybook, ".yaml", "")
+
+	filename := fmt.Sprintf("%s_%s_%s.log", timestamp, cleanPlaybook, id)
+	return filepath.Join(logsDir, filename)
 }
 
 func (c *client) updateEnvironment(cmd Command) Command {
@@ -99,7 +113,7 @@ func (c *client) RunSync(cmd Command) Result {
 		id = uuid.New().String()
 	}
 
-	logPath := getLogPath(c.config.AnsibleLogsPath, id)
+	logPath := getLogPath(c.config.AnsibleLogsPath, cmd.Playbook, id)
 	// Create log file
 	logFile, err := os.Create(logPath)
 	if err != nil {
@@ -164,7 +178,7 @@ func (c *client) RunAsync(cmd Command) (string, context.CancelFunc, error) {
 	} else {
 		id = uuid.New().String()
 	}
-	logPath := getLogPath(c.config.AnsibleLogsPath, id)
+	logPath := getLogPath(c.config.AnsibleLogsPath, cmd.Playbook, id)
 
 	// Create log file
 	logFile, err := os.Create(logPath)

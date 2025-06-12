@@ -10,7 +10,7 @@ func NewAnsibleClient(config *config.Config) pkgansible.Client {
 		Orchestrator:                   config.GetOrchestrator(),
 		AnsiblePath:                    config.GetAnsiblePath(),
 		AnsibleAppsRolesPath:           config.GetAnsibleAppsRolesPath(),
-		AnsibleLogsPath:                config.GetLogsPath(),
+		AnsibleLogsPath:                config.GetAnsibleLogsPath(),
 		AnsibleAppsRolesCurrentVersion: config.GetAnsibleAppRoleCurrentVersionFolder(),
 	})
 }
