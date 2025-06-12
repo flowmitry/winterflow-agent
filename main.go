@@ -37,12 +37,12 @@ func main() {
 
 	// Show version if requested
 	if *showVersion {
-		fmt.Printf("WinterFlow.io Agent version: %s (#%d)\n", version.GetVersion(), version.GetNumericVersion())
+		fmt.Printf("\nWinterFlow.io Agent version: %s (#%d)\n", version.GetVersion(), version.GetNumericVersion())
 		os.Exit(0)
 	}
 
 	if *showHelp {
-		fmt.Println("WinterFlow.io Agent")
+		fmt.Println("\nWinterFlow.io Agent")
 		fmt.Println("Usage: winterflow-agent [options]")
 		fmt.Println("Options:")
 		fmt.Println("  --version  Show version information")
@@ -55,13 +55,15 @@ func main() {
 	// Handle registration if requested
 	if *register {
 		if err := api.RegisterAgent(*configPath); err != nil {
-			log.Fatalf("Registration failed: %v", err)
+			fmt.Printf("Registration failed: %v\n", err)
 		}
 		return
 	}
 
+	fmt.Printf("WinterFlow.io Agent initialization...")
 	if err := syncEmbeddedFiles(*configPath, ansibleFS, certsFS); err != nil {
-		log.Fatalf("Error syncing embedded files: %v", err)
+		fmt.Printf("\nFailed to sync embedded files: %v", err)
+		os.Exit(1)
 	}
 
 	// Set up signal handling
@@ -91,11 +93,16 @@ func main() {
 		os.Exit(0)
 	}()
 
-	log.Debug("Loading configuration from %s", *configPath)
+	fmt.Printf("\nLoading configuration from %s", *configPath)
 	cfg, err := config.WaitUntilReady(*configPath)
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		fmt.Printf("\nFailed to load configuration: %v", err)
+		os.Exit(1)
 	}
+
+	// Initialize logger with configured log level
+	log.InitLog(cfg.LogLevel)
+	fmt.Printf("\nWinterFlow.io Agent initializated with Log Level \"%s\"\n", cfg.LogLevel)
 
 	ansibleRepo := ansible.NewRepository(cfg)
 	result := ansibleRepo.InitialConfiguration()
@@ -126,29 +133,29 @@ func main() {
 func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) error {
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		fmt.Printf("\nFailed to load configuration: %v", err)
 		return err
 	}
 
 	fsysAnsible, err := fs.Sub(ansibleFS, cfg.GetAnsibleFolder())
 	if err != nil {
-		log.Fatalf("Error accessing ansible filesystem: %v", err)
+		fmt.Printf("\nError accessing ansible filesystem: %v", err)
 		return err
 	}
 	ansibleManager := ansiblefiles.NewManager(fsysAnsible, configPath)
 	if err := ansibleManager.SyncFiles(); err != nil {
-		log.Fatalf("Error syncing ansible files: %v", err)
+		fmt.Printf("\nError syncing ansible files: %v", err)
 		return err
 	}
 
 	fsysCerts, err := fs.Sub(certsFS, cfg.GetEmbeddedCertificatesFolder())
 	if err != nil {
-		log.Fatalf("Error accessing certificates filesystem: %v", err)
+		fmt.Printf("\nError accessing certificates filesystem: %v", err)
 		return err
 	}
 	certsManager := certs.NewManager(fsysCerts, configPath)
 	if err := certsManager.SyncFiles(); err != nil {
-		log.Fatalf("Error syncing ansible files: %v", err)
+		fmt.Printf("\nError syncing ansible files: %v", err)
 		return err
 	}
 

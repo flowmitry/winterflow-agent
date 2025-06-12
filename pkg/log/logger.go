@@ -4,27 +4,75 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 )
 
 var (
 	logger *slog.Logger
-	once   sync.Once
+	mu     sync.RWMutex
 )
 
-// GetLog returns the singleton slog.Logger instance configured for the application.
-// The logger is initialised once in a thread-safe manner, emitting JSON-formatted logs
-// at the Debug level to stdout. This format is easy to parse both by humans and log
-// aggregation tools while still being structured.
+// ParseLogLevel converts a string log level to a slog.Level.
+// Valid values are "debug", "info", "warn", "error".
+// If an invalid value is provided, it defaults to debug.
+func ParseLogLevel(level string) slog.Level {
+	switch strings.ToLower(level) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		// Default to debug for unknown levels
+		return slog.LevelDebug
+	}
+}
+
+// InitLog initializes or reinitializes the logger with the specified log level.
+// This can be called multiple times to change the log level at runtime.
+// It will override any previously configured logger instance.
+func InitLog(logLevel string) {
+	level := ParseLogLevel(logLevel)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Always create a new logger instance (override existing)
+	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: level,
+	})
+	logger = slog.New(handler)
+}
+
+// GetLog returns the slog.Logger instance configured for the application.
+// The logger emits JSON-formatted logs at the configured level to stdout.
+// This format is easy to parse both by humans and log aggregation tools
+// while still being structured.
+// If the logger hasn't been initialized yet, it defaults to info level.
 func GetLog() *slog.Logger {
-	once.Do(func() {
-		// Create a JSON handler that writes to stdout. Adjust options here if you
-		// need to lower the default log level or change the output destination.
+	mu.RLock()
+	if logger != nil {
+		defer mu.RUnlock()
+		return logger
+	}
+	mu.RUnlock()
+
+	// Logger not initialized, create default one
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if logger == nil {
 		handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelDebug,
+			Level: slog.LevelInfo,
 		})
 		logger = slog.New(handler)
-	})
+	}
+
 	return logger
 }
 

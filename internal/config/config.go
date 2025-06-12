@@ -81,6 +81,8 @@ type Config struct {
 	BasePath string `json:"base_path,omitempty"`
 	// LogsPath specifies the directory where log files are stored.
 	LogsPath string `json:"logs_path,omitempty"`
+	// LogLevel specifies the minimum log level to output (debug, info, warn, error).
+	LogLevel string `json:"log_level,omitempty"`
 	// Orchestrator specifies the orchestration platform or tool used for managing deployments and configurations.
 	Orchestrator OrchestratorType `json:"orchestrator,omitempty"`
 	// CertificatesFolder specifies the directory where certificate files are stored.
@@ -98,6 +100,9 @@ func prepareConfig(cfg *Config) {
 	}
 	if cfg.LogsPath == "" {
 		cfg.LogsPath = defaultLogsPath
+	}
+	if cfg.LogLevel == "" {
+		cfg.LogLevel = "info"
 	}
 	if cfg.Orchestrator == "" || !isValidOrchestratorType(cfg.Orchestrator) {
 		cfg.Orchestrator = defaultOrchestrator
@@ -183,6 +188,7 @@ func LoadConfig(configPath string) (*Config, error) {
 
 // WaitUntilReady WaitUntilCompleted waits for the configuration file to exist and have valid content
 func WaitUntilReady(configPath string) (*Config, error) {
+	fmt.Printf("\nWaiting for valid configuration file with registered status at %s...", configPath)
 	for {
 		if _, err := os.Stat(configPath); err == nil {
 			// Try to read and validate the config
@@ -198,7 +204,6 @@ func WaitUntilReady(configPath string) (*Config, error) {
 				}
 			}
 		}
-		log.Printf("Waiting for valid configuration file with registered status at %s...", configPath)
 		time.Sleep(5 * time.Second)
 	}
 }

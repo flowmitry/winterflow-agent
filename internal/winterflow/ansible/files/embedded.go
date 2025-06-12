@@ -34,6 +34,5 @@ func NewManager(embeddedFS fs.FS, configPath string) *Manager {
 
 // SyncFiles ensures the ansible directory is up to date with the embedded files
 func (m *Manager) SyncFiles() error {
-	log.Printf("Syncing ansible files")
 	return m.embeddedManager.SyncFiles()
 }

@@ -3,10 +3,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"time"
-	log "winterflow-agent/pkg/log"
-
 	"github.com/google/uuid"
+	"time"
 
 	"winterflow-agent/internal/config"
 	"winterflow-agent/pkg/certs"
@@ -25,7 +23,7 @@ func RegisterAgent(configPath string) error {
 	// Load config to get server URL
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
-		return log.Errorf("failed to load configuration: %v", err)
+		return fmt.Errorf("failed to load configuration: %v", err)
 	}
 
 	// Check if agent is already registered
@@ -40,21 +38,21 @@ func RegisterAgent(configPath string) error {
 	var existingAgentID string
 	if cfg.AgentID != "" {
 		existingAgentID = cfg.AgentID
-		log.Printf("[DEBUG] Using existing agent_id: %s", existingAgentID)
+		fmt.Printf("Using existing agent_id: %s", existingAgentID)
 	}
 
 	// Generate agent private key
-	log.Printf("[DEBUG] Generating agent private key at: %s", cfg.GetPrivateKeyPath())
+	fmt.Printf("Generating agent private key at: %s", cfg.GetPrivateKeyPath())
 	if err := certs.GeneratePrivateKey(cfg.GetPrivateKeyPath()); err != nil {
-		return log.Errorf("failed to generate agent private key: %v", err)
+		return fmt.Errorf("failed to generate agent private key: %v", err)
 	}
 
 	// Create CSR
-	log.Printf("[DEBUG] Creating CSR at: %s", cfg.GetCSRPath())
+	fmt.Printf("Creating CSR at: %s", cfg.GetCSRPath())
 	certificateID := uuid.New().String()
 	csrData, err := certs.CreateCSR(certificateID, cfg.GetPrivateKeyPath(), cfg.GetCSRPath())
 	if err != nil {
-		return log.Errorf("failed to create CSR: %v", err)
+		return fmt.Errorf("failed to create CSR: %v", err)
 	}
 
 	// Request registration code and submit CSR
@@ -66,14 +64,14 @@ func RegisterAgent(configPath string) error {
 				// Parse the structured error for 400 responses
 				var regErr RegistrationError
 				if err := json.Unmarshal([]byte(apiErr.Body), &regErr); err == nil {
-					return log.Errorf("registration failed: %s", regErr.Data.Error)
+					return fmt.Errorf("registration failed: %s", regErr.Data.Error)
 				}
 			}
 			// For other status codes, show a generic error
-			return log.Errorf("server error: HTTP %d - please try again later", apiErr.StatusCode)
+			return fmt.Errorf("server error: HTTP %d - please try again later", apiErr.StatusCode)
 		}
 		// For non-API errors (network issues, etc)
-		return log.Errorf("connection error: %v", err)
+		return fmt.Errorf("connection error: %v", err)
 	}
 
 	// Save agent_id to config immediately if it's new
@@ -82,15 +80,15 @@ func RegisterAgent(configPath string) error {
 		// Set agent status to pending during registration process
 		cfg.AgentStatus = config.AgentStatusPending
 		if err := config.SaveConfig(cfg, configPath); err != nil {
-			log.Warn("[WARN] Failed to save agent_id to config: %v", err)
+			fmt.Printf("Failed to save agent_id to config: %v", err)
 		} else {
-			log.Printf("[DEBUG] Saved new agent_id and set status to pending in config: %s", resp.Data.AgentID)
+			fmt.Printf("Saved new agent_id and set status to pending in config: %s", resp.Data.AgentID)
 		}
 	}
 
-	log.Printf("[DEBUG] Saving certificate at: %s", cfg.GetCertificatePath())
+	fmt.Printf("Saving certificate at: %s", cfg.GetCertificatePath())
 	if err := certs.SaveCertificate(resp.Data.CertificateData, cfg.GetCertificatePath()); err != nil {
-		return log.Errorf("failed to save certificate: %v", err)
+		return fmt.Errorf("failed to save certificate: %v", err)
 	}
 
 	// Format the code with a dash
@@ -131,7 +129,7 @@ func RegisterAgent(configPath string) error {
 					// Reset agent status to unknown before restarting registration
 					cfg.AgentStatus = config.AgentStatusUnknown
 					if err := config.SaveConfig(cfg, configPath); err != nil {
-						log.Warn("[WARN] Failed to reset agent status to unknown: %v", err)
+						fmt.Printf("Failed to reset agent status to unknown: %v", err)
 					}
 
 					// For 400 errors, start a new registration
@@ -140,10 +138,10 @@ func RegisterAgent(configPath string) error {
 					return RegisterAgent(configPath)
 				}
 				// For other status codes, show a generic error
-				return log.Errorf("server error: HTTP %d - please try again later", apiErr.StatusCode)
+				return fmt.Errorf("server error: HTTP %d - please try again later", apiErr.StatusCode)
 			}
 			// For non-API errors
-			return log.Errorf("connection error: %v", err)
+			return fmt.Errorf("connection error: %v", err)
 		}
 
 		switch statusResp.Data.Status {
@@ -151,9 +149,9 @@ func RegisterAgent(configPath string) error {
 			// Update agent status to registered
 			cfg.AgentStatus = config.AgentStatusRegistered
 			if err := config.SaveConfig(cfg, configPath); err != nil {
-				log.Warn("[WARN] Failed to update agent status to registered: %v", err)
+				fmt.Printf("Failed to update agent status to registered: %v", err)
 			} else {
-				log.Printf("[DEBUG] Updated agent status to registered")
+				fmt.Printf("Updated agent status to registered")
 			}
 
 			fmt.Println("\n=== Registration Successful ===")
@@ -166,7 +164,7 @@ func RegisterAgent(configPath string) error {
 			// Reset agent status to unknown before restarting registration
 			cfg.AgentStatus = config.AgentStatusUnknown
 			if err := config.SaveConfig(cfg, configPath); err != nil {
-				log.Warn("[WARN] Failed to reset agent status to unknown: %v", err)
+				fmt.Printf("Failed to reset agent status to unknown: %v", err)
 			}
 
 			fmt.Println("\nRegistration code has expired or is invalid.")
