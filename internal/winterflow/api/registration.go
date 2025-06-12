@@ -3,9 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"time"
 	log "winterflow-agent/pkg/log"
+
+	"github.com/google/uuid"
 
 	"winterflow-agent/internal/config"
 	"winterflow-agent/pkg/certs"
@@ -25,6 +26,12 @@ func RegisterAgent(configPath string) error {
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		return log.Errorf("failed to load configuration: %v", err)
+	}
+
+	// Check if agent is already registered
+	if cfg.AgentStatus == config.AgentStatusRegistered {
+		fmt.Println("\n=== Agent Already Registered ===")
+		return nil
 	}
 
 	client := NewClient(cfg.GetAPIBaseURL())
