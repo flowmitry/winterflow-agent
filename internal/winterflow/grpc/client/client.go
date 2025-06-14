@@ -552,6 +552,10 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 
 			if err := stream.Send(agentMsg); err != nil {
 				log.Error("Failed to send initial heartbeat", "error", err)
+				if status.Code(err) == codes.Unavailable || err == io.EOF {
+					log.Warn("Connection unavailable or stream closed, recreating stream")
+					continue outerLoop
+				}
 				if err := c.reconnect(); err != nil {
 					log.Warn("Failed to reconnect, will retry", "error", err)
 
@@ -830,7 +834,8 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						log.Error("Error sending heartbeat", "error", err)
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
-							return
+							ticker.Stop()
+							continue outerLoop
 						}
 						continue
 					}
@@ -847,7 +852,8 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						log.Error("Error sending app response", "error", err)
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
-							return
+							ticker.Stop()
+							continue outerLoop
 						}
 						continue
 					}
@@ -864,7 +870,8 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						log.Error("Error sending save app response", "error", err)
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
-							return
+							ticker.Stop()
+							continue outerLoop
 						}
 						continue
 					}
@@ -881,7 +888,8 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						log.Error("Error sending delete app response", "error", err)
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
-							return
+							ticker.Stop()
+							continue outerLoop
 						}
 						continue
 					}
@@ -898,7 +906,8 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						log.Error("Error sending control app response", "error", err)
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
-							return
+							ticker.Stop()
+							continue outerLoop
 						}
 						continue
 					}
@@ -915,7 +924,8 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						log.Error("Error sending get apps status response", "error", err)
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
-							return
+							ticker.Stop()
+							continue outerLoop
 						}
 						continue
 					}
