@@ -16,11 +16,12 @@ import (
 	"winterflow-agent/pkg/certs"
 	"winterflow-agent/pkg/cqrs"
 
+	"winterflow-agent/pkg/backoff"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/status"
-	"winterflow-agent/pkg/backoff"
 )
 
 const (
@@ -60,6 +61,9 @@ type Client struct {
 	caCertPath string
 	certPath   string
 	keyPath    string
+
+	// Reconnect mutex
+	reconnectMu sync.Mutex
 }
 
 // setupConnection creates a new gRPC connection and client
@@ -68,6 +72,8 @@ func (c *Client) setupConnection() error {
 
 	// Add timeout option
 	opts = append(opts, grpc.WithTimeout(c.connectionTimeout))
+	// Ensure dial blocks so the timeout is respected
+	opts = append(opts, grpc.WithBlock())
 
 	// Always use TLS and fail if certificates don't exist
 	if c.certPath == "" || c.keyPath == "" {
@@ -155,7 +161,7 @@ func NewClient(config *config.Config, ansible ansible.Repository) (*Client, erro
 		serverAddress:     serverAddress,
 		connectionTimeout: DefaultConnectionTimeout,
 		streamCleanup:     make(chan struct{}),
-		isRegistered:      true,
+		isRegistered:      false,
 		regMutex:          sync.RWMutex{},
 		backoffStrategy:   backoff.New(DefaultReconnectInterval, DefaultMaximumReconnectInterval),
 		commandBus:        commandBus,
@@ -243,11 +249,6 @@ func (c *Client) waitForConnectionReady() error {
 		switch state {
 		case connectivity.Ready:
 			log.Info("Connection is ready", "attempts", attemptCount, "totalTime", time.Since(startTime))
-			// Reset the backoff sequence because the connection has been
-			// successfully re-established. This prevents the next transient
-			// failure from starting with an unnecessarily long delay and keeps
-			// the reconnection behaviour predictable and responsive.
-			c.backoffStrategy.Reset()
 			return nil
 
 		case connectivity.Shutdown:
@@ -981,6 +982,15 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 
 // reconnect attempts to reconnect to the server
 func (c *Client) reconnect() error {
+	c.reconnectMu.Lock()
+	defer c.reconnectMu.Unlock()
+
+	// If another goroutine already re-established the connection while we were waiting
+	// for the lock, simply return without doing any work.
+	if err := c.waitForReady(); err == nil {
+		return nil
+	}
+
 	log.Info("Attempting to reconnect", "serverAddress", c.serverAddress)
 	startTime := time.Now()
 
