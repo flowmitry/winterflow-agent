@@ -12,8 +12,8 @@ type Repository interface {
 	// GetRunner returns an Ansible client for running playbooks
 	GetRunner() pkgansible.Client
 
-	// InitialConfiguration runs the initial configuration playbook
-	InitialConfiguration() pkgansible.Result
+	// DeployIngress runs the initial configuration playbook
+	DeployIngress()
 
 	// DeployApp deploys an application with the specified ID and version
 	DeployApp(appID, appVersion string) pkgansible.Result
@@ -38,6 +38,7 @@ type Repository interface {
 type repository struct {
 	client pkgansible.Client
 	mu     sync.RWMutex
+	config *config.Config
 }
 
 // NewRepository creates a new Ansible repository
@@ -45,6 +46,7 @@ func NewRepository(config *config.Config) *repository {
 	client := NewAnsibleClient(config)
 	return &repository{
 		client: client,
+		config: config,
 	}
 }
 
@@ -54,17 +56,25 @@ func (r *repository) GetRunner() pkgansible.Client {
 	return r.client
 }
 
-func (r *repository) InitialConfiguration() pkgansible.Result {
-	log.Debug("Running initial configuration playbook")
-	res := r.client.RunSync(pkgansible.Command{
-		Playbook: "ingress/stop_ingress.yml",
-	})
-	if res.Error != nil {
-		log.Warn("Error running ingress/stop_ingress.yml playbook", res.Error)
+func (r *repository) DeployIngress() {
+	log.Debug("Running ingress configuration playbook")
+	if r.config.IsFeatureEnabled(config.FeatureIngressDisabled) {
+		log.Info("Initial configuration skipped as ingress disabled")
+	} else {
+		res := r.client.RunSync(pkgansible.Command{
+			Playbook: "ingress/stop_ingress.yml",
+		})
+		if res.Error != nil {
+			log.Warn("Error running ingress/stop_ingress.yml playbook", res.Error)
+		}
+
+		res = r.client.RunSync(pkgansible.Command{
+			Playbook: "ingress/deploy_ingress.yml",
+		})
+		if res.Error != nil {
+			log.Error("Error running ingress/deploy_ingress.yml playbook", res.Error)
+		}
 	}
-	return r.client.RunSync(pkgansible.Command{
-		Playbook: "ingress/deploy_ingress.yml",
-	})
 }
 
 func (r *repository) DeployApp(appID, appVersion string) pkgansible.Result {

@@ -105,12 +105,7 @@ func main() {
 	fmt.Printf("\nWinterFlow.io Agent initializated with Log Level \"%s\"\n", cfg.LogLevel)
 
 	ansibleRepo := ansible.NewRepository(cfg)
-	result := ansibleRepo.InitialConfiguration()
-	if result.Error != nil {
-		log.Warn(fmt.Sprintf("Initial configuration playbook failed: %v, log: %s", result.Error, result.LogPath))
-	} else {
-		log.Info(fmt.Sprintf("Initial configuration playbook completed successfully. Logs: %s", result.LogPath))
-	}
+	ansibleRepo.DeployIngress()
 
 	// Create and initialize agent
 	log.Debug("Creating agent")

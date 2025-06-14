@@ -4,6 +4,7 @@ const (
 	FeatureAgentUpdateDisabled = "agent_update_disabled"
 	FeatureSendMetricsDisabled = "send_metrics_disabled"
 	FeatureEarlyAccessEnabled  = "early_access_enabled"
+	FeatureIngressDisabled     = "ingress_disabled"
 )
 
 const (
@@ -15,6 +16,7 @@ var DefaultFeatureValues = map[string]bool{
 	FeatureAgentUpdateDisabled: FeatureDefaultValue,
 	FeatureEarlyAccessEnabled:  FeatureDefaultValue,
 	FeatureSendMetricsDisabled: FeatureDefaultValue,
+	FeatureIngressDisabled:     FeatureDefaultValue,
 }
 
 // IsFeatureEnabled checks if a feature is enabled in the configuration.
