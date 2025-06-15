@@ -1,13 +1,23 @@
 ---
-- name: Include Docker role
-  import_role:
-    name: docker
+- name: Check for Docker Compose (plugin)
+  command: docker compose version
+  register: docker_compose_check
+  changed_when: false
+  failed_when: false
+
+- name: Check for Docker Compose (standalone)
+  command: docker-compose version
+  register: docker_compose_standalone_check
+  changed_when: false
+  failed_when: false
+  when: docker_compose_check.rc != 0
 
 - name: Verify Docker Compose installation
-  command: docker compose version
-  register: docker_compose_verify
-  changed_when: false
-  failed_when: docker_compose_verify.rc != 0
+  fail:
+    msg: "Docker Compose is not available. Neither 'docker compose' nor 'docker-compose' commands work."
+  when: 
+    - docker_compose_check.rc != 0
+    - (docker_compose_standalone_check is not defined or docker_compose_standalone_check.rc != 0)
 
 - name: Configure system settings for Docker Compose
   sysctl:
@@ -15,6 +25,16 @@
     value: "{{ item.value }}"
     state: present
     sysctl_file: /etc/sysctl.d/99-docker-compose.conf
+    reload: yes
   with_items:
     - { name: 'net.ipv4.ip_forward', value: '1' }
     - { name: 'vm.max_map_count', value: '262144' }
+  become: true
+  ignore_errors: true
+  register: sysctl_result
+
+- name: Display sysctl configuration results
+  debug:
+    msg: "Sysctl configuration: {{ item.item.name }} = {{ item.item.value }} ({{ 'SUCCESS' if not item.failed else 'FAILED: ' + item.msg }})"
+  with_items: "{{ sysctl_result.results }}"
+  when: sysctl_result is defined
