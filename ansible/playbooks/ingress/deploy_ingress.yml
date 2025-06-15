@@ -7,11 +7,11 @@
   roles:
     - role: check_requirements
     - role: docker
-      when: orchestrator == 'docker-compose'
+      when: orchestrator == 'docker_compose'
       become: true
     - role: docker_compose
       become: true
-      when: orchestrator == 'docker-compose'
+      when: orchestrator == 'docker_compose'
 
   pre_tasks:
     - name: Validate required variables
@@ -26,9 +26,8 @@
           - apps_ingress: The ingress system to use
           - apps_ingress_path: The directory to store the ingress files
           - orchestrator: The orchestrator type
-          - orchestrator: Must be one of 'docker-compose'
+          - orchestrator: Must be one of 'docker_compose'
 
   tasks:
     - name: Deploy ingress controller
       include_tasks: "{{ playbook_dir }}/{{ orchestrator }}/tasks/deploy_ingress.yml"
-
