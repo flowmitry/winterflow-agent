@@ -48,6 +48,6 @@ install-tools:
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
 
 generate-certs:
-	openssl genrsa -out agent.key 2048
+	openssl genrsa -out agent.key 4096
 	openssl req -new -key agent.key -out agent.csr
 	# openssl req -x509 -new -nodes -key .certs/agent.key -sha256 -days 36500 -out .certs/agent.crt
