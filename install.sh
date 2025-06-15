@@ -46,9 +46,9 @@ GITHUB_API="https://api.github.com/repos/flowmitry/winterflow-agent/releases"
 # Required packages
 REQUIRED_PACKAGES="curl ansible jq"
 
-# Minimum required versions
-MIN_UBUNTU_VERSION=20
-MIN_DEBIAN_VERSION=12
+# Supported OS families and distributions
+SUPPORTED_OS_FAMILIES=("debian")
+SUPPORTED_OS_DISTRIBUTIONS=("debian:8" "ubuntu:16")
 
 # User settings
 USER="winterflow"
@@ -93,28 +93,80 @@ check_root() {
     fi
 }
 
+# Function to check if OS family is supported
+is_family_supported() {
+    local family="$1"
+    for supported_family in "${SUPPORTED_OS_FAMILIES[@]}"; do
+        if [ "$family" = "$supported_family" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Function to check if specific distribution is supported
+is_distribution_supported() {
+    local distro="$1"
+    local version="$2"
+    
+    for supported_distro in "${SUPPORTED_OS_DISTRIBUTIONS[@]}"; do
+        local distro_name="${supported_distro%:*}"
+        local min_version="${supported_distro#*:}"
+        
+        if [ "$distro" = "$distro_name" ]; then
+            # Extract major version number
+            local major_version=$(echo "$version" | awk -F. '{print $1}')
+            if [ "$major_version" -ge "$min_version" ]; then
+                return 0
+            fi
+        fi
+    done
+    return 1
+}
+
 # Function to check OS version
 check_os_version() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        if [ "$ID" = "ubuntu" ]; then
-            version=$(echo "$VERSION_ID" | awk -F. '{print $1}')
-            if [ "$version" -lt $MIN_UBUNTU_VERSION ]; then
-                log "error" "This script requires Ubuntu 20.04 or newer"
-                exit 1
-            fi
-            log "info" "Detected Ubuntu $VERSION_ID"
-        elif [ "$ID" = "debian" ]; then
-            version=$(echo "$VERSION_ID" | awk -F. '{print $1}')
-            if [ "$version" -lt $MIN_DEBIAN_VERSION ]; then
-                log "error" "This script requires Debian 12 or newer"
-                exit 1
-            fi
-            log "info" "Detected Debian $VERSION_ID"
+        
+        local os_family=""
+        local os_distro="$ID"
+        local os_version="$VERSION_ID"
+        
+        # Determine OS family from ID_LIKE or ID
+        if [ -n "$ID_LIKE" ]; then
+            os_family="$ID_LIKE"
         else
-            log "error" "This script requires Ubuntu 20.04+ or Debian 12+"
-            exit 1
+            os_family="$ID"
         fi
+        
+        log "info" "Detected OS: $os_distro $os_version (family: $os_family)"
+        
+        # Step 1: Check if OS family is supported
+        if is_family_supported "$os_family"; then
+            log "info" "OS family '$os_family' is supported"
+            return 0
+        fi
+        
+        # Step 2: If family not supported, check specific distribution
+        if is_distribution_supported "$os_distro" "$os_version"; then
+            log "info" "Distribution '$os_distro $os_version' is supported"
+            return 0
+        fi
+        
+        # Step 3: Neither family nor distribution supported - fail
+        log "error" "Unsupported OS: $os_distro $os_version (family: $os_family)"
+        log "info" "Supported OS families:"
+        for family in "${SUPPORTED_OS_FAMILIES[@]}"; do
+            log "info" "  - $family"
+        done
+        log "info" "Supported distributions:"
+        for distro in "${SUPPORTED_OS_DISTRIBUTIONS[@]}"; do
+            local distro_name="${distro%:*}"
+            local min_version="${distro#*:}"
+            log "info" "  - $distro_name $min_version+"
+        done
+        exit 1
     else
         log "error" "Cannot determine OS version"
         exit 1
