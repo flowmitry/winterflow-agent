@@ -31,11 +31,11 @@
       fail:
         msg: >
           Required components for traefik-letsencrypt are not available:
-          - apps_notifications_email environment variable must be set
+          - notifications_email environment variable must be set
           Please ensure all required components are installed and configured.
       when:
         - ingress_type == 'traefik-letsencrypt'
-        - not (lookup('env', 'apps_notifications_email') is defined and lookup('env', 'apps_notifications_email') != '')
+        - not (lookup('env', 'notifications_email') is defined and lookup('env', 'notifications_email') != '')
 
     - name: Validate custom ingress configuration
       fail:

@@ -7,7 +7,7 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --certificatesresolvers.le.acme.tlschallenge=true
-      - --certificatesresolvers.le.acme.email={{ apps_notifications_email }}
+      - --certificatesresolvers.le.acme.email={{ notifications_email }}
       - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
       - --entrypoints.websecure.http.tls=true
       - --entrypoints.websecure.http.tls.certresolver=le

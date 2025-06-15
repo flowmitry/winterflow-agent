@@ -4,14 +4,19 @@ all:
     # Variables
     timezone: UTC
     ssh_login_type: "password"
-    ansible_user: "winterflow"
-
-    # Apps Server
-    apps_notifications_email: ""
+    
+    # Variables come from the Agent and override the defaults
+    orchestrator: "docker_compose"
     ingress_type: "traefik-notls"
+    notifications_email: ""
+    apps_status_output_path: "/tmp/winterflow/status"
+
+    # Parameters for the Agent
+    # Change these variables only if you know what you are doing
+    ansible_user: "winterflow"
+    apps_path: "/opt/winterflow/apps"
     ingress_path: "/opt/winterflow/apps/ingress"
     ingress_http_port: 80
     ingress_https_port: 443
-    apps_path: "/opt/winterflow/apps"
-    apps_status_output_path: "/tmp/winterflow/status"
+    
 
