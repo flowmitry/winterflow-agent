@@ -9,12 +9,12 @@
 #     - role: your_actual_role
 #
 # Variables:
-#   ingress_type: The selected ingress controller type
+#   ingress_type: The selected ingress controller type (can be empty)
 #   supported_ingress: List of supported ingress controllers
 
-- name: Ensure ingress_type is defined
+- name: Ensure ingress_type is defined (can be empty)
   fail:
-    msg: "ingress_type variable is not defined. Please specify the ingress controller type."
+    msg: "ingress_type variable is not defined. Please specify the ingress controller type or leave empty if not using ingress."
   when: ingress_type is not defined
 
 - name: Validate ingress controller selection
@@ -23,7 +23,10 @@
       Selected ingress controller '{{ ingress_type }}' is not supported.
       Supported controllers: {{ supported_ingress | list | join(', ') }}
       Please select one of the supported ingress controllers or configure a custom one.
-  when: ingress_type not in (supported_ingress | list)
+  when: 
+    - ingress_type is defined
+    - ingress_type | length > 0
+    - ingress_type not in (supported_ingress | list)
 
 - name: Check for required ingress controller components
   block:
@@ -34,6 +37,7 @@
           - notifications_email environment variable must be set
           Please ensure all required components are installed and configured.
       when:
+        - ingress_type is defined
         - ingress_type == 'traefik-letsencrypt'
         - not (lookup('env', 'notifications_email') is defined and lookup('env', 'notifications_email') != '')
 
@@ -42,11 +46,23 @@
         msg: >
           Custom ingress controller requires additional configuration.
           Please ensure you have configured all necessary components for your custom ingress setup.
-      when: ingress_type == 'custom'
+      when: 
+        - ingress_type is defined
+        - ingress_type == 'custom'
 
     - name: Log ingress controller validation success
       debug:
         msg: "Successfully validated ingress controller configuration for {{ ingress_type }}"
+      when: 
+        - ingress_type is defined
+        - ingress_type | length > 0
+
+    - name: Log no ingress controller configured
+      debug:
+        msg: "No ingress controller configured (ingress_type is empty)"
+      when: 
+        - ingress_type is defined
+        - ingress_type | length == 0
   rescue:
     - name: Handle validation errors
       fail:
