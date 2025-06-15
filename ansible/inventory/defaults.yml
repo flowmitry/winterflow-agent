@@ -4,6 +4,7 @@ all:
     # Variables
     timezone: UTC
     ssh_login_type: "password"
+    ansible_user: "winterflow"
 
     # Apps Server
     apps_notifications_email: ""
