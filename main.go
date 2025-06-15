@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 	"winterflow-agent/internal/winterflow/grpc/certs"
@@ -26,6 +27,12 @@ var ansibleFS embed.FS
 
 //go:embed .certs/ca.crt
 var certsFS embed.FS
+
+// Global variables to manage agent lifecycle
+var (
+	currentAgent *agent.Agent
+	agentMutex   sync.Mutex
+)
 
 func main() {
 	// Parse command line flags
@@ -93,8 +100,22 @@ func main() {
 		os.Exit(0)
 	}()
 
-	fmt.Printf("\nLoading configuration from %s", *configPath)
-	cfg, err := config.WaitUntilReady(*configPath)
+	// Start the agent with the given configuration
+	startAgent(ctx, cancel, *configPath)
+
+	// Wait for context cancellation
+	<-ctx.Done()
+	log.Printf("Context canceled, shutting down agent...")
+
+	// Close the current agent if it exists
+	stopCurrentAgent()
+}
+
+// startAgent initializes and starts the agent with the given configuration
+func startAgent(ctx context.Context, cancel context.CancelFunc, configPath string) {
+	// Load configuration
+	fmt.Printf("\nLoading configuration from %s", configPath)
+	cfg, err := config.WaitUntilReady(configPath)
 	if err != nil {
 		fmt.Printf("\nFailed to load configuration: %v", err)
 		os.Exit(1)
@@ -102,8 +123,9 @@ func main() {
 
 	// Initialize logger with configured log level
 	log.InitLog(cfg.LogLevel)
-	fmt.Printf("\nWinterFlow.io Agent initializated with Log Level \"%s\"\n", cfg.LogLevel)
+	fmt.Printf("\nWinterFlow.io Agent initialized with Log Level \"%s\"\n", cfg.LogLevel)
 
+	// Create ansible repository
 	ansibleRepo := ansible.NewRepository(cfg)
 	ansibleRepo.DeployIngress()
 
@@ -113,16 +135,49 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
 	}
-	defer a.Close()
+
+	// Store the agent in the global variable
+	agentMutex.Lock()
+	if currentAgent != nil {
+		currentAgent.Close()
+	}
+	currentAgent = a
+	agentMutex.Unlock()
 
 	// Run the agent
 	if err := a.Run(ctx); err != nil {
 		log.Fatalf("Agent failed: %v", err)
 	}
 
-	// Wait for context cancellation
-	<-ctx.Done()
-	log.Printf("Context canceled, shutting down agent...")
+	// Set up configuration file watcher
+	watcher := config.NewConfigWatcher(configPath, func(newConfig *config.Config) {
+		log.Info("Configuration changed, restarting agent")
+
+		// Create a new context for the new agent
+		newCtx, newCancel := context.WithCancel(context.Background())
+
+		// Stop the current agent
+		cancel()
+
+		// Start a new agent with the new configuration
+		go startAgent(newCtx, newCancel, configPath)
+	})
+
+	if err := watcher.Start(ctx); err != nil {
+		log.Errorf("Failed to start config watcher: %v", err)
+	}
+}
+
+// stopCurrentAgent safely stops the current agent if it exists
+func stopCurrentAgent() {
+	agentMutex.Lock()
+	defer agentMutex.Unlock()
+
+	if currentAgent != nil {
+		log.Info("Closing current agent")
+		currentAgent.Close()
+		currentAgent = nil
+	}
 }
 
 func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) error {
