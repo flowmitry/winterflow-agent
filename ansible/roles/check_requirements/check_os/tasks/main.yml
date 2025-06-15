@@ -30,8 +30,8 @@
       }}
 
 - name: Check if system is supported
-  fail:
+  debug:
     msg: >
-      This system is not supported. Current system: {{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_os_family }} family).
-      {{ supported_os_description }}
+      WARNING: This system may not be fully supported. Current system: {{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_os_family }} family).
+      Proceeding with caution - some features may not work as expected.
   when: not (os_family_supported or (os_distribution_supported and os_version_supported)) 
