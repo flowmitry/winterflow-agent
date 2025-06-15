@@ -2,4 +2,5 @@
 - name: restart docker
   service:
     name: docker
-    state: restarted 
+    state: restarted
+  when: ansible_os_family == "Debian" 

@@ -22,6 +22,7 @@
         name: openssh-server
         state: present
         update_cache: yes
+      when: ansible_os_family == "Debian"
 
     - name: Backup sshd_config
       copy:
@@ -59,7 +60,7 @@
       notify: restart ssh
 
     - name: Set strong password policies
-      when: ssh_login_type == 'password'
+      when: ssh_login_type == 'password' and ansible_os_family == "Debian"
       lineinfile:
         path: /etc/security/pwquality.conf
         regexp: "{{ item.regexp }}"
@@ -94,4 +95,5 @@
     - name: restart ssh
       service:
         name: ssh
-        state: restarted 
+        state: restarted
+      when: ansible_os_family == "Debian" 

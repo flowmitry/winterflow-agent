@@ -28,6 +28,7 @@
       locale_gen:
         name: "{{ system_locale }}"
         state: present
+      when: ansible_os_family == "Debian"
 
     - name: Set system locale
       command: update-locale LANG={{ system_locale }} LC_ALL={{ system_locale }}

@@ -1,84 +1,99 @@
 ---
-- name: Install required system packages
-  apt:
-    name:
-      - apt-transport-https
-      - ca-certificates
-      - curl
-      - software-properties-common
-      - python3-pip
-      - virtualenv
-      - python3-setuptools
-      - gnupg
-    state: present
-    update_cache: true
+- name: Configure Docker (Debian family)
+  when: ansible_os_family == "Debian"
+  block:
+    - name: Install required system packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+          - gnupg
+        state: present
+        update_cache: true
 
-- name: Add Docker GPG apt Key
-  apt_key:
-    url: https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg
-    state: present
+    - name: Add Docker GPG apt Key
+      apt_key:
+        url: https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg
+        state: present
 
-- name: Add Docker Repository
-  apt_repository:
-    repo: deb https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable
-    state: present
-    update_cache: true
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable
+        state: present
+        update_cache: true
 
-- name: Install Docker packages for multi-node setup
-  apt:
-    name:
-      - docker-ce={{ docker_version }}*
-      - docker-ce-cli={{ docker_version }}*
-      - containerd.io
-      - docker-compose-plugin
-    state: present
-    update_cache: true
-  when: groups['swarm_workers'] is defined and groups['swarm_workers'] | length > 0
+    - name: Install Docker packages for multi-node setup
+      apt:
+        name:
+          - docker-ce={{ docker_version }}*
+          - docker-ce-cli={{ docker_version }}*
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      when: groups['swarm_workers'] is defined and groups['swarm_workers'] | length > 0
 
-- name: Install Docker packages for single-node setup
-  apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-compose-plugin
-    state: latest
-    update_cache: true
-  when: not (groups['swarm_workers'] is defined and groups['swarm_workers'] | length > 0)
+    - name: Install Docker packages for single-node setup
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: latest
+        update_cache: true
+      when: not (groups['swarm_workers'] is defined and groups['swarm_workers'] | length > 0)
 
-- name: Create docker group
-  group:
-    name: docker
-    state: present
+    - name: Create docker group
+      group:
+        name: docker
+        state: present
 
-- name: Add user to docker group
-  user:
-    name: "{{ ansible_user }}"
-    groups: docker
-    append: yes
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
 
-- name: Configure Docker daemon
-  template:
-    src: daemon.json.j2
-    dest: /etc/docker/daemon.json
-    mode: '0644'
-  notify: restart docker
+    - name: Configure Docker daemon
+      template:
+        src: daemon.json.j2
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+      notify: restart docker
 
-- name: Start Docker service
-  service:
-    name: docker
-    state: started
-    enabled: yes
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
 
-- name: Configure system settings for Docker
-  sysctl:
-    name: "{{ item.name }}"
-    value: "{{ item.value }}"
-    state: present
-    sysctl_file: /etc/sysctl.d/99-docker.conf
-  with_items:
-    - { name: 'net.ipv4.ip_forward', value: '1' }
-    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
-    - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
-    - { name: 'vm.max_map_count', value: '262144' }
-  when: groups['swarm_workers'] is defined and groups['swarm_workers'] | length > 0 
+    - name: Configure system settings for Docker
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        sysctl_file: /etc/sysctl.d/99-docker.conf
+      with_items:
+        - { name: 'net.ipv4.ip_forward', value: '1' }
+        - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
+        - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
+        - { name: 'vm.max_map_count', value: '262144' }
+      when: groups['swarm_workers'] is defined and groups['swarm_workers'] | length > 0 
+
+- name: Unsupported OS family warning
+  when: ansible_os_family != "Debian"
+  block:
+    - name: Display unsupported OS warning
+      debug:
+        msg: |
+          WARNING: Docker role is not supported on {{ ansible_os_family }} systems.
+          This role is designed for Debian-based systems only (Ubuntu, Debian, etc.).
+          Current system: {{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_os_family }} family)
+          Skipping Docker installation tasks.
+

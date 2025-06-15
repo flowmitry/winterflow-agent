@@ -15,10 +15,12 @@
       ufw:
         state: disabled
       ignore_errors: true
+      when: ansible_os_family == "Debian"
 
     - name: Wait for UFW to be disabled
       wait_for:
         timeout: 5
+      when: ansible_os_family == "Debian"
       
     - name: Remove UFW package
       apt:
@@ -26,6 +28,7 @@
         state: absent
         purge: yes
         autoremove: yes
+      when: ansible_os_family == "Debian"
       
     - name: Remove UFW configuration files
       file:
@@ -35,4 +38,5 @@
         - /etc/ufw
         - /lib/ufw
         - /etc/default/ufw
-      ignore_errors: true 
+      ignore_errors: true
+      when: ansible_os_family == "Debian" 

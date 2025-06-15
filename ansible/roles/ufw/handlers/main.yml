@@ -3,4 +3,5 @@
   service:
     name: ufw
     state: restarted
-  become: true 
+  become: true
+  when: ansible_os_family == "Debian" 

@@ -1,0 +1,84 @@
+---
+description: 
+globs: ansible/**
+alwaysApply: false
+---
+# Ansible Best Practices and Patterns
+
+## OS Family Conditional Logic
+All Debian-specific tasks must include proper OS family conditions to ensure compatibility:
+
+### Required Pattern for Debian-Specific Tasks
+```yaml
+when: ansible_os_family == "Debian"
+```
+
+### Tasks that require Debian conditions:
+- All `apt` module usage
+- All `apt_key` and `apt_repository` operations
+- UFW firewall operations
+- Debian-specific configuration file modifications
+- Service management for Debian-specific services
+
+## Block Organization
+Use Ansible blocks to organize related tasks and reduce repetition:
+
+### Debian Block Template
+```yaml
+- name: Configure [Service Name] (Debian family)
+  when: ansible_os_family == "Debian"
+  block:
+    - name: Task 1
+      # Debian-specific task
+    - name: Task 2
+      # Another Debian-specific task
+```
+
+### Warning Block Template
+```yaml
+- name: Unsupported OS family warning
+  when: ansible_os_family != "Debian"
+  block:
+    - name: Display unsupported OS warning
+      debug:
+        msg: |
+          WARNING: [Service] role is not supported on {{ ansible_os_family }} systems.
+          This role is designed for Debian-based systems only (Ubuntu, Debian, etc.).
+          Current system: {{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_os_family }} family)
+          Skipping [service] tasks.
+```
+
+## Handler Patterns
+All handlers for Debian-specific services should include OS family conditions:
+
+```yaml
+- name: restart service
+  service:
+    name: service_name
+    state: restarted
+  when: ansible_os_family == "Debian"
+```
+
+## Role Structure Standards
+Each role should follow this structure:
+1. **tasks/main.yml** - Main task file with block organization
+2. **handlers/main.yml** - Service handlers with OS conditions
+3. **defaults/main.yml** - Default variables
+4. **templates/** - Jinja2 templates when needed
+
+## Playbook Organization
+- System playbooks go in [ansible/playbooks/system/](mdc:ansible/playbooks/system)
+- Use descriptive names and include usage comments
+- Always include the [check_requirements](mdc:ansible/roles/check_requirements) role
+- Organize by function: configuration, security, management
+
+## Variable Naming
+- Use descriptive variable names
+- Prefix role-specific variables with role name
+- Use boolean variables for feature toggles (e.g., `reboot_if_needed`)
+
+## Error Handling
+- Use `ignore_errors: true` sparingly and only when appropriate
+- Include meaningful error messages
+- Use `failed_when` for custom failure conditions
+- Always validate prerequisites before running tasks
