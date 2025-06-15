@@ -12,8 +12,8 @@ services:
       - --entrypoints.websecure.http.tls=true
       - --entrypoints.websecure.http.tls.certresolver=le
     ports:
-      - "{{ apps_ingress_http_port }}:80"
-      - "{{ apps_ingress_https_port }}:443"
+      - "{{ ingress_http_port }}:80"
+      - "{{ ingress_https_port }}:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt

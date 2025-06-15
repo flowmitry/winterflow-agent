@@ -8,10 +8,10 @@ all:
 
     # Apps Server
     apps_notifications_email: ""
-    apps_ingress: "traefik-notls"
-    apps_ingress_path: "/opt/winterflow/apps/ingress"
-    apps_ingress_http_port: 80
-    apps_ingress_https_port: 443
+    ingress_type: "traefik-notls"
+    ingress_path: "/opt/winterflow/apps/ingress"
+    ingress_http_port: 80
+    ingress_https_port: 443
     apps_path: "/opt/winterflow/apps"
     apps_status_output_path: "/tmp/winterflow/status"
 

@@ -2,22 +2,22 @@
 - name: Validate required variables
   assert:
     that:
-      - apps_ingress_path is defined
+      - ingress_path is defined
     fail_msg: >
       Required variables must be defined:
-      - apps_ingress_path: The directory to store the ingress files
+      - ingress_path: The directory to store the ingress files
 
 - name: Restart docker compose services
   command: docker compose restart
   args:
-    chdir: "{{ apps_ingress_path }}"
+    chdir: "{{ ingress_path }}"
   register: docker_compose_restart_result
   changed_when: docker_compose_restart_result.rc == 0
 
 - name: Get docker compose status
   command: docker compose ps
   args:
-    chdir: "{{ apps_ingress_path }}"
+    chdir: "{{ ingress_path }}"
   register: docker_compose_status
   changed_when: false
 

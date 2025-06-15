@@ -2,25 +2,25 @@
 - name: Validate required variables
   assert:
     that:
-      - apps_ingress_path is defined
+      - ingress_path is defined
     fail_msg: >
       Required variables must be defined:
-      - apps_ingress_path: The directory to store the ingress files
+      - ingress_path: The directory to store the ingress files
 
 - name: Check if ingress directory exists
   stat:
-    path: "{{ apps_ingress_path }}"
+    path: "{{ ingress_path }}"
   register: ingress_dir_stat
 
 - name: Skip tasks if ingress directory does not exist
   debug:
-    msg: "Skipping ingress stop tasks - directory {{ apps_ingress_path }} does not exist"
+    msg: "Skipping ingress stop tasks - directory {{ ingress_path }} does not exist"
   when: not ingress_dir_stat.stat.exists
 
 - name: Run docker compose down
   command: docker compose down --remove-orphans
   args:
-    chdir: "{{ apps_ingress_path }}"
+    chdir: "{{ ingress_path }}"
   register: docker_compose_down_result
   changed_when: docker_compose_down_result.rc == 0
   when: ingress_dir_stat.stat.exists
@@ -28,7 +28,7 @@
 - name: Get docker compose status
   command: docker compose ps
   args:
-    chdir: "{{ apps_ingress_path }}"
+    chdir: "{{ ingress_path }}"
   register: docker_compose_status
   changed_when: false
   when: ingress_dir_stat.stat.exists
