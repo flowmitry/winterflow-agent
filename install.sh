@@ -12,6 +12,12 @@
 #   chmod +x winterflow-install.sh
 #   sudo ./winterflow-install.sh
 #
+# Force Install (skip OS validation):
+#   sudo ./winterflow-install.sh --force
+#
+# Options:
+#   --force    Skip OS validation (use with caution)
+#
 # Source Code: https://github.com/flowmitry/winterflow-agent
 # Website: https://winterflow.io
 
@@ -30,6 +36,24 @@ cleanup() {
 trap cleanup EXIT
 
 #######################
+# Parse Command Line Arguments
+#######################
+
+# Parse command line arguments
+FORCE_INSTALL=false
+for arg in "$@"; do
+    case $arg in
+        --force)
+            FORCE_INSTALL=true
+            shift
+            ;;
+        *)
+            # Unknown option
+            ;;
+    esac
+done
+
+#######################
 # Configuration Variables
 #######################
 
@@ -46,9 +70,12 @@ GITHUB_API="https://api.github.com/repos/flowmitry/winterflow-agent/releases"
 # Required packages
 REQUIRED_PACKAGES="curl ansible jq"
 
-# Supported OS families and distributions
-SUPPORTED_OS_FAMILIES=("debian")
-SUPPORTED_OS_DISTRIBUTIONS=("debian:8" "ubuntu:16")
+# Supported OS distributions with flexible patterns:
+# "ubuntu" - all ubuntu versions
+# "ubuntu=22" - ubuntu 22
+# "ubuntu>22" - ubuntu 22 (inclusive) and higher
+# "ubuntu<22" - ubuntu 22 (inclusive) and lower
+SUPPORTED_OS_DISTRIBUTIONS=("debian>12" "ubuntu>22")
 
 # User settings
 USER="winterflow"
@@ -93,32 +120,64 @@ check_root() {
     fi
 }
 
-# Function to check if OS family is supported
-is_family_supported() {
-    local family="$1"
-    for supported_family in "${SUPPORTED_OS_FAMILIES[@]}"; do
-        if [ "$family" = "$supported_family" ]; then
-            return 0
-        fi
-    done
-    return 1
-}
+
 
 # Function to check if specific distribution is supported
 is_distribution_supported() {
     local distro="$1"
     local version="$2"
     
-    for supported_distro in "${SUPPORTED_OS_DISTRIBUTIONS[@]}"; do
-        local distro_name="${supported_distro%:*}"
-        local min_version="${supported_distro#*:}"
+    # Extract major version number
+    local major_version=$(echo "$version" | awk -F. '{print $1}')
+    
+    for supported_pattern in "${SUPPORTED_OS_DISTRIBUTIONS[@]}"; do
+        # Check if pattern matches distro name without version constraint
+        if [ "$supported_pattern" = "$distro" ]; then
+            # Pattern like "debian" - all versions supported
+            return 0
+        fi
         
-        if [ "$distro" = "$distro_name" ]; then
-            # Extract major version number
-            local major_version=$(echo "$version" | awk -F. '{print $1}')
-            if [ "$major_version" -ge "$min_version" ]; then
-                return 0
-            fi
+        # Extract distro name and constraint from pattern
+        local pattern_distro=""
+        local constraint=""
+        local constraint_version=""
+        
+        if [[ "$supported_pattern" == *"="* ]]; then
+            pattern_distro="${supported_pattern%=*}"
+            constraint="="
+            constraint_version="${supported_pattern#*=}"
+        elif [[ "$supported_pattern" == *">"* ]]; then
+            pattern_distro="${supported_pattern%>*}"
+            constraint=">"
+            constraint_version="${supported_pattern#*>}"
+        elif [[ "$supported_pattern" == *"<"* ]]; then
+            pattern_distro="${supported_pattern%<*}"
+            constraint="<"
+            constraint_version="${supported_pattern#*<}"
+        else
+            # No constraint, skip this pattern
+            continue
+        fi
+        
+        # Check if distro matches
+        if [ "$distro" = "$pattern_distro" ]; then
+            case "$constraint" in
+                "=")
+                    if [ "$major_version" -eq "$constraint_version" ]; then
+                        return 0
+                    fi
+                    ;;
+                ">")
+                    if [ "$major_version" -ge "$constraint_version" ]; then
+                        return 0
+                    fi
+                    ;;
+                "<")
+                    if [ "$major_version" -le "$constraint_version" ]; then
+                        return 0
+                    fi
+                    ;;
+            esac
         fi
     done
     return 1
@@ -129,43 +188,31 @@ check_os_version() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         
-        local os_family=""
         local os_distro="$ID"
         local os_version="$VERSION_ID"
         
-        # Determine OS family from ID_LIKE or ID
-        if [ -n "$ID_LIKE" ]; then
-            os_family="$ID_LIKE"
-        else
-            os_family="$ID"
-        fi
+        log "info" "Detected OS: $os_distro $os_version"
         
-        log "info" "Detected OS: $os_distro $os_version (family: $os_family)"
-        
-        # Step 1: Check if OS family is supported
-        if is_family_supported "$os_family"; then
-            log "info" "OS family '$os_family' is supported"
+        # Skip OS validation if --force flag is used
+        if [ "$FORCE_INSTALL" = true ]; then
+            log "warn" "OS validation skipped due to --force flag"
+            log "warn" "Installation may not work correctly on unsupported systems"
             return 0
         fi
         
-        # Step 2: If family not supported, check specific distribution
+        # Check if distribution is supported
         if is_distribution_supported "$os_distro" "$os_version"; then
             log "info" "Distribution '$os_distro $os_version' is supported"
             return 0
         fi
         
-        # Step 3: Neither family nor distribution supported - fail
-        log "error" "Unsupported OS: $os_distro $os_version (family: $os_family)"
-        log "info" "Supported OS families:"
-        for family in "${SUPPORTED_OS_FAMILIES[@]}"; do
-            log "info" "  - $family"
-        done
+        # Distribution not supported - fail
+        log "error" "Unsupported OS: $os_distro $os_version"
         log "info" "Supported distributions:"
-        for distro in "${SUPPORTED_OS_DISTRIBUTIONS[@]}"; do
-            local distro_name="${distro%:*}"
-            local min_version="${distro#*:}"
-            log "info" "  - $distro_name $min_version+"
+        for pattern in "${SUPPORTED_OS_DISTRIBUTIONS[@]}"; do
+            log "info" "  - $pattern"
         done
+        log "info" "Use --force to bypass OS validation (not recommended)"
         exit 1
     else
         log "error" "Cannot determine OS version"
