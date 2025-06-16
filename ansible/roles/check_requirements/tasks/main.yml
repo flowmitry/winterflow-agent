@@ -9,7 +9,7 @@
 #     - role: your_actual_role
 
 - name: Include OS compatibility check
-  ansible.builtin.include_tasks: check_os/tasks/main.yml
+  include_tasks: check_os/tasks/main.yml
 
 - name: Include ingress controller check
-  ansible.builtin.include_tasks: check_ingress/tasks/main.yml
+  include_tasks: check_ingress/tasks/main.yml
