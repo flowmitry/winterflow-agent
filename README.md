@@ -2,6 +2,13 @@
 
 @TODO
 
+## Requirements
+
+- Recommended OS: Ubuntu 22+ and Debian 12+.
+- System Resources: at least 1 vCPU and 2GB RAM for Docker.
+
+Note: Only the Debian OS family is supported.
+
 ## Agent Installation
 
 Run on your server as root (use sudo):
@@ -10,7 +17,15 @@ Run on your server as root (use sudo):
 curl -fsSL https://get.winterflow.io/agent | sudo bash
 ```
 
-It will generate a 6-character code that you need to enter at https://app.winterflow.io.
+The installation process includes the setup of necessary dependencies(`curl ansible jq`) and the generation of a unique
+6-character code. This code is required for your server's registration
+at [https://app.winterflow.io](https://app.winterflow.io).
+
+## Manual Agent installation
+
+You can manually download and execute the [./install.sh](./install.sh) script with `sudo`.
+
+Use `sudo source install.sh --force` if you use Debian-based distributive outside of recommended.
 
 ### Manual Agent Registration
 
