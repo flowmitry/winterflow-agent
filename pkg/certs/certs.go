@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	log "winterflow-agent/pkg/log"
@@ -155,20 +156,26 @@ func LoadTLSCredentials(caCertPath, certPath, keyPath, host string) (credentials
 	// Load your CA certificate
 	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
-		log.Fatalf("failed to read CA certificate: %v", err)
+		return nil, fmt.Errorf("failed to read CA certificate: %v", err)
 	}
 	caCertPool := x509.NewCertPool()
-	ok := caCertPool.AppendCertsFromPEM(caCert)
-	if !ok {
-		log.Fatalf("failed to append CA certificate")
+	if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
+		return nil, fmt.Errorf("failed to append CA certificate to pool")
 	}
 
 	// Create TLS configuration
 	tlsConfig := &tls.Config{
-		ServerName:   host,
 		RootCAs:      caCertPool,
 		Certificates: []tls.Certificate{cert},
 		MinVersion:   tls.VersionTLS12,
+		// gRPC uses HTTP/2 under the hood, make sure we advertise it via ALPN
+		NextProtos: []string{"h2"},
+	}
+
+	// Set ServerName only if host looks like a hostname (not an IP address). This avoids issues
+	// when connecting via raw IPs that are not present in the certificateʼs SANs.
+	if parsedIP := net.ParseIP(host); parsedIP == nil && host != "" {
+		tlsConfig.ServerName = host
 	}
 
 	// Create and return credentials

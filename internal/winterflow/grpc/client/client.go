@@ -70,11 +70,6 @@ type Client struct {
 func (c *Client) setupConnection() error {
 	var opts []grpc.DialOption
 
-	// Add timeout option
-	opts = append(opts, grpc.WithTimeout(c.connectionTimeout))
-	// Ensure dial blocks so the timeout is respected
-	opts = append(opts, grpc.WithBlock())
-
 	// Always use TLS and fail if certificates don't exist
 	if c.certPath == "" || c.keyPath == "" {
 		return log.Errorf("TLS is required but certificate paths are not configured")
@@ -99,10 +94,7 @@ func (c *Client) setupConnection() error {
 	}
 	opts = append(opts, grpc.WithTransportCredentials(creds))
 
-	clientConn, err := grpc.NewClient(
-		c.serverAddress,
-		opts...,
-	)
+	clientConn, err := grpc.NewClient(c.serverAddress, opts...)
 	if err != nil {
 		return log.Errorf("failed to create gRPC client: %v", err)
 	}
