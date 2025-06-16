@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
 )
 
@@ -93,6 +94,40 @@ func (c *Client) setupConnection() error {
 		return log.Errorf("Failed to load TLS credentials: %v", err)
 	}
 	opts = append(opts, grpc.WithTransportCredentials(creds))
+
+	// --- keep-alive settings ---
+	kap := keepalive.ClientParameters{
+		Time:                10 * time.Second, // send pings every 10s if the connection is idle
+		Timeout:             3 * time.Second,  // wait 3s for ping ack
+		PermitWithoutStream: true,             // send pings even without active RPCs
+	}
+	opts = append(opts, grpc.WithKeepaliveParams(kap))
+
+	// --- unary retry policy via service config ---
+	const retryServiceConfig = `
+{
+  "methodConfig": [
+    {
+      "name": [
+        {
+          "service": "pb.AgentService"
+        }
+      ],
+      "retryPolicy": {
+        "MaxAttempts": 4,
+        "InitialBackoff": "1s",
+        "MaxBackoff": "10s",
+        "BackoffMultiplier": 2,
+        "RetryableStatusCodes": [
+          "UNAVAILABLE",
+          "RESOURCE_EXHAUSTED",
+          "ABORTED"
+        ]
+      }
+    }
+  ]
+}`
+	opts = append(opts, grpc.WithDefaultServiceConfig(retryServiceConfig))
 
 	clientConn, err := grpc.NewClient(c.serverAddress, opts...)
 	if err != nil {

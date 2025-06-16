@@ -8,7 +8,6 @@ import (
 
 	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/grpc/client"
-	"winterflow-agent/pkg/backoff"
 	"winterflow-agent/pkg/metrics"
 )
 
@@ -91,43 +90,13 @@ func (a *Agent) Close() {
 	}
 }
 
-// RegisterWithRetry attempts to register the agent with retry logic
-func (a *Agent) RegisterWithRetry(ctx context.Context) error {
-	b := backoff.New(2*time.Second, 1*time.Minute)
-
-	for {
-		err := a.Register()
-		if err == nil {
-			b.Reset()
-			return nil
-		}
-
-		// Unrecoverable errors should bubble up to abort agent run.
-		if err == client.ErrUnrecoverable || err == client.ErrUnrecoverableAgentAlreadyConnected {
-			return err
-		}
-
-		delay := b.Next()
-		log.Printf("Registration failed: %v. Retrying in %s", err, delay)
-
-		// Use a timer so we can interrupt the wait
-		timer := time.NewTimer(delay)
-		select {
-		case <-timer.C:
-			continue
-		case <-ctx.Done():
-			timer.Stop()
-			return log.Errorf("registration cancelled: %v", ctx.Err())
-		}
-	}
-}
-
 // Run starts the agent's main loop
 func (a *Agent) Run(ctx context.Context) error {
-	// Register the agent
+	// Silence unused warning if caller intentionally passes context for future use
+	_ = ctx
+	// Register the agent (client handles internal retry & backoff)
 	log.Printf("Registering agent with server: %s", a.config.GetGRPCServerAddress())
-	err := a.RegisterWithRetry(ctx)
-	if err != nil {
+	if err := a.Register(); err != nil {
 		return log.Errorf("failed to register agent: %v", err)
 	}
 	log.Printf("Agent registered successfully")
