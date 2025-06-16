@@ -3,6 +3,8 @@ package certs
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -19,7 +21,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-// GeneratePrivateKey generates a new RSA private key and saves it to the specified path
+// GeneratePrivateKey generates a new ECDSA P-256 private key and saves it to the specified path
 func GeneratePrivateKey(keyPath string) error {
 	// Create directory if it doesn't exist
 	dir := filepath.Dir(keyPath)
@@ -27,16 +29,21 @@ func GeneratePrivateKey(keyPath string) error {
 		return fmt.Errorf("failed to create directory for private key: %v", err)
 	}
 
-	// Generate private key
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	// Generate ECDSA P-256 private key
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return fmt.Errorf("failed to generate private key: %v", err)
+		return fmt.Errorf("failed to generate ECDSA private key: %v", err)
+	}
+
+	keyBytes, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ECDSA private key: %v", err)
 	}
 
 	// Convert to PEM format
 	privateKeyPEM := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+		Type:  "EC PRIVATE KEY",
+		Bytes: keyBytes,
 	}
 
 	// Create file
@@ -93,15 +100,28 @@ func CreateCSR(certificateID string, privateKeyPath, csrPath string) (string, er
 		return "", fmt.Errorf("failed to read private key: %v", err)
 	}
 
-	// Parse private key
+	// Parse private key (supports both ECDSA and RSA for backward compatibility)
 	block, _ := pem.Decode(keyData)
 	if block == nil {
 		return "", fmt.Errorf("failed to parse private key PEM")
 	}
 
-	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse private key: %v", err)
+	var parsedKey crypto.Signer
+	switch block.Type {
+	case "EC PRIVATE KEY":
+		ecKey, err := x509.ParseECPrivateKey(block.Bytes)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse EC private key: %v", err)
+		}
+		parsedKey = ecKey
+	case "RSA PRIVATE KEY":
+		rsaKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse RSA private key: %v", err)
+		}
+		parsedKey = rsaKey
+	default:
+		return "", fmt.Errorf("unsupported private key type: %s", block.Type)
 	}
 
 	// Create CSR template
@@ -112,7 +132,7 @@ func CreateCSR(certificateID string, privateKeyPath, csrPath string) (string, er
 	}
 
 	// Create CSR
-	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, privateKey)
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, parsedKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to create CSR: %v", err)
 	}

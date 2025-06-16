@@ -127,7 +127,7 @@ func startAgent(ctx context.Context, cancel context.CancelFunc, configPath strin
 
 	// Create ansible repository
 	ansibleRepo := ansible.NewRepository(cfg)
-	ansibleRepo.DeployIngress()
+	go ansibleRepo.DeployIngress()
 
 	// Create and initialize agent
 	log.Debug("Creating agent")
