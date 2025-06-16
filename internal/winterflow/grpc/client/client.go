@@ -229,11 +229,11 @@ func (c *Client) waitForConnectionReady() error {
 	c.conn.Connect()
 	log.Debug("Connection attempt initiated, took %v", time.Since(startTime))
 
-	attemptCount := 0
-	for {
-		attemptCount++
-		log.Debug("Connection attempt #%d", attemptCount)
+	// First connection attempt already issued above.
+	attemptCount := 1
+	log.Debug("Connection attempt", "attempt", attemptCount)
 
+	for {
 		// Check for context cancellation first
 		select {
 		case <-c.ctx.Done():
@@ -242,10 +242,10 @@ func (c *Client) waitForConnectionReady() error {
 			// Continue with normal operation
 		}
 
+		// Capture current connection state
 		state := c.conn.GetState()
 		log.Debug("Current connection state", "state", state, "attempt", attemptCount)
 
-		// Log detailed information based on connection state
 		switch state {
 		case connectivity.Ready:
 			log.Info("Connection is ready", "attempts", attemptCount, "totalTime", time.Since(startTime))
@@ -255,47 +255,45 @@ func (c *Client) waitForConnectionReady() error {
 			return log.Errorf("connection is shutdown after %d attempts (total time: %v)", attemptCount, time.Since(startTime))
 
 		case connectivity.TransientFailure:
+			// The previous dial attempt resulted in a transient failure, apply backoff before retrying.
 			log.Warn("Connection attempt failed with TransientFailure", "attempt", attemptCount, "action", "retrying with exponential backoff")
 
-			// Wait before retrying using exponential backoff
 			nextInterval := c.getNextReconnectInterval()
 			log.Info("Waiting before next connection attempt", "waitTime", nextInterval, "nextAttempt", attemptCount+1)
 
-			// Use a timer so we can interrupt the wait
 			timer := time.NewTimer(nextInterval)
 			select {
 			case <-timer.C:
-				log.Debug("Backoff timer expired, proceeding with next connection attempt")
-				// Timer expired, continue with next attempt
+				// Proceed with the next attempt
 			case <-c.ctx.Done():
-				// Context cancelled, abort reconnection
 				timer.Stop()
 				return log.Errorf("connection cancelled during reconnection: %v", c.ctx.Err())
 			}
 
-			// Trigger another connection attempt
-			log.Debug("Initiating new connection attempt #%d after backoff", attemptCount+1)
+			// Start a new connection attempt after backoff.
+			attemptCount++
+			log.Debug("Initiating new connection attempt", "attempt", attemptCount)
 			c.conn.Connect()
 			continue
 
-		case connectivity.Connecting:
-			log.Debug("Connection is in CONNECTING state (attempt #%d, elapsed time: %v)", attemptCount, time.Since(startTime))
+		case connectivity.Connecting, connectivity.Idle:
+			// For CONNECTING and IDLE states we simply wait for the state to change.
+			// gRPC will transition either to READY, TRANSIENT_FAILURE or SHUTDOWN.
+			log.Debug("Waiting for state change", "currentState", state)
 
-		case connectivity.Idle:
-			log.Debug("Connection is in IDLE state (attempt #%d, elapsed time: %v)", attemptCount, time.Since(startTime))
+			if !c.conn.WaitForStateChange(c.ctx, state) {
+				// Context was cancelled while waiting.
+				return log.Errorf("connection cancelled while waiting for state change: %v", c.ctx.Err())
+			}
+			// State changed, loop and evaluate again.
+			continue
 
 		default:
-			log.Debug("Connection is in unknown state: %v (attempt #%d, elapsed time: %v)", state, attemptCount, time.Since(startTime))
-		}
-
-		// Use a timer so we can interrupt the wait
-		log.Debug("Waiting 100ms before checking connection state again")
-		timer := time.NewTimer(100 * time.Millisecond)
-		select {
-		case <-c.ctx.Done():
-			timer.Stop()
-			return log.Errorf("connection cancelled: %v", c.ctx.Err())
-		case <-timer.C:
+			// Unknown state, wait for a state change.
+			log.Debug("Encountered unknown connection state, waiting for change", "state", state)
+			if !c.conn.WaitForStateChange(c.ctx, state) {
+				return log.Errorf("connection cancelled while waiting for state change: %v", c.ctx.Err())
+			}
 			continue
 		}
 	}
