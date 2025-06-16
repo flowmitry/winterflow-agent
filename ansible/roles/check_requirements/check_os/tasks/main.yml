@@ -8,26 +8,54 @@
 #     - role: check_requirements/check_os
 #     - role: your_actual_role
 
+- name: Load default OS compatibility settings
+  set_fact:
+    _supported_os_families: "{{ supported_os_families | default([]) }}"
+    _supported_os: "{{ supported_os | default([]) }}"
+
+- name: Extract supported OS family names
+  set_fact:
+    _supported_family_names: "{{ _supported_os_families | map(attribute='family') | list }}"
+
+- name: Extract supported OS distribution names
+  set_fact:
+    _supported_distribution_names: "{{ _supported_os | map(attribute='distribution') | list }}"
+
 - name: Check if system OS family is supported
   set_fact:
-    os_family_supported: "{{ ansible_os_family in (supported_os_families | map(attribute='family') | list) }}"
+    os_family_supported: "{{ ansible_os_family in _supported_family_names }}"
 
 - name: Check if specific OS distribution is supported (fallback)
   set_fact:
-    os_distribution_supported: "{{ ansible_distribution in (supported_os | map(attribute='distribution') | list) }}"
+    os_distribution_supported: "{{ ansible_distribution in _supported_distribution_names }}"
+
+- name: Find minimum version for current distribution
+  set_fact:
+    _current_os_config: "{{ _supported_os | selectattr('distribution', 'equalto', ansible_distribution) | list }}"
+
+- name: Get minimum version requirement
+  set_fact:
+    _min_version: "{{ _current_os_config[0].min_version | default('0') }}"
+  when: _current_os_config | length > 0
+
+- name: Set default minimum version if not found
+  set_fact:
+    _min_version: "0"
+  when: _current_os_config | length == 0
 
 - name: Validate OS version if specific distribution is supported
   set_fact:
-    os_version_supported: >-
-      {{ 
-        supported_os | length == 0 or
-        (supported_os | selectattr('distribution', 'equalto', ansible_distribution) | list | length == 0) or
-        (ansible_distribution_version | string) is version(
-          ((supported_os | selectattr('distribution', 'equalto', ansible_distribution) | list | first).min_version | default('0')) | string, 
-          '>=', 
-          strict=False
-        )
-      }}
+    os_version_supported: "{{ ansible_distribution_version is version(_min_version, '>=') }}"
+  when: os_distribution_supported
+
+- name: Set version as supported if no specific requirement
+  set_fact:
+    os_version_supported: true
+  when: not os_distribution_supported
+
+- name: Display system information
+  debug:
+    msg: "System: {{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_os_family }} family)"
 
 - name: Check if system is supported
   debug:
