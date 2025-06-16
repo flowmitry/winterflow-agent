@@ -42,8 +42,8 @@
   command: docker compose pull
   args:
     chdir: "{{ ingress_path }}"
-  register: docker_compose_up_result
-  changed_when: docker_compose_up_result.rc == 0
+  register: docker_compose_pull_result
+  changed_when: docker_compose_pull_result.rc == 0
 
 - name: Run docker compose up
   command: docker compose up -d

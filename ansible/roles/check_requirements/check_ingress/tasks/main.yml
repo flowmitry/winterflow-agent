@@ -12,6 +12,10 @@
 #   ingress_type: The selected ingress controller type (can be empty)
 #   supported_ingress: List of supported ingress controllers
 
+# Support Ansible 2.9
+- name: Load ingress defaults
+  include_vars: ../defaults/main.yml
+
 - name: Ensure ingress_type is defined (can be empty)
   fail:
     msg: "ingress_type variable is not defined. Please specify the ingress controller type or leave empty if not using ingress."

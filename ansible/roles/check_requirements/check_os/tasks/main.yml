@@ -8,6 +8,10 @@
 #     - role: check_requirements/check_os
 #     - role: your_actual_role
 
+# Support Ansible 2.9
+- name: Load OS defaults
+  include_vars: ../defaults/main.yml
+
 - name: Load default OS compatibility settings
   set_fact:
     _supported_os_families: "{{ supported_os_families | default([]) }}"

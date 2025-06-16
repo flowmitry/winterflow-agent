@@ -60,6 +60,9 @@
         groups: docker
         append: yes
 
+    - name: Reset connection to pick up new group membership
+      meta: reset_connection
+
     - name: Configure Docker daemon
       template:
         src: daemon.json.j2
