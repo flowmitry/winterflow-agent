@@ -19,7 +19,7 @@ type UpdateAgentHandler struct {
 
 // Handle executes the UpdateAgentCommand
 func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
-	if h.config.IsFeatureEnabled(config.FeatureAgentUpdateDisabled) == false {
+	if h.config.IsFeatureEnabled(config.FeatureAgentUpdateDisabled) {
 		return log.Errorf("Update agent feature is disabled")
 	}
 
@@ -33,14 +33,14 @@ func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
 
 	messageID := cmd.Request.Base.MessageId
 	targetVersion := cmd.Request.Version
-	log.Debug("Processing update agent request for message ID: %s, current targetVersion: %s, target targetVersion", messageID, agentversion.GetVersion(), targetVersion)
+	log.Debug("Processing update agent request", "message_id", messageID, "current_version", agentversion.GetVersion(), "target_version", targetVersion)
 
 	if targetVersion == "" {
 		return log.Errorf("targetVersion is required for update agent command")
 	}
 
 	if agentversion.IsBiggerThan(targetVersion) {
-		log.Info("Agent already uses %s version, which is newer than %s", agentversion.GetVersion(), targetVersion)
+		log.Info("Agent already uses newer version", "current_version", agentversion.GetVersion(), "target_version", targetVersion)
 		return nil
 	}
 
@@ -67,7 +67,7 @@ func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
 	}
 
 	downloadURL := fmt.Sprintf("%s/%s/%s", h.config.GetGitHubReleasesURL(), targetVersion, binaryName)
-	log.Printf("Downloading agent targetVersion %s from %s", targetVersion, downloadURL)
+	log.Debug("Downloading agent version", "target_version", targetVersion, "url", downloadURL)
 
 	// Download the binary
 	resp, err := http.Get(downloadURL)
@@ -105,15 +105,15 @@ func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
 	}
 	out.Close()
 
-	log.Printf("Successfully downloaded agent targetVersion %s to %s", targetVersion, tempFile)
+	log.Debug("Successfully downloaded agent version", "target_version", targetVersion, "file", tempFile)
 
 	// On Unix-like systems, we can replace the executable and let systemd restart the service
-	log.Printf("Replacing current executable at %s with new targetVersion", execPath)
+	log.Debug("Replacing current executable with new version", "executable_path", execPath)
 	if err := os.Rename(tempFile, execPath); err != nil {
 		return log.Errorf("failed to replace current executable: %w", err)
 	}
 
-	log.Printf("Successfully replaced agent (%s) with targetVersion %s, exiting to let systemd restart the service", agentversion.GetVersion(), targetVersion)
+	log.Info("Successfully replaced agent with new version, exiting to let systemd restart the service", "current_version", agentversion.GetVersion(), "target_version", targetVersion)
 	os.Exit(0)
 	return nil
 }

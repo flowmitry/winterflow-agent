@@ -13,7 +13,7 @@ import (
 
 // HandleSaveAppRequest handles the command dispatch and creates the appropriate response message
 func HandleSaveAppRequest(commandBus cqrs.CommandBus, saveAppRequest *pb.SaveAppRequestV1, agentID string) (*pb.AgentMessage, error) {
-	log.Debug("Processing save app request for app ID: %s", saveAppRequest.App.AppId)
+	log.Debug("Processing save app request", "app_id", saveAppRequest.App.AppId)
 
 	// Create and dispatch the command
 	cmd := save_app.SaveAppCommand{Request: saveAppRequest}
@@ -23,7 +23,7 @@ func HandleSaveAppRequest(commandBus cqrs.CommandBus, saveAppRequest *pb.SaveApp
 
 	// Dispatch the command to the handler
 	if err := commandBus.Dispatch(cmd); err != nil {
-		log.Error("Error saving app: %v", err)
+		log.Error("Error saving app", "error", err)
 		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 		responseMessage = fmt.Sprintf("Error saving app: %v", err)
 	}
@@ -45,7 +45,7 @@ func HandleSaveAppRequest(commandBus cqrs.CommandBus, saveAppRequest *pb.SaveApp
 
 // HandleDeleteAppRequest handles the command dispatch and creates the appropriate response message
 func HandleDeleteAppRequest(commandBus cqrs.CommandBus, deleteAppRequest *pb.DeleteAppRequestV1, agentID string) (*pb.AgentMessage, error) {
-	log.Debug("Processing delete app request for app ID: %s", deleteAppRequest.AppId)
+	log.Debug("Processing delete app request", "app_id", deleteAppRequest.AppId)
 
 	// Create and dispatch the command
 	cmd := delete_app.DeleteAppCommand{Request: deleteAppRequest}
@@ -55,7 +55,7 @@ func HandleDeleteAppRequest(commandBus cqrs.CommandBus, deleteAppRequest *pb.Del
 
 	// Dispatch the command to the handler
 	if err := commandBus.Dispatch(cmd); err != nil {
-		log.Error("Error deleting app: %v", err)
+		log.Error("Error deleting app", "error", err)
 		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 		responseMessage = fmt.Sprintf("Error deleting app: %v", err)
 	}
@@ -76,7 +76,7 @@ func HandleDeleteAppRequest(commandBus cqrs.CommandBus, deleteAppRequest *pb.Del
 
 // HandleControlAppRequest handles the command dispatch and creates the appropriate response message
 func HandleControlAppRequest(commandBus cqrs.CommandBus, controlAppRequest *pb.ControlAppRequestV1, agentID string) (*pb.AgentMessage, error) {
-	log.Debug("Processing control app request for app ID: %s, action: %v", controlAppRequest.AppId, controlAppRequest.Action)
+	log.Debug("Processing control app request", "app_id", controlAppRequest.AppId, "action", controlAppRequest.Action)
 
 	// Create and dispatch the command
 	cmd := control_app.ControlAppCommand{Request: controlAppRequest}
@@ -87,7 +87,7 @@ func HandleControlAppRequest(commandBus cqrs.CommandBus, controlAppRequest *pb.C
 
 	// Dispatch the command to the handler
 	if err := commandBus.Dispatch(cmd); err != nil {
-		log.Error("Error controlling app: %v", err)
+		log.Error("Error controlling app", "error", err)
 		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 		responseMessage = fmt.Sprintf("Error controlling app: %v", err)
 	}
@@ -111,7 +111,7 @@ func HandleControlAppRequest(commandBus cqrs.CommandBus, controlAppRequest *pb.C
 
 // HandleUpdateAgentRequest handles the command dispatch and creates the appropriate response message
 func HandleUpdateAgentRequest(commandBus cqrs.CommandBus, updateAgentRequest *pb.UpdateAgentRequestV1, agentID string) (*pb.AgentMessage, error) {
-	log.Debug("Processing update agent request for version: %s", updateAgentRequest.Version)
+	log.Debug("Processing update agent request", "version", updateAgentRequest.Version)
 
 	// Create and dispatch the command
 	cmd := update_agent.UpdateAgentCommand{Request: updateAgentRequest}
@@ -121,7 +121,7 @@ func HandleUpdateAgentRequest(commandBus cqrs.CommandBus, updateAgentRequest *pb
 
 	// Dispatch the command to the handler
 	if err := commandBus.Dispatch(cmd); err != nil {
-		log.Error("Error updating agent: %v", err)
+		log.Error("Error updating agent", "error", err)
 		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 		responseMessage = fmt.Sprintf("Error updating agent: %v", err)
 	}
