@@ -74,16 +74,24 @@ jobs:
           # Get release information
           RELEASE_INFO=$(gh release view "${{ github.event.inputs.version }}" --json url,body,isPrerelease)
           RELEASE_URL=$(echo "$RELEASE_INFO" | jq -r '.url')
-          RELEASE_BODY=$(echo "$RELEASE_INFO" | jq -r '.body // ""' | head -n1)
+          RELEASE_BODY=$(echo "$RELEASE_INFO" | jq -r '.body // ""' | head -n1 | sed 's/"/\\"/g' | sed 's/\r//g')
           IS_PRERELEASE=$(echo "$RELEASE_INFO" | jq -r '.isPrerelease')
           
+          # Create JSON payload
+          PAYLOAD=$(jq -n \
+            --arg version "${{ github.event.inputs.version }}" \
+            --arg url "$RELEASE_URL" \
+            --argjson is_beta "$IS_PRERELEASE" \
+            --arg message "$RELEASE_BODY" \
+            '{
+              "event_type": "agent_release_created",
+              "client_payload": {
+                "version": $version,
+                "url": $url,
+                "is_beta": $is_beta,
+                "message": $message
+              }
+            }')
+          
           # Trigger repository dispatch event
-          gh api repos/${{ github.repository }}/dispatches \
-            --method POST \
-            --field event_type="agent_release_created" \
-            --field client_payload="{
-              \"version\": \"${{ github.event.inputs.version }}\",
-              \"url\": \"$RELEASE_URL\",
-              \"is_beta\": $IS_PRERELEASE,
-              \"message\": \"$RELEASE_BODY\"
-            }"
+          echo "$PAYLOAD" | gh api repos/${{ github.repository }}/dispatches --method POST --input -
