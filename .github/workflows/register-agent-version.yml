@@ -3,6 +3,8 @@ name: Agent Version Registration
 on:
   release:
     types: [published, edited]
+  repository_dispatch:
+    types: [agent_release_created]
 
 jobs:
   notify-release:
@@ -15,11 +17,19 @@ jobs:
     - name: Extract release information
       id: release_info
       run: |
-        # Extract release information from GitHub context
-        RELEASE_NAME="${{ github.event.release.tag_name }}"
-        RELEASE_URL="${{ github.event.release.html_url }}"
-        RELEASE_PRERELEASE="${{ github.event.release.prerelease }}"
-        RELEASE_BODY="${{ github.event.release.body }}"
+        if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+          # Extract from repository dispatch payload
+          RELEASE_NAME="${{ github.event.client_payload.version }}"
+          RELEASE_URL="${{ github.event.client_payload.url }}"
+          RELEASE_PRERELEASE="${{ github.event.client_payload.is_beta }}"
+          RELEASE_BODY="${{ github.event.client_payload.message }}"
+        else
+          # Extract release information from GitHub release context
+          RELEASE_NAME="${{ github.event.release.tag_name }}"
+          RELEASE_URL="${{ github.event.release.html_url }}"
+          RELEASE_PRERELEASE="${{ github.event.release.prerelease }}"
+          RELEASE_BODY="${{ github.event.release.body }}"
+        fi
         
         # Extract only the first line of the release body and clean it for JSON
         FIRST_LINE=$(echo "$RELEASE_BODY" | head -n1 | sed 's/"/\\"/g' | sed 's/\r//g')
@@ -35,6 +45,7 @@ jobs:
         echo "Release URL: $RELEASE_URL"
         echo "Is Prerelease: $RELEASE_PRERELEASE"
         echo "Release Message: $FIRST_LINE"
+        echo "Event Type: ${{ github.event_name }}"
 
     - name: Send release notification
       run: |
