@@ -6,17 +6,21 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"math/big"
 	"net"
 	"os"
 	"path/filepath"
 	log "winterflow-agent/pkg/log"
+
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha256"
 
 	"google.golang.org/grpc/credentials"
 )
@@ -210,48 +214,118 @@ func CertificateExists(certPath string) bool {
 	return err == nil
 }
 
-// DecryptWithPrivateKey decrypts base64-encoded data using the RSA private key at the specified path
+// DecryptWithPrivateKey decrypts base64-encoded data that was encrypted in the
+// browser using the prime256v1 (P-256) ECDH + AES-GCM (256-bit) scheme.
+//
+// Encryption layout (all binary values are finally base64-encoded for
+// transport):
+//
+//	┌───────────────────┬──────────────┬────────────────────────┐
+//	│ 65 bytes          │ 12 bytes     │ remaining bytes        │
+//	│ Ephemeral pub key │ AES-GCM IV   │ Ciphertext + auth tag  │
+//	└───────────────────┴──────────────┴────────────────────────┘
+//
+// The 65-byte public key is the uncompressed form exported via
+// `crypto.subtle.exportKey('raw', tmpKeyPair.publicKey)` in the browser and is
+// always prefixed with 0x04.
+//
+// To derive the symmetric key we:
+//  1. Perform ECDH with the agent's private key and the received public key.
+//  2. Left-pad the X coordinate of the shared secret to 32 bytes (big-endian).
+//  3. Hash it with SHA-256 and use the resulting 32 bytes as the AES-256-GCM
+//     key.
+//
+// Only prime256v1 keys are supported – passing any other key type will return
+// an explicit error.
 func DecryptWithPrivateKey(privateKeyPath, encryptedBase64 string) (string, error) {
-	// Read private key
+	// Load and parse the agent's private key (must be EC prime256v1).
 	keyData, err := os.ReadFile(privateKeyPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read private key: %v", err)
 	}
 
-	// Parse private key
 	block, _ := pem.Decode(keyData)
 	if block == nil {
-		return "", fmt.Errorf("failed to parse private key PEM")
+		return "", fmt.Errorf("failed to decode private key PEM")
 	}
 
-	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if block.Type != "EC PRIVATE KEY" {
+		return "", fmt.Errorf("unsupported private key type %q – only EC (P-256) keys are supported", block.Type)
+	}
+
+	ecKey, err := x509.ParseECPrivateKey(block.Bytes)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse private key: %v", err)
+		return "", fmt.Errorf("failed to parse EC private key: %v", err)
 	}
 
-	// Decode base64 data
+	// Decode the payload.
 	encryptedData, err := base64.StdEncoding.DecodeString(encryptedBase64)
 	if err != nil {
-		return "", fmt.Errorf("failed to decode base64 data: %v", err)
+		return "", fmt.Errorf("failed to decode base64 payload: %v", err)
 	}
 
-	// Create a SHA-256 hash for OAEP
-	hash := crypto.SHA256.New()
+	// Validate minimum length (65-byte pub key + 12-byte IV + 16-byte tag).
+	const (
+		rawPubKeyLen = 65 // 0x04 + X + Y
+		ivLen        = 12
+		minTotalLen  = rawPubKeyLen + ivLen + 16 // at least auth tag size
+	)
+	if len(encryptedData) < minTotalLen {
+		return "", fmt.Errorf("encrypted payload too short: got %d bytes", len(encryptedData))
+	}
 
-	// Decrypt data using RSA-OAEP with SHA-256
-	decryptedData, err := rsa.DecryptOAEP(hash, rand.Reader, privateKey, encryptedData, nil)
+	rawPubKey := encryptedData[:rawPubKeyLen]
+	iv := encryptedData[rawPubKeyLen : rawPubKeyLen+ivLen]
+	ciphertext := encryptedData[rawPubKeyLen+ivLen:]
+
+	// Ensure uncompressed format.
+	if rawPubKey[0] != 0x04 {
+		return "", fmt.Errorf("unexpected EC public key format: first byte is 0x%02x, want 0x04 (uncompressed)", rawPubKey[0])
+	}
+
+	// Split X / Y coordinates.
+	coordSize := 32 // for P-256
+	x := new(big.Int).SetBytes(rawPubKey[1 : 1+coordSize])
+	y := new(big.Int).SetBytes(rawPubKey[1+coordSize : 1+2*coordSize])
+
+	curve := elliptic.P256()
+	if !curve.IsOnCurve(x, y) {
+		return "", fmt.Errorf("ephemeral public key is not on the P-256 curve")
+	}
+
+	// Derive shared secret (ECDH).
+	sharedX, _ := curve.ScalarMult(x, y, ecKey.D.Bytes())
+	if sharedX == nil {
+		return "", fmt.Errorf("failed to derive shared secret")
+	}
+
+	// Left-pad X coordinate to 32 bytes.
+	sharedXBytes := sharedX.Bytes()
+	if len(sharedXBytes) < coordSize {
+		padded := make([]byte, coordSize)
+		copy(padded[coordSize-len(sharedXBytes):], sharedXBytes)
+		sharedXBytes = padded
+	}
+
+	// Hash with SHA-256 to produce the AES-256 key.
+	keyHash := sha256.Sum256(sharedXBytes)
+
+	// Create AES-GCM cipher.
+	blockCipher, err := aes.NewCipher(keyHash[:])
 	if err != nil {
-		// Try with SHA-1 if SHA-256 fails (for backward compatibility)
-		hash = crypto.SHA1.New()
-		decryptedData, err = rsa.DecryptOAEP(hash, rand.Reader, privateKey, encryptedData, nil)
-		if err != nil {
-			// If both fail, try PKCS#1 v1.5 as a last resort
-			decryptedData, err = rsa.DecryptPKCS1v15(rand.Reader, privateKey, encryptedData)
-			if err != nil {
-				return "", fmt.Errorf("failed to decrypt data: %v", err)
-			}
-		}
+		return "", fmt.Errorf("failed to create AES cipher: %v", err)
 	}
 
-	return string(decryptedData), nil
+	gcm, err := cipher.NewGCM(blockCipher)
+	if err != nil {
+		return "", fmt.Errorf("failed to create AES-GCM: %v", err)
+	}
+
+	// Decrypt.
+	plaintext, err := gcm.Open(nil, iv, ciphertext, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to decrypt: %v", err)
+	}
+
+	return string(plaintext), nil
 }
