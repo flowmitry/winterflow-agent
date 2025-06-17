@@ -1,0 +1,60 @@
+name: Agent Version Registration
+
+on:
+  release:
+    types: [published, edited]
+
+jobs:
+  notify-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Extract release information
+      id: release_info
+      run: |
+        # Extract release information from GitHub context
+        RELEASE_NAME="${{ github.event.release.tag_name }}"
+        RELEASE_URL="${{ github.event.release.html_url }}"
+        RELEASE_PRERELEASE="${{ github.event.release.prerelease }}"
+        RELEASE_BODY="${{ github.event.release.body }}"
+        
+        # Extract only the first line of the release body and clean it for JSON
+        FIRST_LINE=$(echo "$RELEASE_BODY" | head -n1 | sed 's/"/\\"/g' | sed 's/\r//g')
+        
+        # Set outputs
+        echo "name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+        echo "url=$RELEASE_URL" >> $GITHUB_OUTPUT
+        echo "is_beta=$RELEASE_PRERELEASE" >> $GITHUB_OUTPUT
+        echo "message=$FIRST_LINE" >> $GITHUB_OUTPUT
+        
+        # Debug output
+        echo "Release Name: $RELEASE_NAME"
+        echo "Release URL: $RELEASE_URL"
+        echo "Is Prerelease: $RELEASE_PRERELEASE"
+        echo "Release Message: $FIRST_LINE"
+
+    - name: Send release notification
+      run: |
+        curl -X POST \
+          -H "Content-Type: application/json" \
+          -H "X-API-Key: ${{ secrets.WINTERFLOW_API_KEY }}" \
+          -d '{
+            "name": "${{ steps.release_info.outputs.name }}",
+            "url": "${{ steps.release_info.outputs.url }}",
+            "is_beta": ${{ steps.release_info.outputs.is_beta }},
+            "message": "${{ steps.release_info.outputs.message }}"
+          }' \
+          ${{ vars.WINTERFLOW_API_URL }}/api/_/release-agent-version
+
+    - name: Log notification result
+      if: always()
+      run: |
+        if [ $? -eq 0 ]; then
+          echo "Release notification sent successfully"
+        else
+          echo "Failed to send release notification"
+          exit 1
+        fi 
