@@ -2,11 +2,11 @@
 - name: Validate required variables
   assert:
     that:
-      - ingress_type is defined
+      - ingress is defined
       - ingress_path is defined
     fail_msg: >
       Required variables must be defined:
-      - ingress_type: The ingress system to use
+      - ingress: The ingress system to use
       - ingress_path: The directory to store the ingress files
 
 - name: Create ingress directory
@@ -17,10 +17,10 @@
 
 - name: Find all template files
   find:
-    paths: "{{ playbook_dir }}/docker_compose/templates/ingress/{{ ingress_type }}"
+    paths: "{{ playbook_dir }}/docker_compose/templates/ingress/{{ ingress }}"
     patterns: "*.j2"
   register: template_files
-  when: ingress_type != "custom"
+  when: ingress != "custom"
 
 - name: Process all template files
   template:
@@ -28,7 +28,7 @@
     dest: "{{ ingress_path }}/{{ item.path | basename | regex_replace('\\.j2$', '') }}"
     mode: '0644'
   with_items: "{{ template_files.files }}"
-  when: ingress_type != "custom"
+  when: ingress != "custom"
 
 - name: Create external web network
   command: docker network create web

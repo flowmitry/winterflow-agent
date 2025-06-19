@@ -12,9 +12,6 @@ import (
 // AgentStatus represents the current status of the agent
 type AgentStatus string
 
-// OrchestratorType represents the orchestrator
-type OrchestratorType string
-
 const (
 	// AgentStatusRegistered indicates the agent is registered with the server
 	AgentStatusRegistered AgentStatus = "registered"
@@ -23,6 +20,9 @@ const (
 	// AgentStatusUnknown indicates the agent status is unknown
 	AgentStatusUnknown AgentStatus = "unknown"
 )
+
+// OrchestratorType represents the orchestrator
+type OrchestratorType string
 
 const (
 	// OrchestratorTypeDockerCompose represents Docker Compose orchestration
@@ -33,12 +33,27 @@ const (
 	defaultOrchestrator = OrchestratorTypeDockerCompose
 )
 
+// IngressType represents the ingress
+type IngressType string
+
+const (
+	// OrchestratorTypeDockerCompose represents Docker Compose orchestration
+	IngressTypeTraefikNotsls IngressType = "traefik_notls"
+	// OrchestratorTypeDockerSwarm represents Docker Swarm orchestration
+	IngressTypeTraefikLetsEncrypt IngressType = "traefik_letsencrypt"
+	// IngressTypeCustom represents a custom ingress controller
+	IngressTypeCustom IngressType = "custom"
+	// defaultIngressType defines the default ingress type used by the system.
+	defaultIngressType = IngressTypeTraefikLetsEncrypt
+)
+
 var (
 	grpcServerAddress string
 	apiBaseURL        string
 	basePath          string
 	logsPath          string
 	orchestrator      OrchestratorType
+	ingress           IngressType
 )
 
 const (
@@ -69,7 +84,7 @@ const (
 	agentCACertificateFile = "ca.crt"
 
 	// gitHubReleasesURL is the default URL for GitHub releases where agent binaries can be downloaded.
-	gitHubReleasesURL = "https://github.com/winterflowio/agent/releases/download"
+	gitHubReleasesURL = "https://github.com/flowmitry/winterflow-agent/releases/download"
 )
 
 // Config holds the application configuration
@@ -77,6 +92,8 @@ type Config struct {
 	AgentID     string          `json:"agent_id"`
 	AgentStatus AgentStatus     `json:"agent_status"`
 	Features    map[string]bool `json:"features"`
+	// Email specifies the email address associated with the agent
+	Email string `json:"email,omitempty"`
 	// BasePath specifies the root directory used to store application-related files and configurations.
 	BasePath string `json:"base_path,omitempty"`
 	// LogsPath specifies the directory where log files are stored.
@@ -85,6 +102,8 @@ type Config struct {
 	LogLevel string `json:"log_level,omitempty"`
 	// Orchestrator specifies the orchestration platform or tool used for managing deployments and configurations.
 	Orchestrator OrchestratorType `json:"orchestrator,omitempty"`
+	// Ingress specifies the ingress type used for managing traffic to the application.
+	Ingress IngressType `json:"ingress,omitempty"`
 	// CertificatesFolder specifies the directory where certificate files are stored.
 	CertificatesFolder string `json:"certificates_folder,omitempty"`
 }
@@ -106,6 +125,9 @@ func prepareConfig(cfg *Config) {
 	}
 	if cfg.Orchestrator == "" || !isValidOrchestratorType(cfg.Orchestrator) {
 		cfg.Orchestrator = defaultOrchestrator
+	}
+	if cfg.Ingress == "" || !isValidIngressType(cfg.Ingress) {
+		cfg.Ingress = defaultIngressType
 	}
 	if cfg.CertificatesFolder == "" {
 		cfg.CertificatesFolder = embeddedCertificatesFolder
@@ -158,6 +180,12 @@ func NewConfig() *Config {
 		config.Orchestrator = orchestrator
 	} else {
 		config.Orchestrator = defaultOrchestrator
+	}
+
+	if ingress != "" {
+		config.Ingress = ingress
+	} else {
+		config.Ingress = defaultIngressType
 	}
 
 	return config
@@ -351,7 +379,40 @@ func (c *Config) SetOrchestrator(orchestratorType OrchestratorType) error {
 	return nil
 }
 
+func (c *Config) GetIngress() string {
+	return c.Ingress.ToString()
+}
+
+func isValidIngressType(ingressType IngressType) bool {
+	return ingressType == IngressTypeTraefikNotsls ||
+		ingressType == IngressTypeTraefikLetsEncrypt ||
+		ingressType == IngressTypeCustom
+}
+
+func (i IngressType) Validate() {
+	if !isValidIngressType(i) {
+		panic(fmt.Sprintf("invalid ingress type: %s, must be one of: %s, %s, %s",
+			i, IngressTypeTraefikNotsls, IngressTypeTraefikLetsEncrypt, IngressTypeCustom))
+	}
+}
+
+func (i IngressType) ToString() string {
+	return string(i)
+}
+
+// SetIngress sets the ingress type after validating it
+func (c *Config) SetIngress(ingressType IngressType) error {
+	ingressType.Validate()
+	c.Ingress = ingressType
+	return nil
+}
+
 // GetGitHubReleasesURL returns the GitHub releases URL
 func (c *Config) GetGitHubReleasesURL() string {
 	return gitHubReleasesURL
+}
+
+// GetEmail returns the email address associated with the agent
+func (c *Config) GetEmail() string {
+	return c.Email
 }

@@ -78,10 +78,18 @@ message HeartbeatResponseV1 {
   BaseResponse base = 1;
 }
 
+message AppContainerStatusV1 {
+  // UUID
+  string container_id = 1;
+  string container_name = 2;
+  AppStatusCode status_code = 3;
+}
+
 message AppStatusV1 {
   // UUID
   string app_id = 1;
   AppStatusCode status_code = 2;
+  repeated AppContainerStatusV1 containers = 3;
 }
 
 message AppFileV1 {

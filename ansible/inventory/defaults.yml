@@ -3,13 +3,12 @@ all:
   vars:
     # Variables
     timezone: UTC
-    ssh_login_type: "password"
     
     # Variables come from the Agent and override the defaults
     orchestrator: "docker_compose"
-    ingress_type: "traefik-notls"
+    ingress: "traefik_notls"
     notifications_email: ""
-    apps_status_output_path: "/tmp/winterflow/status"
+    apps_status_output_path: ""
 
     # Parameters for the Agent
     # Change these variables only if you know what you are doing

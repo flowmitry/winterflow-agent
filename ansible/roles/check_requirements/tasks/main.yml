@@ -13,3 +13,6 @@
 
 - name: Include ingress controller check
   include_tasks: check_ingress/tasks/main.yml
+
+- name: Include orchestrator check
+  include_tasks: check_orchestrator/tasks/main.yml

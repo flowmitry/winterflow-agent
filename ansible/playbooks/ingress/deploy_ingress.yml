@@ -17,13 +17,13 @@
     - name: Validate required variables
       assert:
         that:
-          - ingress_type is defined
+          - ingress is defined
           - ingress_path is defined
           - orchestrator is defined
           - orchestrator in ['docker_compose']
         fail_msg: >
           Required variables must be defined:
-          - ingress_type: The ingress system to use
+          - ingress: The ingress system to use
           - ingress_path: The directory to store the ingress files
           - orchestrator: The orchestrator type
           - orchestrator: Must be one of 'docker_compose'
