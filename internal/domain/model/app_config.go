@@ -21,9 +21,11 @@ type AppFile struct {
 
 // AppVariable represents a variable in the app configuration
 type AppVariable struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	// Add other fields as needed
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	IsSecret bool   `json:"is_secret"`
+	Origin   string `json:"origin"`
+	Type     string `json:"type"`
 }
 
 // ParseAppConfig parses the app configuration from JSON bytes

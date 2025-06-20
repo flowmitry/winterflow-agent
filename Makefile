@@ -36,12 +36,12 @@ run: build
 clean:
 	@echo "Cleaning build directory..."
 	@rm -f ${BUILD_DIR}/${BINARY_NAME}
-	@rm -f internal/grpc/pb/*.pb.go
+	@rm -f internal/infra/winterflow/grpc/pb/*.pb.go
 	@rm -f ansible/version.txt
 
 grpc:
 	@echo "Generating gRPC code..."
-	@PATH="$$PATH:$$(go env GOPATH)/bin" protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative internal/winterflow/grpc/pb/server.proto
+	@PATH="$$PATH:$$(go env GOPATH)/bin" protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative internal/infra/winterflow/grpc/pb/server.proto
 
 install-tools:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0

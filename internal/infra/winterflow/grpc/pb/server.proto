@@ -121,8 +121,7 @@ message AppV1 {
   // JSON
   bytes config = 2;
   repeated AppVarV1 variables = 3;
-  repeated AppVarV1 secrets = 4;
-  repeated AppFileV1 files = 5;
+  repeated AppFileV1 files = 4;
 }
 
 message GetAppRequestV1 {

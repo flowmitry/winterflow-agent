@@ -30,9 +30,8 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 		return fmt.Errorf("error parsing app config: %v", err)
 	}
 
-	// Parse variables and secrets
+	// Parse variables (which now include secrets)
 	variables := model.ParseVariableMapFromProto(cmd.Request.App.Variables)
-	secrets := model.ParseVariableMapFromProto(cmd.Request.App.Secrets)
 
 	// Create the directory structure and files
 	appID := cmd.Request.App.AppId
@@ -107,7 +106,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 		}
 
 		// Process secrets
-		if err := h.processSecrets(rolesSecretsFile, appConfig, secrets); err != nil {
+		if err := h.processSecrets(rolesSecretsFile, appConfig, variables); err != nil {
 			log.Error("Error processing secrets: %v", err)
 			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 			responseMessage = fmt.Sprintf("Error processing secrets: %v", err)
@@ -306,12 +305,30 @@ func (h *SaveAppHandler) processMap(filePath string, appConfig *model.AppConfig,
 
 // processVariables processes the variables for the app
 func (h *SaveAppHandler) processVariables(varsFile string, appConfig *model.AppConfig, variables model.VariableMap) error {
-	return h.processMap(varsFile, appConfig, variables, false)
+	// Filter variables to only include non-secrets
+	nonSecretVars := make(model.VariableMap)
+	for _, v := range appConfig.Variables {
+		if !v.IsSecret {
+			if value, exists := variables[v.ID]; exists {
+				nonSecretVars[v.ID] = value
+			}
+		}
+	}
+	return h.processMap(varsFile, appConfig, nonSecretVars, false)
 }
 
 // processSecrets processes the secrets for the app
-func (h *SaveAppHandler) processSecrets(secretsFile string, appConfig *model.AppConfig, secrets model.VariableMap) error {
-	return h.processMap(secretsFile, appConfig, secrets, true)
+func (h *SaveAppHandler) processSecrets(secretsFile string, appConfig *model.AppConfig, variables model.VariableMap) error {
+	// Filter variables to only include secrets
+	secretVars := make(model.VariableMap)
+	for _, v := range appConfig.Variables {
+		if v.IsSecret {
+			if value, exists := variables[v.ID]; exists {
+				secretVars[v.ID] = value
+			}
+		}
+	}
+	return h.processMap(secretsFile, appConfig, secretVars, true)
 }
 
 // SaveAppResult represents the result of creating an app

@@ -137,12 +137,14 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 		files = append(files, file)
 	}
 
+	// Combine variables and secrets into a single collection
+	allVariables := append(variables, secrets...)
+
 	// Create and return the app data
 	return &pb.AppV1{
 		AppId:     appID,
 		Config:    configBytes,
-		Variables: variables,
-		Secrets:   secrets,
+		Variables: allVariables,
 		Files:     files,
 	}, nil
 }

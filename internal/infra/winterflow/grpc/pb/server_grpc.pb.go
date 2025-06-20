@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: internal/winterflow/grpc/pb/server.proto
+// source: internal/infra/winterflow/grpc/pb/server.proto
 
 package pb
 
@@ -166,5 +166,5 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "internal/winterflow/grpc/pb/server.proto",
+	Metadata: "internal/infra/winterflow/grpc/pb/server.proto",
 }
