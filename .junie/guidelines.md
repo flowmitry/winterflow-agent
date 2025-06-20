@@ -1,34 +1,118 @@
-# Use the following technical stack:
+# Winterflow Agent Development Guidelines
+
+## Architecture
+
+The Winterflow Agent follows a clean architecture approach with the following layers:
+
+1. **Domain Layer** (`internal/domain/`):
+   - Contains the core business logic and domain models
+   - Independent of any external frameworks or infrastructure
+   - Defines repository interfaces that are implemented by the infrastructure layer
+
+2. **Application Layer** (`internal/application/`):
+   - Contains application-specific logic
+   - Implements use cases using domain models and repositories
+   - Uses CQRS pattern with commands and queries
+   - Must not depend directly on infrastructure, only on domain models
+
+3. **Infrastructure Layer** (`internal/infra/`):
+   - Implements repository interfaces defined in the domain layer
+   - Contains adapters for external services (gRPC, HTTP, etc.)
+   - Handles data persistence and external communication
+   - Contains assemblers for transforming between domain and infrastructure models
+
+## Domain-Infrastructure Transformation
+
+For transformations between domain and infrastructure models:
+
+- Use assemblers in the infrastructure layer
+- For gRPC client transformations, use `internal/infra/winterflow/grpc/client/assemblers.go`
+- Never expose infrastructure models to the application layer
+- Never expose domain models directly to external clients
+- Use a consistent naming for methods `<model_name>ToProto<proto_model_name>` and
+  `Proto<proto_model_name>To<model_name>`
+
+Example:
+
+```go
+// In assemblers.go
+// Domain to Infrastructure
+func AppToProtoAppV1(app *model.App) *pb.AppV1 {
+// Transform domain model to protobuf model
+}
+
+// Infrastructure to Domain
+func ProtoGetAppRequestV1ToGetAppRequest(request *pb.GetAppRequestV1) *model.GetAppRequest {
+// Transform protobuf request to domain request
+}
+```
+
+## Query Implementation Guidelines
+
+When implementing queries:
+
+1. Define domain models in `internal/domain/model/`
+2. Define query struct in application layer using domain models
+3. Pass properties directly to the Queries, do not create Request models
+4. Implement query handler that returns domain models
+5. Use assemblers in infrastructure layer to transform between domain and infrastructure models
+
+Example:
+
+```go
+// Query using domain models
+type GetAppQuery struct {
+AppID      string
+AppVersion uint32
+}
+
+// Handler returning domain models
+func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.App, error) {
+// Implementation using domain models
+}
+
+// Infrastructure layer using assemblers
+func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1) {
+// Convert request to domain model
+domainRequest := FromProtoGetAppRequest(getAppRequest)
+
+// Create and dispatch query
+query := GetAppQuery{
+AppID: getAppRequest.appID,
+AppVersion: getAppRequest.version
+}
+result, err := queryBus.Dispatch(query)
+
+// Convert result back to infrastructure model
+domainApp := result.(*model.App)
+protoApp := ToProtoApp(domainApp)
+}
+```
+
+## Technical Stack
 
 - Backend: Go 1.24.0
-- Use only standard library for GO;
-- Use GRPC;
+- Use only standard library for GO until I asked overwise.
+- Use GRPC.
 - Use JSON file for the configuration storage.
 
-# GO source code location:
+## Logging
 
-- cmd
-- internal
-- pkg
+- Use custom logging package (pkg/log) for all logging
+- Import as: `log "winterflow-agent/pkg/log"`
+- Use structured logging methods: Debug, Info, Warn, Error
+- Use Printf for compatibility with existing code
+- Use Fatalf/Fatal for fatal errors
+- All logs are JSON formatted and include timestamps
+- Log levels: Debug, Info, Warn, Error
+- Include relevant context in log messages
+- Use consistent log message format: [LEVEL] message
+- Include error details when logging errors
+- Use proper log levels for different types of messages
 
 # GO shared libraries and packages:
 
 Create a package in pkg if you need to create some shared component.
-
-# Usage of packages:
-
-- Use only standard library for GO;
-- Use custom logging package (pkg/log) for all logging:
-    - Import as: log "winterflow-agent/pkg/log"
-    - Use structured logging methods: Debug, Info, Warn, Error
-    - Use Printf for compatibility with existing code
-    - Use Fatalf/Fatal for fatal errors
-    - All logs are JSON formatted and include timestamps
-    - Log levels: Debug, Info, Warn, Error
-    - Include relevant context in log messages
-    - Use consistent log message format: [LEVEL] message
-    - Include error details when logging errors
-    - Use proper log levels for different types of messages
 
 # Adding New Capabilities:
 

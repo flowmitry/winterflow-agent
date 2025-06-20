@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"winterflow-agent/internal/infra/winterflow/grpc/pb"
+	"winterflow-agent/internal/domain/model"
 	log "winterflow-agent/pkg/log"
 )
 
@@ -16,16 +16,16 @@ type GetAppQueryHandler struct {
 }
 
 // Handle executes the GetAppQuery and returns the result
-func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
-	log.Printf("Processing get app request for app ID: %s", query.Request.AppId)
+func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.App, error) {
+	log.Printf("Processing get app request for app ID: %s", query.AppID)
 
-	// Get the app ID from the request
-	appID := query.Request.AppId
+	// Get the app ID from the query
+	appID := query.AppID
 
 	// Determine the app version to use
 	var versionDir string
-	if query.Request.AppVersion > 0 {
-		versionDir = fmt.Sprintf("%d", query.Request.AppVersion)
+	if query.AppVersion > 0 {
+		versionDir = fmt.Sprintf("%d", query.AppVersion)
 	} else {
 		versionDir = h.AnsibleAppsRolesCurrentVersion
 	}
@@ -67,10 +67,10 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 		return nil, fmt.Errorf("error converting variables to JSON: %w", err)
 	}
 
-	// Convert variables JSON to AppVarV1 slice
-	variables, err := convertJSONToAppVars(varsJSON)
+	// Convert variables JSON to variable map
+	variables, err := convertJSONToVariableMap(varsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("error converting variables JSON to AppVarV1: %w", err)
+		return nil, fmt.Errorf("error converting variables JSON to variable map: %w", err)
 	}
 
 	// Convert secrets from YAML to JSON with "id": "value" format
@@ -79,10 +79,10 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 		return nil, fmt.Errorf("error converting secrets to JSON: %w", err)
 	}
 
-	// Convert secrets JSON to AppVarV1 slice with encrypted values
-	secrets, err := convertJSONToEncryptedAppVars(secretsJSON)
+	// Convert secrets JSON to variable map with encrypted values
+	secrets, err := convertJSONToEncryptedVariableMap(secretsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("error converting secrets JSON to encrypted AppVarV1: %w", err)
+		return nil, fmt.Errorf("error converting secrets JSON to encrypted variable map: %w", err)
 	}
 
 	// Parse config to get list of files
@@ -112,7 +112,7 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 	}
 
 	// Read only the files listed in the config
-	var files []*pb.AppFileV1
+	files := make(map[string]string)
 	for filename, fileID := range fileInfo {
 		// Construct the full path to the file
 		filePath := filepath.Join(rolesTemplatesDir, filename+".j2")
@@ -129,22 +129,26 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*pb.AppV1, error) {
 			return nil, fmt.Errorf("error reading template file %s: %w", filePath, err)
 		}
 
-		// Create an AppFileV1 for the file
-		file := &pb.AppFileV1{
-			Id:      fileID,
-			Content: content,
-		}
-		files = append(files, file)
+		// Add the file to the map
+		files[fileID] = string(content)
 	}
 
-	// Combine variables and secrets into a single collection
-	allVariables := append(variables, secrets...)
+	// Combine variables and secrets into a single map
+	for k, v := range secrets {
+		variables[k] = v
+	}
+
+	// Parse config bytes into AppConfig
+	appConfig, err := model.ParseAppConfig(configBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing config: %w", err)
+	}
 
 	// Create and return the app data
-	return &pb.AppV1{
-		AppId:     appID,
-		Config:    configBytes,
-		Variables: allVariables,
+	return &model.App{
+		ID:        appID,
+		Config:    appConfig,
+		Variables: variables,
 		Files:     files,
 	}, nil
 }
