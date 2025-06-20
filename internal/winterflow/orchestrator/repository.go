@@ -15,6 +15,11 @@ type GetAppStatusResult struct {
 	App *models.ContainerApp
 }
 
+// GetAppsStatusResult represents the result of getting all apps status
+type GetAppsStatusResult struct {
+	Apps []*models.ContainerApp
+}
+
 // Repository is an interface for managing Docker operations
 type Repository interface {
 	// GetClient returns a Docker client for low-level operations
@@ -22,6 +27,9 @@ type Repository interface {
 
 	// GetAppStatus returns the status of a specific application
 	GetAppStatus(ctx context.Context, appID string) (GetAppStatusResult, error)
+
+	// GetAppsStatus returns the status of all available applications
+	GetAppsStatus(ctx context.Context) (GetAppsStatusResult, error)
 }
 
 // NewRepository creates a new Docker repository based on orchestrator configuration

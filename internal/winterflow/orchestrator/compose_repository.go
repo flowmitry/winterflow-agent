@@ -9,6 +9,7 @@ import (
 	"winterflow-agent/internal/winterflow/models"
 	log "winterflow-agent/pkg/log"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
@@ -86,4 +87,65 @@ func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (Get
 	log.Debug("Docker Compose app status retrieved", "app_id", appID, "containers", len(containerApp.Containers))
 
 	return GetAppStatusResult{App: containerApp}, nil
+}
+
+func (r *composeRepository) GetAppsStatus(ctx context.Context) (GetAppsStatusResult, error) {
+	log.Debug("Getting Docker Compose apps status for all applications")
+
+	// List all containers with Docker Compose project labels
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("label", "com.docker.compose.project")
+
+	options := container.ListOptions{
+		All:     true,
+		Filters: filterArgs,
+	}
+
+	dockerContainers, err := r.client.ContainerList(ctx, options)
+	if err != nil {
+		log.Error("Failed to list containers for all apps", "error", err)
+		return GetAppsStatusResult{}, fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	// Group containers by app ID (compose project)
+	appContainers := make(map[string][]types.Container)
+	for _, dockerContainer := range dockerContainers {
+		if appID, exists := dockerContainer.Labels["com.docker.compose.project"]; exists {
+			appContainers[appID] = append(appContainers[appID], dockerContainer)
+		}
+	}
+
+	// Create ContainerApp models for each app
+	var apps []*models.ContainerApp
+	for appID, containers := range appContainers {
+		containerApp := &models.ContainerApp{
+			ID:         appID,
+			Name:       appID, // For Docker Compose, use project name as app name
+			Containers: make([]models.Container, 0, len(containers)),
+		}
+
+		// Convert Docker containers to Container models
+		for _, dockerContainer := range containers {
+			container := models.Container{
+				ID:         dockerContainer.ID,
+				Name:       strings.TrimPrefix(dockerContainer.Names[0], "/"), // Remove leading slash
+				StatusCode: mapDockerStateToContainerStatus(dockerContainer.State),
+				ExitCode:   0, // Docker API doesn't provide exit code in list response
+				Ports:      mapDockerPortsToContainerPorts(dockerContainer.Ports),
+			}
+
+			// Add error information for problematic containers
+			if container.StatusCode == models.ContainerStatusProblematic {
+				container.Error = fmt.Sprintf("Container in problematic state: %s", dockerContainer.Status)
+			}
+
+			containerApp.Containers = append(containerApp.Containers, container)
+		}
+
+		apps = append(apps, containerApp)
+	}
+
+	log.Debug("Docker Compose apps status retrieved", "apps_count", len(apps))
+
+	return GetAppsStatusResult{Apps: apps}, nil
 }

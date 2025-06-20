@@ -9,6 +9,7 @@ import (
 	"winterflow-agent/internal/winterflow/models"
 	log "winterflow-agent/pkg/log"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
@@ -95,4 +96,98 @@ func (r *swarmRepository) GetAppStatus(ctx context.Context, appID string) (GetAp
 	log.Debug("Docker Swarm app status retrieved", "app_id", appID, "containers", len(containerApp.Containers))
 
 	return GetAppStatusResult{App: containerApp}, nil
+}
+
+func (r *swarmRepository) GetAppsStatus(ctx context.Context) (GetAppsStatusResult, error) {
+	log.Debug("Getting Docker Swarm apps status for all applications")
+
+	// For Docker Swarm, we look for containers with service labels
+	// Services in swarm typically have labels like com.docker.swarm.service.name
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("label", "com.docker.stack.namespace")
+
+	options := container.ListOptions{
+		All:     true,
+		Filters: filterArgs,
+	}
+
+	dockerContainers, err := r.client.ContainerList(ctx, options)
+	if err != nil {
+		log.Error("Failed to list containers for all swarm apps", "error", err)
+		return GetAppsStatusResult{}, fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	// Also check for containers with generic app labels
+	filterArgsApp := filters.NewArgs()
+	filterArgsApp.Add("label", "app")
+
+	optionsApp := container.ListOptions{
+		All:     true,
+		Filters: filterArgsApp,
+	}
+
+	dockerContainersApp, err := r.client.ContainerList(ctx, optionsApp)
+	if err != nil {
+		log.Error("Failed to list containers with app labels", "error", err)
+		return GetAppsStatusResult{}, fmt.Errorf("failed to list containers with app labels: %w", err)
+	}
+
+	// Combine containers from both searches
+	allContainers := append(dockerContainers, dockerContainersApp...)
+
+	// Group containers by app ID (stack namespace or app label)
+	appContainers := make(map[string][]types.Container)
+	for _, dockerContainer := range allContainers {
+		var appID string
+		var exists bool
+
+		// Check for stack namespace first
+		if appID, exists = dockerContainer.Labels["com.docker.stack.namespace"]; exists {
+			appContainers[appID] = append(appContainers[appID], dockerContainer)
+		} else if appID, exists = dockerContainer.Labels["app"]; exists {
+			// Check for generic app label
+			appContainers[appID] = append(appContainers[appID], dockerContainer)
+		}
+	}
+
+	// Create ContainerApp models for each app
+	var apps []*models.ContainerApp
+	for appID, containers := range appContainers {
+		containerApp := &models.ContainerApp{
+			ID:         appID,
+			Name:       appID, // For Docker Swarm, use stack name as app name
+			Containers: make([]models.Container, 0, len(containers)),
+		}
+
+		// Convert Docker containers to Container models
+		for _, dockerContainer := range containers {
+			container := models.Container{
+				ID:         dockerContainer.ID,
+				Name:       strings.TrimPrefix(dockerContainer.Names[0], "/"), // Remove leading slash
+				StatusCode: mapDockerStateToContainerStatus(dockerContainer.State),
+				ExitCode:   0, // Docker API doesn't provide exit code in list response
+				Ports:      mapDockerPortsToContainerPorts(dockerContainer.Ports),
+			}
+
+			// Add error information for problematic containers
+			if container.StatusCode == models.ContainerStatusProblematic {
+				container.Error = fmt.Sprintf("Container in problematic state: %s", dockerContainer.Status)
+			}
+
+			// Add service information to container name for Swarm mode
+			if len(dockerContainer.Labels) > 0 {
+				if serviceName, exists := dockerContainer.Labels["com.docker.swarm.service.name"]; exists {
+					container.Name = fmt.Sprintf("%s (service: %s)", container.Name, serviceName)
+				}
+			}
+
+			containerApp.Containers = append(containerApp.Containers, container)
+		}
+
+		apps = append(apps, containerApp)
+	}
+
+	log.Debug("Docker Swarm apps status retrieved", "apps_count", len(apps))
+
+	return GetAppsStatusResult{Apps: apps}, nil
 }

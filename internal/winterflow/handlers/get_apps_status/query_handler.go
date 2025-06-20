@@ -7,8 +7,6 @@ import (
 	"winterflow-agent/internal/winterflow/models"
 	"winterflow-agent/internal/winterflow/orchestrator"
 	log "winterflow-agent/pkg/log"
-
-	"github.com/docker/docker/api/types/container"
 )
 
 // GetAppsStatusQueryHandler handles the GetAppsStatusQuery
@@ -23,54 +21,30 @@ func (h *GetAppsStatusQueryHandler) Handle(query GetAppsStatusQuery) ([]*pb.AppS
 	// Create a context for the operation
 	ctx := context.Background()
 
-	// Create a client to get Docker information
-	client := h.orchestrator.GetClient()
-
-	// Get the list of all containers
-	options := container.ListOptions{
-		All: true,
-	}
-	containers, err := client.ContainerList(ctx, options)
+	// Get all apps status using the orchestrator's GetAppsStatus method
+	result, err := h.orchestrator.GetAppsStatus(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list containers: %w", err)
-	}
-
-	// Group containers by app ID
-	appIDs := make(map[string]bool)
-	for _, container := range containers {
-		// Extract app ID from container labels
-		appID, ok := container.Labels["winterflow.app.id"]
-		if !ok {
-			// Skip containers that don't have the winterflow.app.id label
-			continue
-		}
-
-		// Add app ID to the set
-		appIDs[appID] = true
+		log.Error("Error getting apps status", "error", err)
+		return nil, fmt.Errorf("failed to get apps status: %w", err)
 	}
 
 	var appStatuses []*pb.AppStatusV1
 
-	// Process each app
-	for appID := range appIDs {
-		// Get the app status
-		result, err := h.orchestrator.GetAppStatus(ctx, appID)
-		if err != nil {
-			log.Error("Error getting app status", "appID", appID, "error", err)
-			continue
-		}
-
+	// Process each app from the result
+	for _, app := range result.Apps {
 		// Convert models.Container to pb.ContainerStatusV1
-		containerStatuses := convertContainers(result.App.Containers)
+		containerStatuses := convertContainers(app.Containers)
 
 		// Create an AppStatusV1 for this app
 		appStatus := &pb.AppStatusV1{
-			AppId:      appID,
+			AppId:      app.ID,
 			Containers: containerStatuses,
 		}
 
 		appStatuses = append(appStatuses, appStatus)
 	}
+
+	log.Info("Retrieved apps status", "apps_count", len(appStatuses))
 
 	return appStatuses, nil
 }
