@@ -1,4 +1,4 @@
-package files
+package embedded
 
 import (
 	"io/fs"

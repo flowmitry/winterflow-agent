@@ -12,13 +12,13 @@ import (
 	"syscall"
 	"time"
 	"winterflow-agent/internal/application"
-	"winterflow-agent/internal/infra/winterflow/grpc/certs"
+	certsEmbedded "winterflow-agent/internal/infra/winterflow/grpc/embedded"
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/application/agent"
 	"winterflow-agent/internal/application/version"
 	"winterflow-agent/internal/config"
-	ansiblefiles "winterflow-agent/internal/infra/ansible/files"
+	ansibleEmbedded "winterflow-agent/internal/infra/ansible/embedded"
 	"winterflow-agent/internal/infra/winterflow/api"
 )
 
@@ -190,7 +190,7 @@ func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) 
 		fmt.Printf("\nError accessing ansible filesystem: %v", err)
 		return err
 	}
-	ansibleManager := ansiblefiles.NewManager(fsysAnsible, configPath)
+	ansibleManager := ansibleEmbedded.NewManager(fsysAnsible, configPath)
 	if err := ansibleManager.SyncFiles(); err != nil {
 		fmt.Printf("\nError syncing ansible files: %v", err)
 		return err
@@ -201,7 +201,7 @@ func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) 
 		fmt.Printf("\nError accessing certificates filesystem: %v", err)
 		return err
 	}
-	certsManager := certs.NewManager(fsysCerts, configPath)
+	certsManager := certsEmbedded.NewManager(fsysCerts, configPath)
 	if err := certsManager.SyncFiles(); err != nil {
 		fmt.Printf("\nError syncing ansible files: %v", err)
 		return err
