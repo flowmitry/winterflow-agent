@@ -140,7 +140,7 @@ func (c *Client) setupConnection() error {
 }
 
 // NewClient creates a new gRPC client
-func NewClient(config *config.Config, ansible repository.RunnerRepository, orchestrator repository.ContainerAppRepository) (*Client, error) {
+func NewClient(config *config.Config, appRepository repository.AppRepository) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	serverAddress := config.GetGRPCServerAddress()
 	caCertPath := config.GetCACertificatePath()
@@ -151,14 +151,14 @@ func NewClient(config *config.Config, ansible repository.RunnerRepository, orche
 
 	// Create command bus and register handlers
 	commandBus := cqrs.NewCommandBus()
-	if err := command.RegisterCommandHandlers(commandBus, config, ansible); err != nil {
+	if err := command.RegisterCommandHandlers(commandBus, config, appRepository); err != nil {
 		cancel()
 		return nil, log.Errorf("failed to register command handlers: %v", err)
 	}
 
 	// Create query bus and register handlers
 	queryBus := cqrs.NewQueryBus()
-	if err := query.RegisterQueryHandlers(queryBus, config, ansible, orchestrator); err != nil {
+	if err := query.RegisterQueryHandlers(queryBus, config, appRepository); err != nil {
 		cancel()
 		return nil, log.Errorf("failed to register query handlers: %v", err)
 	}

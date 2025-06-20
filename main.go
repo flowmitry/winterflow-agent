@@ -18,7 +18,6 @@ import (
 	"winterflow-agent/internal/application/agent"
 	"winterflow-agent/internal/application/version"
 	"winterflow-agent/internal/config"
-	ansible "winterflow-agent/internal/infra/ansible"
 	ansiblefiles "winterflow-agent/internal/infra/ansible/files"
 	"winterflow-agent/internal/infra/winterflow/api"
 )
@@ -126,17 +125,11 @@ func startAgent(ctx context.Context, cancel context.CancelFunc, configPath strin
 	log.InitLog(cfg.LogLevel)
 	fmt.Printf("\nWinterFlow.io Agent initialized with Log Level \"%s\"\n", cfg.LogLevel)
 
-	// Create ansible repository
-	ansibleRepo := ansible.NewRepository(cfg)
-	go ansibleRepo.DeployIngress()
-
-	// Create orchestrator repository
-	log.Debug("Creating orchestrator repository")
-	containerAppRepository := application.NewContainerAppRepository(cfg)
+	appRepository := application.NewAppRepository(application.NewRunnerRepository(cfg), application.NewContainerAppRepository(cfg))
 
 	// Create and initialize agent
 	log.Debug("Creating agent")
-	a, err := agent.NewAgent(cfg, ansibleRepo, containerAppRepository)
+	a, err := agent.NewAgent(cfg, appRepository)
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
 	}

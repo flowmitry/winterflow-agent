@@ -9,12 +9,12 @@ import (
 	"winterflow-agent/pkg/log"
 )
 
-func RegisterQueryHandlers(b cqrs.QueryBus, config *config.Config, ansible repository.RunnerRepository, containerAppRepository repository.ContainerAppRepository) error {
+func RegisterQueryHandlers(b cqrs.QueryBus, config *config.Config, appRepository repository.AppRepository) error {
 	if err := b.Register(get_app.NewGetAppQueryHandler(config.GetAnsibleAppsRolesPath(), config.GetAnsibleAppRoleCurrentVersionFolder())); err != nil {
 		return log.Errorf("failed to register get app query handler: %v", err)
 	}
 
-	if err := b.Register(get_apps_status.NewGetAppsStatusQueryHandler(containerAppRepository)); err != nil {
+	if err := b.Register(get_apps_status.NewGetAppsStatusQueryHandler(appRepository)); err != nil {
 		return log.Errorf("failed to register get apps status query handler: %v", err)
 	}
 
