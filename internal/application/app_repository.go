@@ -1,15 +1,18 @@
 package application
 
-import "winterflow-agent/internal/domain/repository"
+import (
+	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/domain/repository"
+)
 
 // NewAppRepository returns a repository.AppRepository by composing a
 // RunnerRepository and a ContainerAppRepository.  The returned struct embeds
 // both repositories, so all their methods are promoted and the composite
 // automatically satisfies the AppRepository interface.
-func NewAppRepository(runner repository.RunnerRepository, container repository.ContainerAppRepository) repository.AppRepository {
+func NewAppRepository(config *config.Config) repository.AppRepository {
 	return &combinedRepository{
-		RunnerRepository:       runner,
-		ContainerAppRepository: container,
+		RunnerRepository:       NewRunnerRepository(config),
+		ContainerAppRepository: NewContainerAppRepository(config),
 	}
 }
 
