@@ -176,10 +176,6 @@ message ControlAppRequestV1 {
 
 message ControlAppResponseV1 {
   BaseResponse base = 1;
-  // UUID
-  string app_id = 2;
-  uint32 app_version = 3;
-  AppStatusCode status_code = 4;
 }
 
 message GetAppsStatusRequestV1 {

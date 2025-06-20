@@ -1438,12 +1438,8 @@ func (x *ControlAppRequestV1) GetAction() AppAction {
 }
 
 type ControlAppResponseV1 struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Base  *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
-	// UUID
-	AppId         string        `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
-	AppVersion    uint32        `protobuf:"varint,3,opt,name=app_version,json=appVersion,proto3" json:"app_version,omitempty"`
-	StatusCode    AppStatusCode `protobuf:"varint,4,opt,name=status_code,json=statusCode,proto3,enum=pb.AppStatusCode" json:"status_code,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1483,27 +1479,6 @@ func (x *ControlAppResponseV1) GetBase() *BaseResponse {
 		return x.Base
 	}
 	return nil
-}
-
-func (x *ControlAppResponseV1) GetAppId() string {
-	if x != nil {
-		return x.AppId
-	}
-	return ""
-}
-
-func (x *ControlAppResponseV1) GetAppVersion() uint32 {
-	if x != nil {
-		return x.AppVersion
-	}
-	return 0
-}
-
-func (x *ControlAppResponseV1) GetStatusCode() AppStatusCode {
-	if x != nil {
-		return x.StatusCode
-	}
-	return AppStatusCode_APP_STATUS_CODE_UNKNOWN
 }
 
 type GetAppsStatusRequestV1 struct {
@@ -2022,14 +1997,9 @@ const file_internal_infra_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x06app_id\x18\x02 \x01(\tR\x05appId\x12\x1f\n" +
 	"\vapp_version\x18\x03 \x01(\rR\n" +
 	"appVersion\x12%\n" +
-	"\x06action\x18\x04 \x01(\x0e2\r.pb.AppActionR\x06action\"\xa8\x01\n" +
+	"\x06action\x18\x04 \x01(\x0e2\r.pb.AppActionR\x06action\"<\n" +
 	"\x14ControlAppResponseV1\x12$\n" +
-	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x15\n" +
-	"\x06app_id\x18\x02 \x01(\tR\x05appId\x12\x1f\n" +
-	"\vapp_version\x18\x03 \x01(\rR\n" +
-	"appVersion\x122\n" +
-	"\vstatus_code\x18\x04 \x01(\x0e2\x11.pb.AppStatusCodeR\n" +
-	"statusCode\"=\n" +
+	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"=\n" +
 	"\x16GetAppsStatusRequestV1\x12#\n" +
 	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\"d\n" +
 	"\x17GetAppsStatusResponseV1\x12$\n" +
@@ -2168,33 +2138,32 @@ var file_internal_infra_winterflow_grpc_pb_server_proto_depIdxs = []int32{
 	5,  // 25: pb.ControlAppRequestV1.base:type_name -> pb.BaseMessage
 	3,  // 26: pb.ControlAppRequestV1.action:type_name -> pb.AppAction
 	6,  // 27: pb.ControlAppResponseV1.base:type_name -> pb.BaseResponse
-	1,  // 28: pb.ControlAppResponseV1.status_code:type_name -> pb.AppStatusCode
-	5,  // 29: pb.GetAppsStatusRequestV1.base:type_name -> pb.BaseMessage
-	6,  // 30: pb.GetAppsStatusResponseV1.base:type_name -> pb.BaseResponse
-	12, // 31: pb.GetAppsStatusResponseV1.apps:type_name -> pb.AppStatusV1
-	10, // 32: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
-	18, // 33: pb.ServerCommand.update_agent_request_v1:type_name -> pb.UpdateAgentRequestV1
-	16, // 34: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
-	20, // 35: pb.ServerCommand.save_app_request_v1:type_name -> pb.SaveAppRequestV1
-	22, // 36: pb.ServerCommand.delete_app_request_v1:type_name -> pb.DeleteAppRequestV1
-	24, // 37: pb.ServerCommand.control_app_request_v1:type_name -> pb.ControlAppRequestV1
-	26, // 38: pb.ServerCommand.get_apps_status_request_v1:type_name -> pb.GetAppsStatusRequestV1
-	9,  // 39: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
-	19, // 40: pb.AgentMessage.update_agent_response_v1:type_name -> pb.UpdateAgentResponseV1
-	17, // 41: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
-	21, // 42: pb.AgentMessage.save_app_response_v1:type_name -> pb.SaveAppResponseV1
-	23, // 43: pb.AgentMessage.delete_app_response_v1:type_name -> pb.DeleteAppResponseV1
-	25, // 44: pb.AgentMessage.control_app_response_v1:type_name -> pb.ControlAppResponseV1
-	27, // 45: pb.AgentMessage.get_apps_status_response_v1:type_name -> pb.GetAppsStatusResponseV1
-	7,  // 46: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
-	29, // 47: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
-	8,  // 48: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
-	28, // 49: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
-	48, // [48:50] is the sub-list for method output_type
-	46, // [46:48] is the sub-list for method input_type
-	46, // [46:46] is the sub-list for extension type_name
-	46, // [46:46] is the sub-list for extension extendee
-	0,  // [0:46] is the sub-list for field type_name
+	5,  // 28: pb.GetAppsStatusRequestV1.base:type_name -> pb.BaseMessage
+	6,  // 29: pb.GetAppsStatusResponseV1.base:type_name -> pb.BaseResponse
+	12, // 30: pb.GetAppsStatusResponseV1.apps:type_name -> pb.AppStatusV1
+	10, // 31: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
+	18, // 32: pb.ServerCommand.update_agent_request_v1:type_name -> pb.UpdateAgentRequestV1
+	16, // 33: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
+	20, // 34: pb.ServerCommand.save_app_request_v1:type_name -> pb.SaveAppRequestV1
+	22, // 35: pb.ServerCommand.delete_app_request_v1:type_name -> pb.DeleteAppRequestV1
+	24, // 36: pb.ServerCommand.control_app_request_v1:type_name -> pb.ControlAppRequestV1
+	26, // 37: pb.ServerCommand.get_apps_status_request_v1:type_name -> pb.GetAppsStatusRequestV1
+	9,  // 38: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
+	19, // 39: pb.AgentMessage.update_agent_response_v1:type_name -> pb.UpdateAgentResponseV1
+	17, // 40: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
+	21, // 41: pb.AgentMessage.save_app_response_v1:type_name -> pb.SaveAppResponseV1
+	23, // 42: pb.AgentMessage.delete_app_response_v1:type_name -> pb.DeleteAppResponseV1
+	25, // 43: pb.AgentMessage.control_app_response_v1:type_name -> pb.ControlAppResponseV1
+	27, // 44: pb.AgentMessage.get_apps_status_response_v1:type_name -> pb.GetAppsStatusResponseV1
+	7,  // 45: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
+	29, // 46: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
+	8,  // 47: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
+	28, // 48: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
+	47, // [47:49] is the sub-list for method output_type
+	45, // [45:47] is the sub-list for method input_type
+	45, // [45:45] is the sub-list for extension type_name
+	45, // [45:45] is the sub-list for extension extendee
+	0,  // [0:45] is the sub-list for field type_name
 }
 
 func init() { file_internal_infra_winterflow_grpc_pb_server_proto_init() }
