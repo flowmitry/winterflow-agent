@@ -54,7 +54,7 @@ jobs:
           
           # Build for linux/arm64
           echo "Building for linux/arm64..."
-          GOOS=linux GOARCH=arm64 go build -v -ldflags="-s -w -X winterflow-agent/internal/version.version=${SEMVER}" -o winterflow-agent-linux-arm64 ./main.go
+          GOOS=linux GOARCH=arm64 go build -v -ldflags="-s -w -X winterflow-agent/internal/config/version.version=${SEMVER}" -o winterflow-agent-linux-arm64 ./main.go
 
       - name: Create Release
         env:
