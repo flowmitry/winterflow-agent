@@ -5,7 +5,7 @@ import (
 	"winterflow-agent/internal/application/version"
 	log "winterflow-agent/pkg/log"
 
-	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/pkg/embedded"
 )
 

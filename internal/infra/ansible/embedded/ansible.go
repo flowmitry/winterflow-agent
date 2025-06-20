@@ -4,8 +4,8 @@ import (
 	"io/fs"
 	log "winterflow-agent/pkg/log"
 
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/application/version"
-	"winterflow-agent/internal/config"
 	"winterflow-agent/pkg/embedded"
 )
 

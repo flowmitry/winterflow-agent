@@ -1,9 +1,9 @@
 package query
 
 import (
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/application/query/get_app"
 	"winterflow-agent/internal/application/query/get_apps_status"
-	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/domain/repository"
 	"winterflow-agent/pkg/cqrs"
 	"winterflow-agent/pkg/log"

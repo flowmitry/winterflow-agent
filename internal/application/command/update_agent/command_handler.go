@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"winterflow-agent/internal/application/config"
 	agentversion "winterflow-agent/internal/application/version"
-	"winterflow-agent/internal/config"
 	log "winterflow-agent/pkg/log"
 )
 

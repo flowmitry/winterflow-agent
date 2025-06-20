@@ -5,7 +5,7 @@ import (
 	"winterflow-agent/internal/application/command/delete_app"
 	"winterflow-agent/internal/application/command/save_app"
 	"winterflow-agent/internal/application/command/update_agent"
-	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/domain/repository"
 	"winterflow-agent/pkg/cqrs"
 	"winterflow-agent/pkg/log"

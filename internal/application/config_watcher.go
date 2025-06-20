@@ -3,7 +3,7 @@ package application
 import (
 	"context"
 	"time"
-	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/pkg/files"
 	log "winterflow-agent/pkg/log"
 )

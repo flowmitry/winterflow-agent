@@ -16,8 +16,8 @@ import (
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/application/agent"
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/application/version"
-	"winterflow-agent/internal/config"
 	ansibleEmbedded "winterflow-agent/internal/infra/ansible/embedded"
 	"winterflow-agent/internal/infra/winterflow/api"
 )
