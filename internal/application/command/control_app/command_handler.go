@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"winterflow-agent/internal/domain/model"
-	"winterflow-agent/internal/infra/ansible"
+	"winterflow-agent/internal/domain/repository"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	ansiblepkg "winterflow-agent/pkg/ansible"
 	log "winterflow-agent/pkg/log"
@@ -13,7 +13,7 @@ import (
 
 // ControlAppHandler handles the ControlAppCommand
 type ControlAppHandler struct {
-	ansible                        ansible.Repository
+	ansible                        repository.RunnerRepository
 	AnsibleAppsRolesPath           string
 	AnsibleAppsRolesCurrentVersion string
 }
@@ -104,7 +104,7 @@ func getAppConfig(AnsibleAppsRolesPath, appID, version string) (*model.AppConfig
 }
 
 // NewControlAppHandler creates a new ControlAppHandler
-func NewControlAppHandler(ansible ansible.Repository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *ControlAppHandler {
+func NewControlAppHandler(ansible repository.RunnerRepository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *ControlAppHandler {
 	return &ControlAppHandler{
 		ansible:                        ansible,
 		AnsibleAppsRolesPath:           ansibleAppsRolesPath,

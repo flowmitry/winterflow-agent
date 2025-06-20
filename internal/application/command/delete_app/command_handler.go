@@ -3,13 +3,13 @@ package delete_app
 import (
 	"os"
 	"path/filepath"
-	"winterflow-agent/internal/infra/ansible"
+	"winterflow-agent/internal/domain/repository"
 	log "winterflow-agent/pkg/log"
 )
 
 // DeleteAppHandler handles the DeleteAppCommand
 type DeleteAppHandler struct {
-	ansible                        ansible.Repository
+	ansible                        repository.RunnerRepository
 	AnsibleAppsRolesPath           string
 	AnsibleAppsRolesCurrentVersion string
 }
@@ -56,7 +56,7 @@ func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
 }
 
 // NewDeleteAppHandler creates a new DeleteAppHandler
-func NewDeleteAppHandler(ansible ansible.Repository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *DeleteAppHandler {
+func NewDeleteAppHandler(ansible repository.RunnerRepository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *DeleteAppHandler {
 	return &DeleteAppHandler{
 		ansible:                        ansible,
 		AnsibleAppsRolesPath:           ansibleAppsRolesPath,

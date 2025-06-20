@@ -6,12 +6,12 @@ import (
 	"winterflow-agent/internal/application/command/save_app"
 	"winterflow-agent/internal/application/command/update_agent"
 	"winterflow-agent/internal/config"
-	"winterflow-agent/internal/infra/ansible"
+	"winterflow-agent/internal/domain/repository"
 	"winterflow-agent/pkg/cqrs"
 	"winterflow-agent/pkg/log"
 )
 
-func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, ansible ansible.Repository) error {
+func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, ansible repository.RunnerRepository) error {
 	if err := b.Register(save_app.NewSaveAppHandler(config.GetAnsibleAppsRolesPath(), config.GetAnsibleAppRoleCurrentVersionFolder(), config.GetPrivateKeyPath())); err != nil {
 		return log.Errorf("failed to register save app handler: %v", err)
 	}

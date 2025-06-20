@@ -11,7 +11,6 @@ import (
 	"winterflow-agent/internal/application/query"
 	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/domain/repository"
-	"winterflow-agent/internal/infra/ansible"
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
@@ -141,7 +140,7 @@ func (c *Client) setupConnection() error {
 }
 
 // NewClient creates a new gRPC client
-func NewClient(config *config.Config, ansible ansible.Repository, orchestrator repository.ContainerAppRepository) (*Client, error) {
+func NewClient(config *config.Config, ansible repository.RunnerRepository, orchestrator repository.ContainerAppRepository) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	serverAddress := config.GetGRPCServerAddress()
 	caCertPath := config.GetCACertificatePath()
