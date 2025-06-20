@@ -155,7 +155,7 @@ func startAgent(ctx context.Context, cancel context.CancelFunc, configPath strin
 	}
 
 	// Set up configuration file watcher
-	watcher := config.NewConfigWatcher(configPath, func(newConfig *config.Config) {
+	watcher := application.NewConfigWatcher(configPath, func(newConfig *config.Config) {
 		log.Info("Configuration changed, restarting agent")
 
 		// Create a new context for the new agent
