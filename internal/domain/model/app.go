@@ -12,4 +12,4 @@ type App struct {
 type VariableMap map[string]string
 
 // FilesMap represents a map of variable UUIDs to values
-type FilesMap map[string]string
+type FilesMap map[string][]byte

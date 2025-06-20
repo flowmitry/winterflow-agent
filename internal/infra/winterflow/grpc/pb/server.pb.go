@@ -1222,7 +1222,6 @@ func (x *SaveAppRequestV1) GetApp() *AppV1 {
 type SaveAppResponseV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
-	App           *AppV1                 `protobuf:"bytes,2,opt,name=app,proto3" json:"app,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1260,13 +1259,6 @@ func (*SaveAppResponseV1) Descriptor() ([]byte, []int) {
 func (x *SaveAppResponseV1) GetBase() *BaseResponse {
 	if x != nil {
 		return x.Base
-	}
-	return nil
-}
-
-func (x *SaveAppResponseV1) GetApp() *AppV1 {
-	if x != nil {
-		return x.App
 	}
 	return nil
 }
@@ -1983,10 +1975,9 @@ const file_internal_infra_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"T\n" +
 	"\x10SaveAppRequestV1\x12#\n" +
 	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x1b\n" +
-	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"V\n" +
+	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"9\n" +
 	"\x11SaveAppResponseV1\x12$\n" +
-	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x1b\n" +
-	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\"P\n" +
+	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"P\n" +
 	"\x12DeleteAppRequestV1\x12#\n" +
 	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x15\n" +
 	"\x06app_id\x18\x02 \x01(\tR\x05appId\";\n" +
@@ -2132,38 +2123,37 @@ var file_internal_infra_winterflow_grpc_pb_server_proto_depIdxs = []int32{
 	5,  // 19: pb.SaveAppRequestV1.base:type_name -> pb.BaseMessage
 	15, // 20: pb.SaveAppRequestV1.app:type_name -> pb.AppV1
 	6,  // 21: pb.SaveAppResponseV1.base:type_name -> pb.BaseResponse
-	15, // 22: pb.SaveAppResponseV1.app:type_name -> pb.AppV1
-	5,  // 23: pb.DeleteAppRequestV1.base:type_name -> pb.BaseMessage
-	6,  // 24: pb.DeleteAppResponseV1.base:type_name -> pb.BaseResponse
-	5,  // 25: pb.ControlAppRequestV1.base:type_name -> pb.BaseMessage
-	3,  // 26: pb.ControlAppRequestV1.action:type_name -> pb.AppAction
-	6,  // 27: pb.ControlAppResponseV1.base:type_name -> pb.BaseResponse
-	5,  // 28: pb.GetAppsStatusRequestV1.base:type_name -> pb.BaseMessage
-	6,  // 29: pb.GetAppsStatusResponseV1.base:type_name -> pb.BaseResponse
-	12, // 30: pb.GetAppsStatusResponseV1.apps:type_name -> pb.AppStatusV1
-	10, // 31: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
-	18, // 32: pb.ServerCommand.update_agent_request_v1:type_name -> pb.UpdateAgentRequestV1
-	16, // 33: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
-	20, // 34: pb.ServerCommand.save_app_request_v1:type_name -> pb.SaveAppRequestV1
-	22, // 35: pb.ServerCommand.delete_app_request_v1:type_name -> pb.DeleteAppRequestV1
-	24, // 36: pb.ServerCommand.control_app_request_v1:type_name -> pb.ControlAppRequestV1
-	26, // 37: pb.ServerCommand.get_apps_status_request_v1:type_name -> pb.GetAppsStatusRequestV1
-	9,  // 38: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
-	19, // 39: pb.AgentMessage.update_agent_response_v1:type_name -> pb.UpdateAgentResponseV1
-	17, // 40: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
-	21, // 41: pb.AgentMessage.save_app_response_v1:type_name -> pb.SaveAppResponseV1
-	23, // 42: pb.AgentMessage.delete_app_response_v1:type_name -> pb.DeleteAppResponseV1
-	25, // 43: pb.AgentMessage.control_app_response_v1:type_name -> pb.ControlAppResponseV1
-	27, // 44: pb.AgentMessage.get_apps_status_response_v1:type_name -> pb.GetAppsStatusResponseV1
-	7,  // 45: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
-	29, // 46: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
-	8,  // 47: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
-	28, // 48: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
-	47, // [47:49] is the sub-list for method output_type
-	45, // [45:47] is the sub-list for method input_type
-	45, // [45:45] is the sub-list for extension type_name
-	45, // [45:45] is the sub-list for extension extendee
-	0,  // [0:45] is the sub-list for field type_name
+	5,  // 22: pb.DeleteAppRequestV1.base:type_name -> pb.BaseMessage
+	6,  // 23: pb.DeleteAppResponseV1.base:type_name -> pb.BaseResponse
+	5,  // 24: pb.ControlAppRequestV1.base:type_name -> pb.BaseMessage
+	3,  // 25: pb.ControlAppRequestV1.action:type_name -> pb.AppAction
+	6,  // 26: pb.ControlAppResponseV1.base:type_name -> pb.BaseResponse
+	5,  // 27: pb.GetAppsStatusRequestV1.base:type_name -> pb.BaseMessage
+	6,  // 28: pb.GetAppsStatusResponseV1.base:type_name -> pb.BaseResponse
+	12, // 29: pb.GetAppsStatusResponseV1.apps:type_name -> pb.AppStatusV1
+	10, // 30: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
+	18, // 31: pb.ServerCommand.update_agent_request_v1:type_name -> pb.UpdateAgentRequestV1
+	16, // 32: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
+	20, // 33: pb.ServerCommand.save_app_request_v1:type_name -> pb.SaveAppRequestV1
+	22, // 34: pb.ServerCommand.delete_app_request_v1:type_name -> pb.DeleteAppRequestV1
+	24, // 35: pb.ServerCommand.control_app_request_v1:type_name -> pb.ControlAppRequestV1
+	26, // 36: pb.ServerCommand.get_apps_status_request_v1:type_name -> pb.GetAppsStatusRequestV1
+	9,  // 37: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
+	19, // 38: pb.AgentMessage.update_agent_response_v1:type_name -> pb.UpdateAgentResponseV1
+	17, // 39: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
+	21, // 40: pb.AgentMessage.save_app_response_v1:type_name -> pb.SaveAppResponseV1
+	23, // 41: pb.AgentMessage.delete_app_response_v1:type_name -> pb.DeleteAppResponseV1
+	25, // 42: pb.AgentMessage.control_app_response_v1:type_name -> pb.ControlAppResponseV1
+	27, // 43: pb.AgentMessage.get_apps_status_response_v1:type_name -> pb.GetAppsStatusResponseV1
+	7,  // 44: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
+	29, // 45: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
+	8,  // 46: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
+	28, // 47: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
+	46, // [46:48] is the sub-list for method output_type
+	44, // [44:46] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_internal_infra_winterflow_grpc_pb_server_proto_init() }

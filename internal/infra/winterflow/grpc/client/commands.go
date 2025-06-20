@@ -2,11 +2,9 @@ package client
 
 import (
 	"fmt"
-	"winterflow-agent/internal/application/command/control_app"
 	"winterflow-agent/internal/application/command/delete_app"
 	"winterflow-agent/internal/application/command/save_app"
 	"winterflow-agent/internal/application/command/update_agent"
-	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	"winterflow-agent/pkg/cqrs"
 	log "winterflow-agent/pkg/log"
@@ -15,25 +13,10 @@ import (
 // HandleSaveAppRequest handles the command dispatch and creates the appropriate response message
 func HandleSaveAppRequest(commandBus cqrs.CommandBus, saveAppRequest *pb.SaveAppRequestV1, agentID string) (*pb.AgentMessage, error) {
 	log.Debug("Processing save app request", "app_id", saveAppRequest.App.AppId)
-
-	variables := ProtoAppVarsV1ToVariableMap(saveAppRequest.App.Variables)
-	files := ProtoAppFilesV1ToFilesMap(saveAppRequest.App.Files)
-
-	// Parse config bytes into AppConfig
-	appConfig, err := model.ParseAppConfig(saveAppRequest.App.Config)
-	if err != nil {
-		log.Error("Error parsing app config: %v", err)
-		appConfig = &model.AppConfig{ID: saveAppRequest.App.AppId}
-	}
-
+	app := ProtoAppV1ToApp(saveAppRequest.App)
 	// Create and dispatch the command
 	cmd := save_app.SaveAppCommand{
-		App: &model.App{
-			ID:        saveAppRequest.App.AppId,
-			Config:    appConfig,
-			Variables: variables,
-			Files:     files,
-		},
+		App: app,
 	}
 
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
@@ -49,7 +32,6 @@ func HandleSaveAppRequest(commandBus cqrs.CommandBus, saveAppRequest *pb.SaveApp
 	baseResp := createBaseResponse(saveAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	saveAppResp := &pb.SaveAppResponseV1{
 		Base: &baseResp,
-		App:  saveAppRequest.App,
 	}
 
 	agentMsg := &pb.AgentMessage{
@@ -98,27 +80,8 @@ func HandleDeleteAppRequest(commandBus cqrs.CommandBus, deleteAppRequest *pb.Del
 func HandleControlAppRequest(commandBus cqrs.CommandBus, controlAppRequest *pb.ControlAppRequestV1, agentID string) (*pb.AgentMessage, error) {
 	log.Debug("Processing control app request", "app_id", controlAppRequest.AppId, "action", controlAppRequest.Action)
 
-	// Convert AppAction
-	var action control_app.AppAction
-	switch controlAppRequest.Action {
-	case pb.AppAction_START:
-		action = control_app.AppActionStart
-	case pb.AppAction_STOP:
-		action = control_app.AppActionStop
-	case pb.AppAction_RESTART:
-		action = control_app.AppActionRestart
-	case pb.AppAction_UPDATE:
-		action = control_app.AppActionUpdate
-	default:
-		action = control_app.AppActionStop
-	}
-
 	// Create and dispatch the command
-	cmd := control_app.ControlAppCommand{
-		AppID:      controlAppRequest.AppId,
-		AppVersion: controlAppRequest.AppVersion,
-		Action:     action,
-	}
+	cmd := ProtoControlAppRequestV1ToControlAppCommand(controlAppRequest)
 
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage string = "App control action executed successfully"

@@ -112,7 +112,7 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.App, error) {
 	}
 
 	// Read only the files listed in the config
-	files := make(map[string]string)
+	files := make(map[string][]byte)
 	for filename, fileID := range fileInfo {
 		// Construct the full path to the file
 		filePath := filepath.Join(rolesTemplatesDir, filename+".j2")
@@ -130,7 +130,7 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.App, error) {
 		}
 
 		// Add the file to the map
-		files[fileID] = string(content)
+		files[fileID] = content
 	}
 
 	// Combine variables and secrets into a single map

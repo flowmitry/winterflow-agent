@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"winterflow-agent/internal/application/command/control_app"
 	"winterflow-agent/internal/application/command/delete_app"
-	"winterflow-agent/internal/application/command/save_app"
-	"winterflow-agent/internal/application/command/update_agent"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	log "winterflow-agent/pkg/log"
@@ -123,7 +121,7 @@ func ProtoAppVarsV1ToVariableMap(vars []*pb.AppVarV1) model.VariableMap {
 func ProtoAppFilesV1ToFilesMap(files []*pb.AppFileV1) model.FilesMap {
 	filesMap := make(model.FilesMap)
 	for _, v := range files {
-		filesMap[v.Id] = string(v.Content)
+		filesMap[v.Id] = v.Content
 	}
 	return filesMap
 }
@@ -138,9 +136,9 @@ func ProtoAppV1ToApp(app *pb.AppV1) *model.App {
 	variables := ProtoAppVarsV1ToVariableMap(app.Variables)
 
 	// Convert files
-	files := make(map[string]string)
+	files := make(map[string][]byte)
 	for _, file := range app.Files {
-		files[file.Id] = string(file.Content)
+		files[file.Id] = file.Content
 	}
 
 	// Parse config bytes into AppConfig
@@ -221,33 +219,6 @@ func ProtoContainerStatusCodeToContainerStatusCode(statusCode pb.ContainerStatus
 
 // Command assemblers
 
-// ProtoSaveAppRequestV1ToSaveAppCommand converts a protobuf SaveAppRequestV1 to a domain SaveAppCommand
-func ProtoSaveAppRequestV1ToSaveAppCommand(request *pb.SaveAppRequestV1) save_app.SaveAppCommand {
-	if request == nil || request.App == nil {
-		return save_app.SaveAppCommand{}
-	}
-
-	// Convert variables to VariableMap
-	variables := ProtoAppVarsV1ToVariableMap(request.App.Variables)
-	files := ProtoAppFilesV1ToFilesMap(request.App.Files)
-
-	// Parse config bytes into AppConfig
-	appConfig, err := model.ParseAppConfig(request.App.Config)
-	if err != nil {
-		log.Error("Error parsing app config: %v", err)
-		appConfig = &model.AppConfig{ID: request.App.AppId}
-	}
-
-	return save_app.SaveAppCommand{
-		App: &model.App{
-			ID:        request.App.AppId,
-			Config:    appConfig,
-			Variables: variables,
-			Files:     files,
-		},
-	}
-}
-
 // ProtoDeleteAppRequestV1ToDeleteAppCommand converts a protobuf DeleteAppRequestV1 to a domain DeleteAppCommand
 func ProtoDeleteAppRequestV1ToDeleteAppCommand(request *pb.DeleteAppRequestV1) delete_app.DeleteAppCommand {
 	if request == nil {
@@ -284,16 +255,5 @@ func ProtoControlAppRequestV1ToControlAppCommand(request *pb.ControlAppRequestV1
 		AppID:      request.AppId,
 		AppVersion: request.AppVersion,
 		Action:     action,
-	}
-}
-
-// ProtoUpdateAgentRequestV1ToUpdateAgentCommand converts a protobuf UpdateAgentRequestV1 to a domain UpdateAgentCommand
-func ProtoUpdateAgentRequestV1ToUpdateAgentCommand(request *pb.UpdateAgentRequestV1) update_agent.UpdateAgentCommand {
-	if request == nil {
-		return update_agent.UpdateAgentCommand{}
-	}
-
-	return update_agent.UpdateAgentCommand{
-		Version: request.Version,
 	}
 }
