@@ -2,6 +2,10 @@ package client
 
 import (
 	"encoding/json"
+	"winterflow-agent/internal/application/command/control_app"
+	"winterflow-agent/internal/application/command/delete_app"
+	"winterflow-agent/internal/application/command/save_app"
+	"winterflow-agent/internal/application/command/update_agent"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	log "winterflow-agent/pkg/log"
@@ -106,8 +110,6 @@ func ContainerStatusCodeToProtoContainerStatusCode(statusCode model.ContainerSta
 
 // Infrastructure to Domain transformations
 
-// These functions have been removed as we now pass properties directly to queries
-
 // ProtoAppVarsV1ToVariableMap converts protobuf app variables to a domain variable map
 func ProtoAppVarsV1ToVariableMap(vars []*pb.AppVarV1) model.VariableMap {
 	variableMap := make(model.VariableMap)
@@ -115,6 +117,15 @@ func ProtoAppVarsV1ToVariableMap(vars []*pb.AppVarV1) model.VariableMap {
 		variableMap[v.Id] = string(v.Content)
 	}
 	return variableMap
+}
+
+// ProtoAppFilesV1ToFilesMap converts protobuf app files to a domain files map
+func ProtoAppFilesV1ToFilesMap(files []*pb.AppFileV1) model.FilesMap {
+	filesMap := make(model.FilesMap)
+	for _, v := range files {
+		filesMap[v.Id] = string(v.Content)
+	}
+	return filesMap
 }
 
 // ProtoAppV1ToApp converts a protobuf app model to a domain app model
@@ -205,5 +216,84 @@ func ProtoContainerStatusCodeToContainerStatusCode(statusCode pb.ContainerStatus
 		return model.ContainerStatusStopped
 	default:
 		return model.ContainerStatusUnknown
+	}
+}
+
+// Command assemblers
+
+// ProtoSaveAppRequestV1ToSaveAppCommand converts a protobuf SaveAppRequestV1 to a domain SaveAppCommand
+func ProtoSaveAppRequestV1ToSaveAppCommand(request *pb.SaveAppRequestV1) save_app.SaveAppCommand {
+	if request == nil || request.App == nil {
+		return save_app.SaveAppCommand{}
+	}
+
+	// Convert variables to VariableMap
+	variables := ProtoAppVarsV1ToVariableMap(request.App.Variables)
+	files := ProtoAppFilesV1ToFilesMap(request.App.Files)
+
+	// Parse config bytes into AppConfig
+	appConfig, err := model.ParseAppConfig(request.App.Config)
+	if err != nil {
+		log.Error("Error parsing app config: %v", err)
+		appConfig = &model.AppConfig{ID: request.App.AppId}
+	}
+
+	return save_app.SaveAppCommand{
+		App: &model.App{
+			ID:        request.App.AppId,
+			Config:    appConfig,
+			Variables: variables,
+			Files:     files,
+		},
+	}
+}
+
+// ProtoDeleteAppRequestV1ToDeleteAppCommand converts a protobuf DeleteAppRequestV1 to a domain DeleteAppCommand
+func ProtoDeleteAppRequestV1ToDeleteAppCommand(request *pb.DeleteAppRequestV1) delete_app.DeleteAppCommand {
+	if request == nil {
+		return delete_app.DeleteAppCommand{}
+	}
+
+	return delete_app.DeleteAppCommand{
+		AppID: request.AppId,
+	}
+}
+
+// ProtoControlAppRequestV1ToControlAppCommand converts a protobuf ControlAppRequestV1 to a domain ControlAppCommand
+func ProtoControlAppRequestV1ToControlAppCommand(request *pb.ControlAppRequestV1) control_app.ControlAppCommand {
+	if request == nil {
+		return control_app.ControlAppCommand{}
+	}
+
+	// Convert AppAction
+	var action control_app.AppAction
+	switch request.Action {
+	case pb.AppAction_START:
+		action = control_app.AppActionStart
+	case pb.AppAction_STOP:
+		action = control_app.AppActionStop
+	case pb.AppAction_RESTART:
+		action = control_app.AppActionRestart
+	case pb.AppAction_UPDATE:
+		action = control_app.AppActionUpdate
+	default:
+		action = control_app.AppActionStop
+	}
+
+	return control_app.ControlAppCommand{
+		AppID:      request.AppId,
+		AppVersion: request.AppVersion,
+		Action:     action,
+	}
+}
+
+// ProtoUpdateAgentRequestV1ToUpdateAgentCommand converts a protobuf UpdateAgentRequestV1 to a domain UpdateAgentCommand
+func ProtoUpdateAgentRequestV1ToUpdateAgentCommand(request *pb.UpdateAgentRequestV1) update_agent.UpdateAgentCommand {
+	if request == nil {
+		return update_agent.UpdateAgentCommand{}
+	}
+
+	return update_agent.UpdateAgentCommand{
+		Version: request.Version,
 	}
 }

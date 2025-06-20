@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"winterflow-agent/internal/domain/model"
-	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	"winterflow-agent/pkg/certs"
 	log "winterflow-agent/pkg/log"
 	"winterflow-agent/pkg/yaml"
@@ -21,21 +20,17 @@ type SaveAppHandler struct {
 
 // Handle executes the SaveAppCommand
 func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
-	log.Printf("Processing save app request for app ID: %s", cmd.Request.App.AppId)
+	log.Printf("Processing save app request for app ID: %s", cmd.App.ID)
 
-	// Validate the app configuration
-	appConfig, err := model.ParseAppConfig(cmd.Request.App.Config)
-	if err != nil {
-		log.Error("Error parsing app config: %v", err)
-		return fmt.Errorf("error parsing app config: %v", err)
-	}
+	// Get the app configuration from the command
+	appConfig := cmd.App.Config
 
-	// Parse variables (which now include secrets)
-	variables := model.ParseVariableMapFromProto(cmd.Request.App.Variables)
+	// Get variables from the command
+	variables := cmd.App.Variables
 
 	// Create the directory structure and files
-	appID := cmd.Request.App.AppId
-	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	appID := cmd.App.ID
+	var success bool = true
 	var responseMessage string = "App saved successfully"
 
 	// Create the required directories
@@ -50,71 +45,89 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	// Create directories if they don't exist
 	if err := os.MkdirAll(versionDir, 0755); err != nil {
 		log.Error("Error creating roles directory: %v", err)
-		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		success = false
 		responseMessage = fmt.Sprintf("Error creating roles directory: %v", err)
 	}
 
 	if err := os.MkdirAll(rolesDefaultsDir, 0755); err != nil {
 		log.Error("Error creating roles defaults directory: %v", err)
-		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		success = false
 		responseMessage = fmt.Sprintf("Error creating roles defaults directory: %v", err)
 	}
 
 	if err := os.MkdirAll(rolesVarsDir, 0755); err != nil {
 		log.Error("Error creating roles vars directory: %v", err)
-		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		success = false
 		responseMessage = fmt.Sprintf("Error creating roles vars directory: %v", err)
 	}
 
 	if err := os.MkdirAll(rolesTemplatesDir, 0755); err != nil {
 		log.Error("Error creating roles templates directory: %v", err)
-		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		success = false
 		responseMessage = fmt.Sprintf("Error creating roles templates directory: %v", err)
 	}
 
 	// Process files, variables, and secrets
-	if responseCode == pb.ResponseCode_RESPONSE_CODE_SUCCESS {
+	if success {
 		// Create config file
 		roleConfigFile := filepath.Join(versionDir, "config.json")
 
+		// Convert AppConfig to JSON
+		configBytes, err := json.Marshal(appConfig)
+		if err != nil {
+			log.Error("Error marshaling app config: %v", err)
+			success = false
+			responseMessage = fmt.Sprintf("Error marshaling app config: %v", err)
+		}
+
 		// Store config.json in app_roles/{APP_ID}/config.json
-		if err := os.WriteFile(roleConfigFile, cmd.Request.App.Config, 0644); err != nil {
-			log.Error("Error creating role config file: %v", err)
-			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-			responseMessage = fmt.Sprintf("Error creating role config file: %v", err)
+		if success {
+			if err := os.WriteFile(roleConfigFile, configBytes, 0644); err != nil {
+				log.Error("Error creating role config file: %v", err)
+				success = false
+				responseMessage = fmt.Sprintf("Error creating role config file: %v", err)
+			}
 		}
 
 		// Handle template files
-		if err := h.handleTemplateFiles(rolesTemplatesDir, appConfig, cmd.Request.App.Files); err != nil {
-			log.Error("Error handling template files: %v", err)
-			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-			responseMessage = fmt.Sprintf("Error handling template files: %v", err)
+		if success {
+			if err := h.handleTemplateFiles(rolesTemplatesDir, appConfig, cmd.App.Files); err != nil {
+				log.Error("Error handling template files: %v", err)
+				success = false
+				responseMessage = fmt.Sprintf("Error handling template files: %v", err)
+			}
 		}
 
 		// Create defaults/main.yml with empty values based on config variables
-		if err := h.createDefaultsFile(rolesDefaultsDir, appConfig); err != nil {
-			log.Error("Error creating defaults file: %v", err)
-			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-			responseMessage = fmt.Sprintf("Error creating defaults file: %v", err)
+		if success {
+			if err := h.createDefaultsFile(rolesDefaultsDir, appConfig); err != nil {
+				log.Error("Error creating defaults file: %v", err)
+				success = false
+				responseMessage = fmt.Sprintf("Error creating defaults file: %v", err)
+			}
 		}
 
 		// Process variables
-		if err := h.processVariables(rolesVarsFile, appConfig, variables); err != nil {
-			log.Error("Error processing variables: %v", err)
-			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-			responseMessage = fmt.Sprintf("Error processing variables: %v", err)
+		if success {
+			if err := h.processVariables(rolesVarsFile, appConfig, variables); err != nil {
+				log.Error("Error processing variables: %v", err)
+				success = false
+				responseMessage = fmt.Sprintf("Error processing variables: %v", err)
+			}
 		}
 
 		// Process secrets
-		if err := h.processSecrets(rolesSecretsFile, appConfig, variables); err != nil {
-			log.Error("Error processing secrets: %v", err)
-			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
-			responseMessage = fmt.Sprintf("Error processing secrets: %v", err)
+		if success {
+			if err := h.processSecrets(rolesSecretsFile, appConfig, variables); err != nil {
+				log.Error("Error processing secrets: %v", err)
+				success = false
+				responseMessage = fmt.Sprintf("Error processing secrets: %v", err)
+			}
 		}
 	}
 
 	// Return error if there was a problem
-	if responseCode != pb.ResponseCode_RESPONSE_CODE_SUCCESS {
+	if !success {
 		return fmt.Errorf(responseMessage)
 	}
 
@@ -123,11 +136,11 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 
 // handleTemplateFiles handles the template files for the app
 // It creates new files, updates existing files, and deletes files that are no longer in the config
-func (h *SaveAppHandler) handleTemplateFiles(templatesDir string, appConfig *model.AppConfig, files []*pb.AppFileV1) error {
+func (h *SaveAppHandler) handleTemplateFiles(templatesDir string, appConfig *model.AppConfig, files model.FilesMap) error {
 	// Create a map of filenames from the request for creating/updating files
 	requestFiles := make(map[string]bool)
-	for _, file := range files {
-		requestFiles[file.Id] = true
+	for fileID := range files {
+		requestFiles[fileID] = true
 	}
 
 	// Create a map of filenames from the appConfig for checking which files to delete
@@ -159,17 +172,17 @@ func (h *SaveAppHandler) handleTemplateFiles(templatesDir string, appConfig *mod
 	}
 
 	// Create or update files from the request
-	for _, file := range files {
+	for fileID, content := range files {
 		// Get the filename from the ID using the mapping
-		filename, ok := idToFilename[file.Id]
+		filename, ok := idToFilename[fileID]
 		if !ok {
 			// If filename not found, fall back to using ID
-			filename = file.Id
-			log.Printf("Warning: No filename found for ID %s, using ID as filename", file.Id)
+			filename = fileID
+			log.Printf("Warning: No filename found for ID %s, using ID as filename", fileID)
 		}
 
 		templateFile := filepath.Join(templatesDir, filename+".j2")
-		if err := os.WriteFile(templateFile, file.Content, 0644); err != nil {
+		if err := os.WriteFile(templateFile, []byte(content), 0644); err != nil {
 			return fmt.Errorf("error creating/updating template file %s: %w", filename, err)
 		}
 		log.Printf("Created/updated file: %s", templateFile)
@@ -333,9 +346,9 @@ func (h *SaveAppHandler) processSecrets(secretsFile string, appConfig *model.App
 
 // SaveAppResult represents the result of creating an app
 type SaveAppResult struct {
-	ResponseCode    pb.ResponseCode
+	Success         bool
 	ResponseMessage string
-	App             *pb.AppV1
+	App             *model.App
 }
 
 // NewSaveAppHandler creates a new SaveAppHandler

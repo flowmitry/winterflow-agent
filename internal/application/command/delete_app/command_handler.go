@@ -16,17 +16,8 @@ type DeleteAppHandler struct {
 
 // Handle executes the DeleteAppCommand
 func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
-	if cmd.Request == nil {
-		return log.Errorf("invalid request: request is nil")
-	}
-
-	if cmd.Request.Base == nil {
-		return log.Errorf("invalid request: base message is nil")
-	}
-
-	messageID := cmd.Request.Base.MessageId
-	appID := cmd.Request.AppId
-	log.Debug("Processing delete app request for message ID: %s, app ID: %s", messageID, appID)
+	appID := cmd.AppID
+	log.Debug("Processing delete app request for app ID: %s", appID)
 
 	// Validate the app ID
 	if appID == "" {

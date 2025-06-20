@@ -47,6 +47,69 @@ func ProtoGetAppRequestV1ToGetAppRequest(request *pb.GetAppRequestV1) *model.Get
 }
 ```
 
+## Command Implementation Guidelines
+
+When implementing commands:
+
+1. Define domain models in `internal/domain/model/`
+2. Define command struct in application layer using domain models
+3. Pass properties directly to the Commands, do not create Request models
+4. Implement command handler that uses domain models
+5. Use direct transformation in infrastructure layer to convert between domain and infrastructure models
+
+Example:
+
+```go
+// Command using domain models
+type SaveAppCommand struct {
+AppID     string
+Config    *model.AppConfig
+Variables model.VariableMap
+Files     map[string][]byte
+}
+
+// Handler using domain models
+func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
+// Implementation using domain models
+}
+
+// Infrastructure layer using direct transformation
+func HandleSaveAppRequest(commandBus cqrs.CommandBus, saveAppRequest *pb.SaveAppRequestV1, agentID string) (*pb.AgentMessage, error) {
+// Convert variables to VariableMap
+variables := make(model.VariableMap)
+for _, v := range saveAppRequest.App.Variables {
+variables[v.Id] = string(v.Content)
+}
+
+// Convert files to map[string][]byte
+files := make(map[string][]byte)
+for _, file := range saveAppRequest.App.Files {
+files[file.Id] = file.Content
+}
+
+// Parse config bytes into AppConfig
+appConfig, err := model.ParseAppConfig(saveAppRequest.App.Config)
+if err != nil {
+log.Error("Error parsing app config: %v", err)
+appConfig = &model.AppConfig{ID: saveAppRequest.App.AppId}
+}
+
+// Create and dispatch the command
+cmd := SaveAppCommand{
+AppID:     saveAppRequest.App.AppId,
+Config:    appConfig,
+Variables: variables,
+Files:     files,
+}
+
+// Dispatch the command to the handler
+err := commandBus.Dispatch(cmd)
+
+// Handle the response
+// ...
+}
+```
+
 ## Query Implementation Guidelines
 
 When implementing queries:
@@ -163,7 +226,7 @@ To add a new capability to the system, follow these steps:
        if err != nil {
            return false
        }
-       
+
        // Parse version from output
        versionStr := string(output)
        if strings.Contains(versionStr, "new-tool version") {
@@ -242,4 +305,3 @@ Best Practices:
 # Tasks completion
 
 After each task run `make build` and fix errors if any.
-
