@@ -1,7 +1,7 @@
 package capabilities
 
 import (
-	"winterflow-agent/internal/version"
+	"winterflow-agent/internal/application/version"
 )
 
 // AgentVersionCapability represents the Agent Version capability

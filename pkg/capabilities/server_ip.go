@@ -2,7 +2,7 @@ package capabilities
 
 import (
 	"winterflow-agent/internal/config"
-	"winterflow-agent/internal/winterflow/api"
+	"winterflow-agent/internal/infra/winterflow/api"
 	log "winterflow-agent/pkg/log"
 )
 

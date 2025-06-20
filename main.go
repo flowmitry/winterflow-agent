@@ -11,16 +11,16 @@ import (
 	"sync"
 	"syscall"
 	"time"
-	"winterflow-agent/internal/winterflow/grpc/certs"
-	"winterflow-agent/internal/winterflow/orchestrator"
+	"winterflow-agent/internal/application"
+	"winterflow-agent/internal/infra/winterflow/grpc/certs"
 	log "winterflow-agent/pkg/log"
 
-	"winterflow-agent/internal/agent"
+	"winterflow-agent/internal/application/agent"
+	"winterflow-agent/internal/application/version"
 	"winterflow-agent/internal/config"
-	"winterflow-agent/internal/version"
-	ansible "winterflow-agent/internal/winterflow/ansible"
-	ansiblefiles "winterflow-agent/internal/winterflow/ansible/files"
-	"winterflow-agent/internal/winterflow/api"
+	ansible "winterflow-agent/internal/infra/ansible"
+	ansiblefiles "winterflow-agent/internal/infra/ansible/files"
+	"winterflow-agent/internal/infra/winterflow/api"
 )
 
 //go:embed ansible/inventory/** ansible/playbooks/** ansible/roles/** ansible/apps_roles/README.md ansible/ansible.cfg
@@ -132,11 +132,11 @@ func startAgent(ctx context.Context, cancel context.CancelFunc, configPath strin
 
 	// Create orchestrator repository
 	log.Debug("Creating orchestrator repository")
-	orchestratorRepo := orchestrator.NewRepository(cfg)
+	containerAppRepository := application.NewContainerAppRepository(cfg)
 
 	// Create and initialize agent
 	log.Debug("Creating agent")
-	a, err := agent.NewAgent(cfg, ansibleRepo, orchestratorRepo)
+	a, err := agent.NewAgent(cfg, ansibleRepo, containerAppRepository)
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
 	}
