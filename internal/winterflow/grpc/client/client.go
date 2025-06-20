@@ -10,13 +10,13 @@ import (
 	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/winterflow/ansible"
 	"winterflow-agent/internal/winterflow/handlers"
+	"winterflow-agent/internal/winterflow/orchestrator"
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/winterflow/grpc/pb"
+	"winterflow-agent/pkg/backoff"
 	"winterflow-agent/pkg/certs"
 	"winterflow-agent/pkg/cqrs"
-
-	"winterflow-agent/pkg/backoff"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -140,7 +140,7 @@ func (c *Client) setupConnection() error {
 }
 
 // NewClient creates a new gRPC client
-func NewClient(config *config.Config, ansible ansible.Repository) (*Client, error) {
+func NewClient(config *config.Config, ansible ansible.Repository, orchestrator orchestrator.Repository) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	serverAddress := config.GetGRPCServerAddress()
 	caCertPath := config.GetCACertificatePath()
@@ -158,7 +158,7 @@ func NewClient(config *config.Config, ansible ansible.Repository) (*Client, erro
 
 	// Create query bus and register handlers
 	queryBus := cqrs.NewQueryBus()
-	if err := handlers.RegisterQueryHandlers(queryBus, config, ansible); err != nil {
+	if err := handlers.RegisterQueryHandlers(queryBus, config, ansible, orchestrator); err != nil {
 		cancel()
 		return nil, log.Errorf("failed to register query handlers: %v", err)
 	}
@@ -771,7 +771,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 								Base:       &baseResp,
 								AppId:      cmd.ControlAppRequestV1.AppId,
 								AppVersion: cmd.ControlAppRequestV1.AppVersion,
-								StatusCode: pb.AppStatusCode_STATUS_CODE_PROBLEMATIC,
+								StatusCode: pb.AppStatusCode_APP_STATUS_CODE_PROBLEMATIC,
 							}
 
 							agentMsg := &pb.AgentMessage{

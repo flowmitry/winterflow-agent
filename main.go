@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 	"winterflow-agent/internal/winterflow/grpc/certs"
+	"winterflow-agent/internal/winterflow/orchestrator"
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/agent"
@@ -129,9 +130,13 @@ func startAgent(ctx context.Context, cancel context.CancelFunc, configPath strin
 	ansibleRepo := ansible.NewRepository(cfg)
 	go ansibleRepo.DeployIngress()
 
+	// Create orchestrator repository
+	log.Debug("Creating orchestrator repository")
+	orchestratorRepo := orchestrator.NewRepository(cfg)
+
 	// Create and initialize agent
 	log.Debug("Creating agent")
-	a, err := agent.NewAgent(cfg, ansibleRepo)
+	a, err := agent.NewAgent(cfg, ansibleRepo, orchestratorRepo)
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
 	}

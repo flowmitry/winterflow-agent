@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 	"winterflow-agent/internal/winterflow/ansible"
+	"winterflow-agent/internal/winterflow/orchestrator"
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/config"
@@ -21,8 +22,8 @@ type Agent struct {
 }
 
 // NewAgent creates a new agent instance
-func NewAgent(config *config.Config, ansible ansible.Repository) (*Agent, error) {
-	c, err := client.NewClient(config, ansible)
+func NewAgent(config *config.Config, ansible ansible.Repository, orchestrator orchestrator.Repository) (*Agent, error) {
+	c, err := client.NewClient(config, ansible, orchestrator)
 	if err != nil {
 		return nil, log.Errorf("New GRPC client failed", err)
 	}

@@ -19,12 +19,21 @@ enum ResponseCode {
 }
 
 enum AppStatusCode {
-  STATUS_CODE_UNKNOWN = 0;
-  STATUS_CODE_ACTIVE = 1;
-  STATUS_CODE_IDLE = 2;
-  STATUS_CODE_RESTARTING = 3;
-  STATUS_CODE_PROBLEMATIC = 4;
-  STATUS_CODE_STOPPED = 5;
+  APP_STATUS_CODE_UNKNOWN = 0;
+  APP_STATUS_CODE_ACTIVE = 1;
+  APP_STATUS_CODE_IDLE = 2;
+  APP_STATUS_CODE_RESTARTING = 3;
+  APP_STATUS_CODE_PROBLEMATIC = 4;
+  APP_STATUS_CODE_STOPPED = 5;
+}
+
+enum ContainerStatusCode {
+  CONTAINER_STATUS_CODE_UNKNOWN = 0;
+  CONTAINER_STATUS_CODE_ACTIVE = 1;
+  CONTAINER_STATUS_CODE_IDLE = 2;
+  CONTAINER_STATUS_CODE_RESTARTING = 3;
+  CONTAINER_STATUS_CODE_PROBLEMATIC = 4;
+  CONTAINER_STATUS_CODE_STOPPED = 5;
 }
 
 enum AppAction {
@@ -78,18 +87,18 @@ message HeartbeatResponseV1 {
   BaseResponse base = 1;
 }
 
-message AppContainerStatusV1 {
-  // UUID
+message ContainerStatusV1 {
   string container_id = 1;
-  string container_name = 2;
-  AppStatusCode status_code = 3;
+  string name = 2;
+  ContainerStatusCode status_code = 3;
+  int32 exit_code = 4;
+  string error = 5;
 }
 
 message AppStatusV1 {
   // UUID
   string app_id = 1;
-  AppStatusCode status_code = 2;
-  repeated AppContainerStatusV1 containers = 3;
+  repeated ContainerStatusV1 containers = 2;
 }
 
 message AppFileV1 {

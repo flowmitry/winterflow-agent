@@ -1,76 +1,72 @@
 package get_apps_status
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-	"winterflow-agent/internal/winterflow/ansible"
 	"winterflow-agent/internal/winterflow/grpc/pb"
+	"winterflow-agent/internal/winterflow/models"
+	"winterflow-agent/internal/winterflow/orchestrator"
 	log "winterflow-agent/pkg/log"
+
+	"github.com/docker/docker/api/types/container"
 )
 
 // GetAppsStatusQueryHandler handles the GetAppsStatusQuery
 type GetAppsStatusQueryHandler struct {
-	ansible ansible.Repository
+	orchestrator orchestrator.Repository
 }
 
 // Handle executes the GetAppsStatusQuery and returns the result
 func (h *GetAppsStatusQueryHandler) Handle(query GetAppsStatusQuery) ([]*pb.AppStatusV1, error) {
 	log.Info("Processing get apps status request")
 
-	// Create a temporary directory for app status files
-	tempAppsStatusDir, err := os.MkdirTemp("", "apps_status_*")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temporary directory: %w", err)
-	}
-	defer os.RemoveAll(tempAppsStatusDir)
+	// Create a context for the operation
+	ctx := context.Background()
 
-	result := h.ansible.GenerateAppsStatus(tempAppsStatusDir)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to run get_apps_status playbook: %w", result.Error)
+	// Create a client to get Docker information
+	client := h.orchestrator.GetClient()
+
+	// Get the list of all containers
+	options := container.ListOptions{
+		All: true,
+	}
+	containers, err := client.ContainerList(ctx, options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
-	// Read the status files from the output directory
-	statusFiles, err := os.ReadDir(tempAppsStatusDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read status output directory: %w", err)
+	// Group containers by app ID
+	appIDs := make(map[string]bool)
+	for _, container := range containers {
+		// Extract app ID from container labels
+		appID, ok := container.Labels["winterflow.app.id"]
+		if !ok {
+			// Skip containers that don't have the winterflow.app.id label
+			continue
+		}
+
+		// Add app ID to the set
+		appIDs[appID] = true
 	}
 
 	var appStatuses []*pb.AppStatusV1
 
-	// Process each status file
-	for _, file := range statusFiles {
-		if file.IsDir() || !strings.HasSuffix(file.Name(), ".json") {
-			continue
-		}
-
-		// Extract app ID from filename (remove .json extension)
-		appID := strings.TrimSuffix(file.Name(), ".json")
-
-		// Read the status file
-		statusFilePath := filepath.Join(tempAppsStatusDir, file.Name())
-		statusData, err := os.ReadFile(statusFilePath)
+	// Process each app
+	for appID := range appIDs {
+		// Get the app status
+		result, err := h.orchestrator.GetAppStatus(ctx, appID)
 		if err != nil {
-			log.Error("Error reading status file", "path", statusFilePath, "error", err)
+			log.Error("Error getting app status", "appID", appID, "error", err)
 			continue
 		}
 
-		// Parse the JSON data
-		var containers []map[string]interface{}
-		if err := json.Unmarshal(statusData, &containers); err != nil {
-			log.Error("Error parsing JSON from status file", "path", statusFilePath, "error", err)
-			continue
-		}
-
-		// Determine the overall status of the app based on container statuses
-		statusCode := determineAppStatus(containers)
+		// Convert models.Container to pb.ContainerStatusV1
+		containerStatuses := convertContainers(result.App.Containers)
 
 		// Create an AppStatusV1 for this app
 		appStatus := &pb.AppStatusV1{
 			AppId:      appID,
-			StatusCode: statusCode,
+			Containers: containerStatuses,
 		}
 
 		appStatuses = append(appStatuses, appStatus)
@@ -79,80 +75,45 @@ func (h *GetAppsStatusQueryHandler) Handle(query GetAppsStatusQuery) ([]*pb.AppS
 	return appStatuses, nil
 }
 
-// determineAppStatus determines the overall status of an app based on its container statuses
-func determineAppStatus(containers []map[string]interface{}) pb.AppStatusCode {
-	if len(containers) == 0 {
-		return pb.AppStatusCode_STATUS_CODE_STOPPED
-	}
-
-	// Count containers in each state
-	var active, idle, stopped, restarting, problematic int
+// convertContainers converts models.Container to pb.ContainerStatusV1
+func convertContainers(containers []models.Container) []*pb.ContainerStatusV1 {
+	var result []*pb.ContainerStatusV1
 
 	for _, container := range containers {
-		state, ok := container["State"].(string)
-		if !ok {
-			continue
+		containerStatus := &pb.ContainerStatusV1{
+			ContainerId: container.ID,
+			Name:        container.Name,
+			StatusCode:  convertStatusCode(container.StatusCode),
+			ExitCode:    int32(container.ExitCode),
+			Error:       container.Error,
 		}
-
-		status, ok := container["Status"].(string)
-		if !ok {
-			status = ""
-		}
-
-		exitCode, ok := container["ExitCode"].(int)
-		if !ok {
-			exitCode = 0
-		}
-
-		// Map Docker container states to app status codes
-		switch {
-		case state == "active" || state == "running":
-			if strings.Contains(status, "unhealthy") {
-				problematic++
-			} else {
-				active++
-			}
-		case state == "created" || state == "paused":
-			idle++
-		case state == "exited":
-		case state == "removing":
-			stopped++
-		case state == "dead":
-			problematic++
-		case state == "restarting":
-			if exitCode != 0 {
-				problematic++
-			} else {
-				restarting++
-			}
-		default:
-			problematic++
-		}
+		result = append(result, containerStatus)
 	}
 
-	// Determine overall status based on container counts
-	if problematic > 0 {
-		return pb.AppStatusCode_STATUS_CODE_PROBLEMATIC
-	}
-	if restarting > 0 {
-		return pb.AppStatusCode_STATUS_CODE_RESTARTING
-	}
-	if active > 0 && stopped == 0 && idle == 0 {
-		return pb.AppStatusCode_STATUS_CODE_ACTIVE
-	}
-	if stopped > 0 && active == 0 && idle == 0 {
-		return pb.AppStatusCode_STATUS_CODE_STOPPED
-	}
-	if idle > 0 || (active > 0 && stopped > 0) {
-		return pb.AppStatusCode_STATUS_CODE_IDLE
-	}
+	return result
+}
 
-	return pb.AppStatusCode_STATUS_CODE_UNKNOWN
+// convertStatusCode converts models.ContainerStatusCode to pb.ContainerStatusCode
+func convertStatusCode(statusCode models.ContainerStatusCode) pb.ContainerStatusCode {
+	switch statusCode {
+	case models.ContainerStatusActive:
+		return pb.ContainerStatusCode_CONTAINER_STATUS_CODE_ACTIVE
+	case models.ContainerStatusIdle:
+		return pb.ContainerStatusCode_CONTAINER_STATUS_CODE_IDLE
+	case models.ContainerStatusRestarting:
+		return pb.ContainerStatusCode_CONTAINER_STATUS_CODE_RESTARTING
+	case models.ContainerStatusProblematic:
+		return pb.ContainerStatusCode_CONTAINER_STATUS_CODE_PROBLEMATIC
+	case models.ContainerStatusStopped:
+		return pb.ContainerStatusCode_CONTAINER_STATUS_CODE_STOPPED
+	default:
+		return pb.ContainerStatusCode_CONTAINER_STATUS_CODE_UNKNOWN
+	}
 }
 
 // NewGetAppsStatusQueryHandler creates a new GetAppsStatusQueryHandler
-func NewGetAppsStatusQueryHandler(ansible ansible.Repository) *GetAppsStatusQueryHandler {
+func NewGetAppsStatusQueryHandler(orchestrator orchestrator.Repository) *GetAppsStatusQueryHandler {
 	return &GetAppsStatusQueryHandler{
-		ansible: ansible,
+		orchestrator: orchestrator,
 	}
 }

@@ -83,7 +83,7 @@ func HandleControlAppRequest(commandBus cqrs.CommandBus, controlAppRequest *pb.C
 
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage string = "App control action executed successfully"
-	var statusCode pb.AppStatusCode = pb.AppStatusCode_STATUS_CODE_ACTIVE
+	var statusCode pb.AppStatusCode = pb.AppStatusCode_APP_STATUS_CODE_ACTIVE
 
 	// Dispatch the command to the handler
 	if err := commandBus.Dispatch(cmd); err != nil {
