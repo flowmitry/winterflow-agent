@@ -9,8 +9,7 @@ ansible/apps_roles/*
 ansible/inventory/*
 !ansible/inventory/defaults.yml
 !ansible/playbooks/agent_startup.yml
-.certs/*
-!.certs/ca.crt
+.certs/
 
 # Binaries for programs and plugins
 *.exe
