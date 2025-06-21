@@ -159,8 +159,8 @@ func (r *composeRepository) GetAppsStatus(ctx context.Context) (model.GetAppsSta
 
 func (r *composeRepository) DeployApp(appID, appVersion string) error {
 	// Determine important directories based on the agent configuration
-	roleDir := filepath.Join(r.config.GetAnsibleAppsRolesPath(), appID, appVersion)
-	outputDir := filepath.Join(r.config.BasePath, "apps", appID)
+	roleDir := filepath.Join(r.config.GetAppsTemplatesPath(), appID, appVersion)
+	outputDir := filepath.Join(r.config.GetAppsPath(), appID)
 
 	// Validate that the role directory exists
 	if _, err := os.Stat(roleDir); err != nil {
@@ -193,7 +193,7 @@ func (r *composeRepository) DeployApp(appID, appVersion string) error {
 }
 
 func (r *composeRepository) StopApp(appID string) error {
-	appDir := filepath.Join(r.config.BasePath, "apps", appID)
+	appDir := filepath.Join(r.config.GetAppsPath(), appID)
 	if _, err := os.Stat(appDir); err != nil {
 		if os.IsNotExist(err) {
 			log.Warn("[Stop] app directory does not exist, skipping", "app_id", appID)
@@ -212,7 +212,7 @@ func (r *composeRepository) StopApp(appID string) error {
 
 func (r *composeRepository) RestartApp(appID, _ string) error {
 	// The playbook for restart simply issues a compose restart, keeping existing files.
-	appDir := filepath.Join(r.config.BasePath, "apps", appID)
+	appDir := filepath.Join(r.config.GetAppsPath(), appID)
 	if _, err := os.Stat(appDir); err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("app directory %s does not exist", appDir)
@@ -229,7 +229,7 @@ func (r *composeRepository) RestartApp(appID, _ string) error {
 }
 
 func (r *composeRepository) UpdateApp(appID string) error {
-	appDir := filepath.Join(r.config.BasePath, "apps", appID)
+	appDir := filepath.Join(r.config.GetAppsPath(), appID)
 	if _, err := os.Stat(appDir); err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("app directory %s does not exist", appDir)

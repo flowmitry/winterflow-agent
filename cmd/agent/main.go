@@ -2,17 +2,15 @@ package main
 
 import (
 	"context"
-	"embed"
 	"flag"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 	"winterflow-agent/internal/application"
-	certsEmbedded "winterflow-agent/internal/infra/winterflow/grpc/embedded"
+	certsEmbedded "winterflow-agent/internal/infra/winterflow/certs"
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/application/agent"
@@ -20,12 +18,6 @@ import (
 	"winterflow-agent/internal/application/version"
 	"winterflow-agent/internal/infra/winterflow/api"
 )
-
-//go:embed ansible/inventory/** ansible/playbooks/** ansible/roles/** ansible/apps_roles/README.md ansible/ansible.cfg
-var ansibleFS embed.FS
-
-//go:embed .certs/ca.crt
-var certsFS embed.FS
 
 // Global variables to manage agent lifecycle
 var (
@@ -67,7 +59,7 @@ func main() {
 	}
 
 	fmt.Printf("WinterFlow.io Agent initialization...")
-	if err := syncEmbeddedFiles(*configPath, ansibleFS, certsFS); err != nil {
+	if err := syncEmbeddedFiles(*configPath); err != nil {
 		fmt.Printf("\nFailed to sync embedded files: %v", err)
 		os.Exit(1)
 	}
@@ -177,19 +169,8 @@ func stopCurrentAgent() {
 	}
 }
 
-func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) error {
-	cfg, err := config.LoadConfig(configPath)
-	if err != nil {
-		fmt.Printf("\nFailed to load configuration: %v", err)
-		return err
-	}
-
-	fsysCerts, err := fs.Sub(certsFS, cfg.GetEmbeddedCertificatesFolder())
-	if err != nil {
-		fmt.Printf("\nError accessing certificates filesystem: %v", err)
-		return err
-	}
-	certsManager := certsEmbedded.NewManager(fsysCerts, configPath)
+func syncEmbeddedFiles(configPath string) error {
+	certsManager := certsEmbedded.NewManager(configPath)
 	if err := certsManager.SyncFiles(); err != nil {
 		fmt.Printf("\nError syncing ansible files: %v", err)
 		return err

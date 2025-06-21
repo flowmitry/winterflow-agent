@@ -1,30 +1,38 @@
 package certs
 
 import (
+	"embed"
 	"io/fs"
-	"winterflow-agent/internal/application/version"
+
 	log "winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/pkg/embedded"
 )
 
-// Manager handles ansible-related operations
+//go:embed assets/**
+var certsFS embed.FS
+
 type Manager struct {
 	embeddedManager *embedded.Manager
 }
 
 // NewManager creates a new Ansible manager
-func NewManager(embeddedFS fs.FS, configPath string) *Manager {
+func NewManager(configPath string) *Manager {
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
+	// Create a sub-filesystem rooted at the "assets" directory so that the
+	// extracted file paths do not include the top-level "assets" prefix.
+	subFS, err := fs.Sub(certsFS, "assets")
+	if err != nil {
+		log.Fatalf("Failed to create sub filesystem for embedded certificates: %v", err)
+	}
+
 	return &Manager{
-		embeddedManager: embedded.NewManager(embeddedFS, cfg.GetEmbeddedCertificatesFolder(), version.GetVersion(), []string{
-			cfg.GetCACertificateFile(),
-		}),
+		embeddedManager: embedded.NewManager(subFS, cfg.GetCertificatesFolder()),
 	}
 }
 

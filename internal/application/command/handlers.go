@@ -12,15 +12,15 @@ import (
 )
 
 func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appRepository repository.AppRepository) error {
-	if err := b.Register(save_app.NewSaveAppHandler(config.GetAnsibleAppsRolesPath(), config.GetAnsibleAppRoleCurrentVersionFolder(), config.GetPrivateKeyPath())); err != nil {
+	if err := b.Register(save_app.NewSaveAppHandler(config.GetAppsTemplatesPath(), config.GetAppsCurrentVersionFolder(), config.GetPrivateKeyPath())); err != nil {
 		return log.Errorf("failed to register save app handler: %v", err)
 	}
 
-	if err := b.Register(delete_app.NewDeleteAppHandler(appRepository, config.GetAnsibleAppsRolesPath(), config.GetAnsibleAppRoleCurrentVersionFolder())); err != nil {
+	if err := b.Register(delete_app.NewDeleteAppHandler(appRepository, config.GetAppsTemplatesPath(), config.GetAppsCurrentVersionFolder())); err != nil {
 		return log.Errorf("failed to register delete app handler: %v", err)
 	}
 
-	if err := b.Register(control_app.NewControlAppHandler(appRepository, config.GetAnsibleAppsRolesPath(), config.GetAnsibleAppRoleCurrentVersionFolder())); err != nil {
+	if err := b.Register(control_app.NewControlAppHandler(appRepository, config.GetAppsTemplatesPath(), config.GetAppsCurrentVersionFolder())); err != nil {
 		return log.Errorf("failed to register control app handler: %v", err)
 	}
 

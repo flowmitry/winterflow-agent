@@ -10,7 +10,7 @@ import (
 )
 
 func RegisterQueryHandlers(b cqrs.QueryBus, config *config.Config, appRepository repository.AppRepository) error {
-	if err := b.Register(get_app.NewGetAppQueryHandler(config.GetAnsibleAppsRolesPath(), config.GetAnsibleAppRoleCurrentVersionFolder())); err != nil {
+	if err := b.Register(get_app.NewGetAppQueryHandler(config.GetAppsTemplatesPath(), config.GetAppsCurrentVersionFolder())); err != nil {
 		return log.Errorf("failed to register get app query handler: %v", err)
 	}
 

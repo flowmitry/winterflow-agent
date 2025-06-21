@@ -23,8 +23,8 @@ ansible-version:
 build: ansible-version
 	@echo "Building ${BINARY_NAME}..."
 	@mkdir -p ${BUILD_DIR}
-	@echo "go build ${BUILD_FLAGS} -ldflags=\"${LDFLAGS}\" -o ${BUILD_DIR}/${BINARY_NAME} ./main.go"
-	@go build ${BUILD_FLAGS} -ldflags="${LDFLAGS}" -o ${BUILD_DIR}/${BINARY_NAME} ./main.go
+	@echo "go build ${BUILD_FLAGS} -ldflags=\"${LDFLAGS}\" -o ${BUILD_DIR}/${BINARY_NAME} ./cmd/agent/main.go"
+	@go build ${BUILD_FLAGS} -ldflags="${LDFLAGS}" -o ${BUILD_DIR}/${BINARY_NAME} ./cmd/agent/main.go
 	@chmod +x ${BUILD_DIR}/${BINARY_NAME}
 
 # Run the agent
