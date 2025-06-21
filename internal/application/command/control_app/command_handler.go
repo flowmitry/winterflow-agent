@@ -11,9 +11,9 @@ import (
 
 // ControlAppHandler handles the ControlAppCommand
 type ControlAppHandler struct {
-	repository                     repository.AppRepository
-	AnsibleAppsRolesPath           string
-	AnsibleAppsRolesCurrentVersion string
+	repository         repository.AppRepository
+	AppsTemplatesPath  string
+	AppsCurrentVersion string
 }
 
 // Handle executes the ControlAppCommand
@@ -26,7 +26,7 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	}
 
 	// Get the app config
-	appConfig, err := getAppConfig(h.AnsibleAppsRolesPath, cmd.AppID, h.AnsibleAppsRolesCurrentVersion)
+	appConfig, err := getAppConfig(h.AppsTemplatesPath, cmd.AppID, h.AppsCurrentVersion)
 	if err != nil {
 		return log.Errorf("failed to get app config for app ID %s: %w", cmd.AppID, err)
 	}
@@ -36,7 +36,7 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	if cmd.AppVersion > 0 {
 		appVersion = fmt.Sprintf("%d", cmd.AppVersion)
 	} else {
-		appVersion = h.AnsibleAppsRolesCurrentVersion
+		appVersion = h.AppsCurrentVersion
 	}
 
 	// Determine the action to perform
@@ -68,9 +68,9 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 }
 
 // getAppConfig retrieves the app configuration for the given app ID
-func getAppConfig(AnsibleAppsRolesPath, appID, version string) (*model.AppConfig, error) {
+func getAppConfig(appsTemplatesPath, appID, version string) (*model.AppConfig, error) {
 	// Check if the app exists
-	appDir := filepath.Join(AnsibleAppsRolesPath, appID, version)
+	appDir := filepath.Join(appsTemplatesPath, appID, version)
 	if _, err := os.Stat(appDir); os.IsNotExist(err) {
 		return nil, fmt.Errorf("app with ID %s does not exist", appID)
 	}
@@ -91,10 +91,10 @@ func getAppConfig(AnsibleAppsRolesPath, appID, version string) (*model.AppConfig
 }
 
 // NewControlAppHandler creates a new ControlAppHandler
-func NewControlAppHandler(repository repository.AppRepository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *ControlAppHandler {
+func NewControlAppHandler(repository repository.AppRepository, appsTemplatesPath, appsCurrentVersion string) *ControlAppHandler {
 	return &ControlAppHandler{
-		repository:                     repository,
-		AnsibleAppsRolesPath:           ansibleAppsRolesPath,
-		AnsibleAppsRolesCurrentVersion: ansibleAppsRolesCurrentVersion,
+		repository:         repository,
+		AppsTemplatesPath:  appsTemplatesPath,
+		AppsCurrentVersion: appsCurrentVersion,
 	}
 }

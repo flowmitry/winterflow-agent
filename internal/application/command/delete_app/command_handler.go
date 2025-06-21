@@ -9,9 +9,9 @@ import (
 
 // DeleteAppHandler handles the DeleteAppCommand
 type DeleteAppHandler struct {
-	repository                     repository.AppRepository
-	AnsibleAppsRolesPath           string
-	AnsibleAppsRolesCurrentVersion string
+	repository         repository.AppRepository
+	AppsTemplatesPath  string
+	AppsCurrentVersion string
 }
 
 // Handle executes the DeleteAppCommand
@@ -25,7 +25,7 @@ func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
 	}
 
 	// Check if the app exists
-	appDir := filepath.Join(h.AnsibleAppsRolesPath, appID)
+	appDir := filepath.Join(h.AppsTemplatesPath, appID)
 	if _, err := os.Stat(appDir); os.IsNotExist(err) {
 		log.Warn("App directory for app ID %s does not exist, it may have been already deleted", appID)
 		log.Info("Successfully deleted app with ID: %s", appID)
@@ -47,10 +47,10 @@ func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
 }
 
 // NewDeleteAppHandler creates a new DeleteAppHandler
-func NewDeleteAppHandler(repository repository.AppRepository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *DeleteAppHandler {
+func NewDeleteAppHandler(repository repository.AppRepository, appsTemplatesPath, appsCurrentVersion string) *DeleteAppHandler {
 	return &DeleteAppHandler{
-		repository:                     repository,
-		AnsibleAppsRolesPath:           ansibleAppsRolesPath,
-		AnsibleAppsRolesCurrentVersion: ansibleAppsRolesCurrentVersion,
+		repository:         repository,
+		AppsTemplatesPath:  appsTemplatesPath,
+		AppsCurrentVersion: appsCurrentVersion,
 	}
 }

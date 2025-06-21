@@ -8,14 +8,13 @@ import (
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/pkg/certs"
 	log "winterflow-agent/pkg/log"
-	"winterflow-agent/pkg/yaml"
 )
 
 // SaveAppHandler handles the SaveAppCommand
 type SaveAppHandler struct {
-	AnsibleAppsRolesPath           string
-	AnsibleAppsRolesCurrentVersion string
-	PrivateKeyPath                 string
+	AppsTemplatesPath  string
+	AppsCurrentVersion string
+	PrivateKeyPath     string
 }
 
 // Handle executes the SaveAppCommand
@@ -28,13 +27,12 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	log.Printf("Processing save app request for app ID: %s", app.ID)
 
 	// Resolve important directories once
-	baseDir := filepath.Join(h.AnsibleAppsRolesPath, app.ID)
-	versionDir := filepath.Join(baseDir, h.AnsibleAppsRolesCurrentVersion)
+	baseDir := filepath.Join(h.AppsTemplatesPath, app.ID)
+	versionDir := filepath.Join(baseDir, h.AppsCurrentVersion)
 	dirs := map[string]string{
-		"version":   versionDir,
-		"defaults":  filepath.Join(versionDir, "defaults"),
-		"vars":      filepath.Join(versionDir, "vars"),
-		"templates": filepath.Join(versionDir, "templates"),
+		"version": versionDir,
+		"vars":    filepath.Join(versionDir, "vars"),
+		"files":   filepath.Join(versionDir, "files"),
 	}
 
 	// 1. Ensure directory structure exists
@@ -49,17 +47,12 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 		return err
 	}
 
-	// 3. Sync template files
-	if err := h.syncTemplates(dirs["templates"], app.Config, app.Files); err != nil {
+	// 3. Sync template files to /files directory
+	if err := h.syncTemplates(dirs["files"], app.Config, app.Files); err != nil {
 		return err
 	}
 
-	// 4. Write defaults from variables skeleton
-	if err := h.writeDefaults(dirs["defaults"], app.Config); err != nil {
-		return err
-	}
-
-	// 5. Write vars YAML file (secrets are stored together with regular variables)
+	// 4. Write vars JSON file (secrets are stored together with regular variables)
 	if err := h.writeVars(dirs["vars"], app.Config, app.Variables); err != nil {
 		return err
 	}
@@ -90,7 +83,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 		idToFilename[f.ID] = f.Filename
 	}
 
-	// Remove obsolete .j2 files
+	// Remove obsolete .j2 files inside /files directory
 	existing, err := filepath.Glob(filepath.Join(templatesDir, "*.j2"))
 	if err != nil {
 		return fmt.Errorf("error listing template files: %w", err)
@@ -124,37 +117,14 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 	return nil
 }
 
-// writeDefaults produces defaults/main.yml with empty values for every variable in the config.
-func (h *SaveAppHandler) writeDefaults(defaultsDir string, cfg *model.AppConfig) error {
-	empty := make(map[string]string)
-	for _, v := range cfg.Variables {
-		empty[v.Name] = ""
-	}
-
-	j, err := json.Marshal(empty)
-	if err != nil {
-		return fmt.Errorf("error marshaling defaults JSON: %w", err)
-	}
-	y, err := yaml.JSONToYAML(j)
-	if err != nil {
-		return fmt.Errorf("error converting defaults to YAML: %w", err)
-	}
-
-	path := filepath.Join(defaultsDir, "main.yml")
-	if err := os.WriteFile(path, y, 0o644); err != nil {
-		return fmt.Errorf("error writing defaults file: %w", err)
-	}
-	return nil
-}
-
-// writeVars writes all variables (including encrypted ones) into vars.yml.
+// writeVars writes all variables (including encrypted ones) into vars/values.json.
 func (h *SaveAppHandler) writeVars(varsDir string, cfg *model.AppConfig, input model.VariableMap) error {
-	varsFile := filepath.Join(varsDir, "vars.yml")
+	varsFile := filepath.Join(varsDir, "values.json")
 
 	// Load existing values to preserve secrets when placeholder "<encrypted>" is passed.
 	existingVars := make(map[string]string)
 	if data, err := os.ReadFile(varsFile); err == nil {
-		_ = yaml.UnmarshalYAML(data, &existingVars)
+		_ = json.Unmarshal(data, &existingVars)
 	}
 
 	// Prepare resulting map keyed by variable name.
@@ -183,7 +153,7 @@ func (h *SaveAppHandler) writeVars(varsDir string, cfg *model.AppConfig, input m
 				vars[v.Name] = value
 			}
 
-			// Attempt to decrypt before storing so the role gets plain text.
+			// Attempt to decrypt before storing so the consumer gets plain text.
 			if h.PrivateKeyPath != "" && vars[v.Name] != "" {
 				dec, err := certs.DecryptWithPrivateKey(h.PrivateKeyPath, vars[v.Name])
 				if err == nil {
@@ -198,16 +168,12 @@ func (h *SaveAppHandler) writeVars(varsDir string, cfg *model.AppConfig, input m
 		}
 	}
 
-	// Convert to YAML and write the file.
-	j, err := json.Marshal(vars)
+	// Convert to JSON and write the file.
+	j, err := json.MarshalIndent(vars, "", "  ")
 	if err != nil {
 		return fmt.Errorf("error marshaling vars JSON: %w", err)
 	}
-	y, err := yaml.JSONToYAML(j)
-	if err != nil {
-		return fmt.Errorf("error converting vars to YAML: %w", err)
-	}
-	if err := os.WriteFile(varsFile, y, 0o644); err != nil {
+	if err := os.WriteFile(varsFile, j, 0o644); err != nil {
 		return fmt.Errorf("error writing vars file: %w", err)
 	}
 
@@ -222,10 +188,10 @@ type SaveAppResult struct {
 }
 
 // NewSaveAppHandler creates a new SaveAppHandler
-func NewSaveAppHandler(ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion, privateKeyPath string) *SaveAppHandler {
+func NewSaveAppHandler(appsTemplatesPath, appsCurrentVersion, privateKeyPath string) *SaveAppHandler {
 	return &SaveAppHandler{
-		AnsibleAppsRolesPath:           ansibleAppsRolesPath,
-		AnsibleAppsRolesCurrentVersion: ansibleAppsRolesCurrentVersion,
-		PrivateKeyPath:                 privateKeyPath,
+		AppsTemplatesPath:  appsTemplatesPath,
+		AppsCurrentVersion: appsCurrentVersion,
+		PrivateKeyPath:     privateKeyPath,
 	}
 }

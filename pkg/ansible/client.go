@@ -19,12 +19,12 @@ type Config struct {
 	Orchestrator string
 	// AnsiblePath is the path where ansible files are stored
 	AnsiblePath string
-	// AnsibleAppsRolesPath is the path where ansible application files are stored
-	AnsibleAppsRolesPath string
+	// AppsTemplatesPath is the path where application templates are stored
+	AppsTemplatesPath string
 	// AnsibleLogsPath defines the directory path where ansible log files are stored.
 	AnsibleLogsPath string
-	// AnsibleAppsRolesCurrentVersion represents the current version folder name of Ansible application roles.
-	AnsibleAppsRolesCurrentVersion string
+	// AppsCurrentVersion represents the current version folder name of application templates.
+	AppsCurrentVersion string
 }
 
 // Result represents the result of an Ansible command execution
@@ -97,8 +97,8 @@ func (c *client) updateEnvironment(cmd Command) Command {
 	if cmd.Env["orchestrator"] == "" {
 		cmd.Env["orchestrator"] = c.config.Orchestrator
 	}
-	if cmd.Env["apps_roles_path"] == "" {
-		cmd.Env["apps_roles_path"] = c.config.AnsibleAppsRolesPath
+	if cmd.Env["apps_templates_path"] == "" {
+		cmd.Env["apps_templates_path"] = c.config.AppsTemplatesPath
 	}
 
 	return cmd

@@ -2,6 +2,7 @@ package docker_compose
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,7 +15,6 @@ import (
 	"winterflow-agent/internal/domain/repository"
 	"winterflow-agent/internal/infra/docker"
 	log "winterflow-agent/pkg/log"
-	"winterflow-agent/pkg/yaml"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -158,12 +158,12 @@ func (r *composeRepository) GetAppsStatus(ctx context.Context) (model.GetAppsSta
 
 func (r *composeRepository) DeployApp(appID, appVersion string) error {
 	// Determine important directories based on the agent configuration
-	roleDir := filepath.Join(r.config.GetAppsTemplatesPath(), appID, appVersion)
+	templateDir := filepath.Join(r.config.GetAppsTemplatesPath(), appID, appVersion)
 	outputDir := filepath.Join(r.config.GetAppsPath(), appID)
 
 	// Validate that the role directory exists
-	if _, err := os.Stat(roleDir); err != nil {
-		return fmt.Errorf("role directory %s does not exist: %w", roleDir, err)
+	if _, err := os.Stat(templateDir); err != nil {
+		return fmt.Errorf("role directory %s does not exist: %w", templateDir, err)
 	}
 
 	// Ensure the output directory exists
@@ -172,13 +172,13 @@ func (r *composeRepository) DeployApp(appID, appVersion string) error {
 	}
 
 	// Load variables (defaults first, then override with vars)
-	vars, err := r.loadTemplateVariables(roleDir)
+	vars, err := r.loadTemplateVariables(templateDir)
 	if err != nil {
 		return fmt.Errorf("failed to load template variables: %w", err)
 	}
 
 	// Render templates into the output directory
-	if err := r.renderTemplates(roleDir, outputDir, vars); err != nil {
+	if err := r.renderTemplates(templateDir, outputDir, vars); err != nil {
 		return fmt.Errorf("failed to render templates: %w", err)
 	}
 
@@ -265,46 +265,35 @@ func (r *composeRepository) DeleteApp(appID string) error {
 // -----------------------------------------------------------------------------
 
 // loadTemplateVariables merges defaults and vars files into a single map.
-func (r *composeRepository) loadTemplateVariables(roleDir string) (map[string]string, error) {
+func (r *composeRepository) loadTemplateVariables(templateDir string) (map[string]string, error) {
 	vars := make(map[string]string)
 
-	// Helper to read YAML into the map (string keys/values)
-	read := func(path string) error {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
+	varsPath := filepath.Join(templateDir, "vars", "values.json")
+	data, err := os.ReadFile(varsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// No variables file – return empty map
+			return vars, nil
 		}
-		var tmp map[string]interface{}
-		if err := yaml.UnmarshalYAML(data, &tmp); err != nil {
-			return err
-		}
-		for k, v := range tmp {
-			if str, ok := v.(string); ok {
-				vars[k] = str
-			}
-		}
-		return nil
+		return nil, err
 	}
 
-	// Defaults first (they may be empty values)
-	defaultsPath := filepath.Join(roleDir, "defaults", "main.yml")
-	_ = read(defaultsPath) // ignore error – defaults file may be absent
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("failed to parse variables JSON: %w", err)
+	}
 
-	// Vars override defaults
-	varsPath := filepath.Join(roleDir, "vars", "vars.yml")
-	if err := read(varsPath); err != nil {
-		// If vars file does not exist – treat as non-fatal, otherwise propagate error
-		if !os.IsNotExist(err) {
-			return nil, err
-		}
+	// Convert all values to string for simple template substitution
+	for k, v := range raw {
+		vars[k] = fmt.Sprintf("%v", v)
 	}
 
 	return vars, nil
 }
 
 // renderTemplates processes *.j2 files from roleDir/templates into destDir, performing a naive variable substitution.
-func (r *composeRepository) renderTemplates(roleDir, destDir string, vars map[string]string) error {
-	templatesPattern := filepath.Join(roleDir, "templates", "*.j2")
+func (r *composeRepository) renderTemplates(templateDir, destDir string, vars map[string]string) error {
+	templatesPattern := filepath.Join(templateDir, "files", "*.j2")
 	files, err := filepath.Glob(templatesPattern)
 	if err != nil {
 		return fmt.Errorf("failed to list template files: %w", err)
