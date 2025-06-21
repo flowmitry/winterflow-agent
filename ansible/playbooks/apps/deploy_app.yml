@@ -41,10 +41,6 @@
       include_vars:
         file: "{{ _app_role_dir }}/vars/vars.yml"
 
-    - name: Load secrets
-      include_vars:
-        file: "{{ _app_role_dir }}/vars/secrets.yml"
-
     - name: Create a destination directory
       file:
         path: "{{ _app_output_dir }}"

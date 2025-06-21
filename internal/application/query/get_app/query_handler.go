@@ -74,13 +74,7 @@ func (h *GetAppQueryHandler) loadVariables(appConfig *model.AppConfig, configByt
 		return nil, fmt.Errorf("error reading vars file: %w", err)
 	}
 
-	secretsFilePath := filepath.Join(varsDir, "secrets.yml")
-	secretsBytes, err := os.ReadFile(secretsFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading secrets file: %w", err)
-	}
-
-	// non-encrypted values from vars.yml
+	// Parse all values from vars.yml
 	varsJSON, err := convertYAMLToIDValueJSON(configBytes, varsBytes)
 	if err != nil {
 		return nil, fmt.Errorf("error converting vars YAML: %w", err)
@@ -90,22 +84,7 @@ func (h *GetAppQueryHandler) loadVariables(appConfig *model.AppConfig, configByt
 		return nil, fmt.Errorf("error converting vars JSON to map: %w", err)
 	}
 
-	// encrypted values from secrets.yml
-	secretsJSON, err := convertYAMLToIDValueJSON(configBytes, secretsBytes)
-	if err != nil {
-		return nil, fmt.Errorf("error converting secrets YAML: %w", err)
-	}
-	secrets, err := convertJSONToEncryptedVariableMap(secretsJSON)
-	if err != nil {
-		return nil, fmt.Errorf("error converting secrets JSON to map: %w", err)
-	}
-
-	// merge secrets over vars (encrypted wins)
-	for id, v := range secrets {
-		variables[id] = v
-	}
-
-	// finally, honour IsEncrypted flag from the config itself (in case value is stored in vars.yml)
+	// For encrypted variables ensure the placeholder is returned instead of the real value.
 	for _, v := range appConfig.Variables {
 		if v.IsEncrypted {
 			variables[v.ID] = "<encrypted>"
