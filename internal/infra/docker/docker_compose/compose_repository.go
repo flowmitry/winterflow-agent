@@ -16,7 +16,6 @@ import (
 	log "winterflow-agent/pkg/log"
 	"winterflow-agent/pkg/yaml"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
@@ -75,7 +74,7 @@ func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (mod
 
 	// Convert Docker containers to Container models
 	for _, dockerContainer := range dockerContainers {
-		container := model.Container{
+		containerInstance := model.Container{
 			ID:         dockerContainer.ID,
 			Name:       strings.TrimPrefix(dockerContainer.Names[0], "/"), // Remove leading slash
 			StatusCode: docker.MapDockerStateToContainerStatus(dockerContainer.State),
@@ -84,11 +83,11 @@ func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (mod
 		}
 
 		// Add error information for problematic containers
-		if container.StatusCode == model.ContainerStatusProblematic {
-			container.Error = fmt.Sprintf("Container in problematic state: %s", dockerContainer.Status)
+		if containerInstance.StatusCode == model.ContainerStatusProblematic {
+			containerInstance.Error = fmt.Sprintf("Container in problematic state: %s", dockerContainer.Status)
 		}
 
-		containerApp.Containers = append(containerApp.Containers, container)
+		containerApp.Containers = append(containerApp.Containers, containerInstance)
 	}
 
 	log.Debug("Docker Compose app status retrieved", "app_id", appID, "containers", len(containerApp.Containers))
@@ -115,7 +114,7 @@ func (r *composeRepository) GetAppsStatus(ctx context.Context) (model.GetAppsSta
 	}
 
 	// Group containers by app ID (compose project)
-	appContainers := make(map[string][]types.Container)
+	appContainers := make(map[string][]container.Summary)
 	for _, dockerContainer := range dockerContainers {
 		if appID, exists := dockerContainer.Labels["com.docker.compose.project"]; exists {
 			appContainers[appID] = append(appContainers[appID], dockerContainer)
@@ -133,7 +132,7 @@ func (r *composeRepository) GetAppsStatus(ctx context.Context) (model.GetAppsSta
 
 		// Convert Docker containers to Container models
 		for _, dockerContainer := range containers {
-			container := model.Container{
+			containerInstance := model.Container{
 				ID:         dockerContainer.ID,
 				Name:       strings.TrimPrefix(dockerContainer.Names[0], "/"), // Remove leading slash
 				StatusCode: docker.MapDockerStateToContainerStatus(dockerContainer.State),
@@ -142,11 +141,11 @@ func (r *composeRepository) GetAppsStatus(ctx context.Context) (model.GetAppsSta
 			}
 
 			// Add error information for problematic containers
-			if container.StatusCode == model.ContainerStatusProblematic {
-				container.Error = fmt.Sprintf("Container in problematic state: %s", dockerContainer.Status)
+			if containerInstance.StatusCode == model.ContainerStatusProblematic {
+				containerInstance.Error = fmt.Sprintf("Container in problematic state: %s", dockerContainer.Status)
 			}
 
-			containerApp.Containers = append(containerApp.Containers, container)
+			containerApp.Containers = append(containerApp.Containers, containerInstance)
 		}
 
 		apps = append(apps, containerApp)

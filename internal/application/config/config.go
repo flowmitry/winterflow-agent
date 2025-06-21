@@ -280,6 +280,10 @@ func (c *Config) GetCertificatesPath() string {
     return c.buildPath(c.GetCertificatesFolder())
 }
 
+func (c *Config) GetCertificatesDefaultFolder() string {
+    return certificatesFolder
+}
+
 func (c *Config) GetCertificatesFolder() string {
     if c.CertificatesFolder == "" {
         return certificatesFolder

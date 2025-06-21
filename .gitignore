@@ -10,6 +10,8 @@ ansible/inventory/*
 !ansible/inventory/defaults.yml
 !ansible/playbooks/agent_startup.yml
 .certs/
+apps_templates
+apps
 
 # Binaries for programs and plugins
 *.exe

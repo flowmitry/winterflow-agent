@@ -32,7 +32,7 @@ func NewManager(configPath string) *Manager {
 	}
 
 	return &Manager{
-		embeddedManager: embedded.NewManager(subFS, cfg.GetCertificatesFolder()),
+		embeddedManager: embedded.NewManager(subFS, cfg.GetCertificatesDefaultFolder()),
 	}
 }
 
