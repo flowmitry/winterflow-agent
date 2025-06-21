@@ -264,6 +264,16 @@ func (h *SaveAppHandler) processMap(filePath string, appConfig *model.AppConfig,
 				if ok && existingNamedValues[name] != "" {
 					// Skip this value as we'll keep the existing one
 					continue
+				} else {
+					// For encrypted variables with no existing value, we need to store an empty string
+					// This ensures the variable is included in the secrets.yml file
+					name, ok := idToName[id]
+					if ok {
+						existingNamedValues[name] = ""
+					} else {
+						existingNamedValues[id] = ""
+					}
+					continue
 				}
 			}
 
@@ -321,7 +331,7 @@ func (h *SaveAppHandler) processVariables(varsFile string, appConfig *model.AppC
 	// Filter variables to only include non-secrets
 	nonSecretVars := make(model.VariableMap)
 	for _, v := range appConfig.Variables {
-		if !v.IsSecret {
+		if !v.IsEncrypted {
 			if value, exists := variables[v.ID]; exists {
 				nonSecretVars[v.ID] = value
 			}
@@ -335,13 +345,32 @@ func (h *SaveAppHandler) processSecrets(secretsFile string, appConfig *model.App
 	// Filter variables to only include secrets
 	secretVars := make(model.VariableMap)
 	for _, v := range appConfig.Variables {
-		if v.IsSecret {
+		if v.IsEncrypted {
 			if value, exists := variables[v.ID]; exists {
 				secretVars[v.ID] = value
 			}
 		}
 	}
-	return h.processMap(secretsFile, appConfig, secretVars, true)
+
+	// Create the directory if it doesn't exist
+	secretsDir := filepath.Dir(secretsFile)
+	if err := os.MkdirAll(secretsDir, 0755); err != nil {
+		return fmt.Errorf("error creating secrets directory: %w", err)
+	}
+
+	// Process the secrets map
+	if err := h.processMap(secretsFile, appConfig, secretVars, true); err != nil {
+		return err
+	}
+
+	// Ensure the secrets file exists even if there are no secrets
+	if _, err := os.Stat(secretsFile); os.IsNotExist(err) {
+		if err := os.WriteFile(secretsFile, []byte{}, 0644); err != nil {
+			return fmt.Errorf("error creating empty secrets file: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // SaveAppResult represents the result of creating an app

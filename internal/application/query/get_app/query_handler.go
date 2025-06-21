@@ -134,8 +134,8 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.App, error) {
 	}
 
 	// Combine variables and secrets into a single map
-	for k, v := range secrets {
-		variables[k] = v
+	for k, _ := range secrets {
+		variables[k] = "<encrypted>"
 	}
 
 	// Parse config bytes into AppConfig

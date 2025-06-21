@@ -6,7 +6,7 @@ API_URL=http://127.0.0.1:8080
 BUILD_DIR=.
 
 # Go build flags
-LDFLAGS=-X winterflow-agent/internal/application/version.version=${VERSION} -X winterflow-agent/internal/config.grpcServerAddress=${GRPC_ADDR} -X winterflow-agent/internal/config.apiBaseURL=${API_URL}
+LDFLAGS=-X winterflow-agent/internal/application/version.version=${VERSION} -X winterflow-agent/internal/application/config.grpcServerAddress=${GRPC_ADDR} -X winterflow-agent/internal/application/config.apiBaseURL=${API_URL}
 BUILD_FLAGS=-v
 
 .PHONY: all clean grpc build run install-tools ansible-version

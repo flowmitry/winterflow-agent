@@ -14,18 +14,19 @@ type AppConfig struct {
 
 // AppFile represents a file in the app configuration
 type AppFile struct {
-	ID       string `json:"id"`
-	Filename string `json:"filename"`
-	Origin   string `json:"origin"`
+	ID          string `json:"id"`
+	IsEncrypted bool   `json:"is_encrypted"`
+	Filename    string `json:"filename"`
+	Origin      string `json:"origin"`
 }
 
 // AppVariable represents a variable in the app configuration
 type AppVariable struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	IsSecret bool   `json:"is_secret"`
-	Origin   string `json:"origin"`
-	Type     string `json:"type"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	IsEncrypted bool   `json:"is_encrypted"`
+	Origin      string `json:"origin"`
+	Type        string `json:"type"`
 }
 
 // ParseAppConfig parses the app configuration from JSON bytes
