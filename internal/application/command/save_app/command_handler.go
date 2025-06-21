@@ -20,354 +20,208 @@ type SaveAppHandler struct {
 
 // Handle executes the SaveAppCommand
 func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
-	log.Printf("Processing save app request for app ID: %s", cmd.App.ID)
+	if cmd.App == nil {
+		return fmt.Errorf("app is nil in command")
+	}
+	app := cmd.App
 
-	// Get the app configuration from the command
-	appConfig := cmd.App.Config
+	log.Printf("Processing save app request for app ID: %s", app.ID)
 
-	// Get variables from the command
-	variables := cmd.App.Variables
-
-	// Create the directory structure and files
-	appID := cmd.App.ID
-	var success bool = true
-	var responseMessage string = "App saved successfully"
-
-	// Create the required directories
-	rolesDir := filepath.Join(h.AnsibleAppsRolesPath, appID)
-	versionDir := filepath.Join(rolesDir, h.AnsibleAppsRolesCurrentVersion)
-	rolesDefaultsDir := filepath.Join(versionDir, "defaults")
-	rolesVarsDir := filepath.Join(versionDir, "vars")
-	rolesVarsFile := filepath.Join(rolesVarsDir, "vars.yml")
-	rolesSecretsFile := filepath.Join(rolesVarsDir, "secrets.yml")
-	rolesTemplatesDir := filepath.Join(versionDir, "templates")
-
-	// Create directories if they don't exist
-	if err := os.MkdirAll(versionDir, 0755); err != nil {
-		log.Error("Error creating roles directory: %v", err)
-		success = false
-		responseMessage = fmt.Sprintf("Error creating roles directory: %v", err)
+	// Resolve important directories once
+	baseDir := filepath.Join(h.AnsibleAppsRolesPath, app.ID)
+	versionDir := filepath.Join(baseDir, h.AnsibleAppsRolesCurrentVersion)
+	dirs := map[string]string{
+		"version":   versionDir,
+		"defaults":  filepath.Join(versionDir, "defaults"),
+		"vars":      filepath.Join(versionDir, "vars"),
+		"templates": filepath.Join(versionDir, "templates"),
 	}
 
-	if err := os.MkdirAll(rolesDefaultsDir, 0755); err != nil {
-		log.Error("Error creating roles defaults directory: %v", err)
-		success = false
-		responseMessage = fmt.Sprintf("Error creating roles defaults directory: %v", err)
-	}
-
-	if err := os.MkdirAll(rolesVarsDir, 0755); err != nil {
-		log.Error("Error creating roles vars directory: %v", err)
-		success = false
-		responseMessage = fmt.Sprintf("Error creating roles vars directory: %v", err)
-	}
-
-	if err := os.MkdirAll(rolesTemplatesDir, 0755); err != nil {
-		log.Error("Error creating roles templates directory: %v", err)
-		success = false
-		responseMessage = fmt.Sprintf("Error creating roles templates directory: %v", err)
-	}
-
-	// Process files, variables, and secrets
-	if success {
-		// Create config file
-		roleConfigFile := filepath.Join(versionDir, "config.json")
-
-		// Convert AppConfig to JSON
-		configBytes, err := json.Marshal(appConfig)
-		if err != nil {
-			log.Error("Error marshaling app config: %v", err)
-			success = false
-			responseMessage = fmt.Sprintf("Error marshaling app config: %v", err)
-		}
-
-		// Store config.json in app_roles/{APP_ID}/config.json
-		if success {
-			if err := os.WriteFile(roleConfigFile, configBytes, 0644); err != nil {
-				log.Error("Error creating role config file: %v", err)
-				success = false
-				responseMessage = fmt.Sprintf("Error creating role config file: %v", err)
-			}
-		}
-
-		// Handle template files
-		if success {
-			if err := h.handleTemplateFiles(rolesTemplatesDir, appConfig, cmd.App.Files); err != nil {
-				log.Error("Error handling template files: %v", err)
-				success = false
-				responseMessage = fmt.Sprintf("Error handling template files: %v", err)
-			}
-		}
-
-		// Create defaults/main.yml with empty values based on config variables
-		if success {
-			if err := h.createDefaultsFile(rolesDefaultsDir, appConfig); err != nil {
-				log.Error("Error creating defaults file: %v", err)
-				success = false
-				responseMessage = fmt.Sprintf("Error creating defaults file: %v", err)
-			}
-		}
-
-		// Process variables
-		if success {
-			if err := h.processVariables(rolesVarsFile, appConfig, variables); err != nil {
-				log.Error("Error processing variables: %v", err)
-				success = false
-				responseMessage = fmt.Sprintf("Error processing variables: %v", err)
-			}
-		}
-
-		// Process secrets
-		if success {
-			if err := h.processSecrets(rolesSecretsFile, appConfig, variables); err != nil {
-				log.Error("Error processing secrets: %v", err)
-				success = false
-				responseMessage = fmt.Sprintf("Error processing secrets: %v", err)
-			}
+	// 1. Ensure directory structure exists
+	for _, d := range dirs {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			return fmt.Errorf("error creating directory %s: %w", d, err)
 		}
 	}
 
-	// Return error if there was a problem
-	if !success {
-		return fmt.Errorf(responseMessage)
+	// 2. Persist config.json
+	if err := h.writeConfig(dirs["version"], app.Config); err != nil {
+		return err
+	}
+
+	// 3. Sync template files
+	if err := h.syncTemplates(dirs["templates"], app.Config, app.Files); err != nil {
+		return err
+	}
+
+	// 4. Write defaults from variables skeleton
+	if err := h.writeDefaults(dirs["defaults"], app.Config); err != nil {
+		return err
+	}
+
+	// 5. Write vars and secrets YAML files
+	if err := h.writeVarsAndSecrets(dirs["vars"], app.Config, app.Variables); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-// handleTemplateFiles handles the template files for the app
-// It creates new files, updates existing files, and deletes files that are no longer in the config
-func (h *SaveAppHandler) handleTemplateFiles(templatesDir string, appConfig *model.AppConfig, files model.FilesMap) error {
-	// Create a map of filenames from the request for creating/updating files
-	requestFiles := make(map[string]bool)
-	for fileID := range files {
-		requestFiles[fileID] = true
+// writeConfig marshals the AppConfig and writes it to config.json inside versionDir.
+func (h *SaveAppHandler) writeConfig(versionDir string, cfg *model.AppConfig) error {
+	configPath := filepath.Join(versionDir, "config.json")
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("error marshaling app config: %w", err)
 	}
+	if err := os.WriteFile(configPath, data, 0o644); err != nil {
+		return fmt.Errorf("error writing config file: %w", err)
+	}
+	return nil
+}
 
-	// Create a map of filenames from the appConfig for checking which files to delete
-	configFiles := make(map[string]bool)
-	// Create a map to lookup filenames by ID
+// syncTemplates keeps the templates directory in sync with cfg.Files and contentMap.
+func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig, contentMap model.FilesMap) error {
+	// Build sets for quick look-ups
+	expected := make(map[string]model.AppFile) // filename -> AppFile
 	idToFilename := make(map[string]string)
-	for _, file := range appConfig.Files {
-		configFiles[file.Filename] = true
-		idToFilename[file.ID] = file.Filename
+	for _, f := range cfg.Files {
+		expected[f.Filename] = f
+		idToFilename[f.ID] = f.Filename
 	}
 
-	// Get existing template files
-	existingFiles, err := filepath.Glob(filepath.Join(templatesDir, "*.j2"))
+	// Remove obsolete .j2 files
+	existing, err := filepath.Glob(filepath.Join(templatesDir, "*.j2"))
 	if err != nil {
-		return fmt.Errorf("error getting existing template files: %w", err)
+		return fmt.Errorf("error listing template files: %w", err)
 	}
-
-	// Delete files that are no longer in the config
-	for _, existingFile := range existingFiles {
-		filename := filepath.Base(existingFile)
-		// Remove the .j2 extension
-		filename = filename[:len(filename)-3]
-		if !configFiles[filename] {
-			if err := os.Remove(existingFile); err != nil {
-				return fmt.Errorf("error removing file %s: %w", existingFile, err)
+	for _, path := range existing {
+		name := filepath.Base(path)
+		name = name[:len(name)-3] // strip .j2
+		if _, ok := expected[name]; !ok {
+			if err := os.Remove(path); err != nil {
+				return fmt.Errorf("error removing obsolete template %s: %w", path, err)
 			}
-			log.Debug("Deleted file: %s", existingFile)
+			log.Debug("Deleted obsolete template: %s", path)
 		}
 	}
 
-	// Create or update files from the request
-	for fileID, content := range files {
-		// Get the filename from the ID using the mapping
-		filename, ok := idToFilename[fileID]
+	// Write/update templates provided in the request
+	for id, content := range contentMap {
+		filename, ok := idToFilename[id]
 		if !ok {
-			// If filename not found, fall back to using ID
-			filename = fileID
-			log.Printf("Warning: No filename found for ID %s, using ID as filename", fileID)
+			log.Warn("No filename found for file ID %s, skipping", id)
+			continue
 		}
 
-		templateFile := filepath.Join(templatesDir, filename+".j2")
-		if err := os.WriteFile(templateFile, []byte(content), 0644); err != nil {
-			return fmt.Errorf("error creating/updating template file %s: %w", filename, err)
+		targetPath := filepath.Join(templatesDir, filename+".j2")
+		if err := os.WriteFile(targetPath, content, 0o644); err != nil {
+			return fmt.Errorf("error writing template %s: %w", targetPath, err)
 		}
-		log.Printf("Created/updated file: %s", templateFile)
+		log.Debug("Wrote template: %s", targetPath)
 	}
 
 	return nil
 }
 
-// createDefaultsFile creates the defaults/main.yml file with empty values based on config variables
-func (h *SaveAppHandler) createDefaultsFile(defaultsDir string, appConfig *model.AppConfig) error {
-	// Create empty values map
-	emptyValues := make(map[string]string)
-	for _, v := range appConfig.Variables {
-		emptyValues[v.Name] = ""
+// writeDefaults produces defaults/main.yml with empty values for every variable in the config.
+func (h *SaveAppHandler) writeDefaults(defaultsDir string, cfg *model.AppConfig) error {
+	empty := make(map[string]string)
+	for _, v := range cfg.Variables {
+		empty[v.Name] = ""
 	}
 
-	// Convert to JSON and then to YAML
-	emptyValuesJSON, err := json.Marshal(emptyValues)
+	j, err := json.Marshal(empty)
 	if err != nil {
-		return fmt.Errorf("error marshaling empty values to JSON: %w", err)
+		return fmt.Errorf("error marshaling defaults JSON: %w", err)
 	}
-
-	defaultsYAML, err := yaml.JSONToYAML(emptyValuesJSON)
+	y, err := yaml.JSONToYAML(j)
 	if err != nil {
 		return fmt.Errorf("error converting defaults to YAML: %w", err)
 	}
 
-	defaultsFile := filepath.Join(defaultsDir, "main.yml")
-	if err := os.WriteFile(defaultsFile, defaultsYAML, 0644); err != nil {
-		return fmt.Errorf("error creating defaults file: %w", err)
+	path := filepath.Join(defaultsDir, "main.yml")
+	if err := os.WriteFile(path, y, 0o644); err != nil {
+		return fmt.Errorf("error writing defaults file: %w", err)
 	}
-
 	return nil
 }
 
-// processMap is a helper function that processes variables or secrets for the app
-func (h *SaveAppHandler) processMap(filePath string, appConfig *model.AppConfig, variableMap model.VariableMap, decrypt bool) error {
-	// Map variable IDs to names using the appConfig
-	idToName := make(map[string]string)
-	// Create a set of variable IDs from appConfig for checking which variables/secrets to keep
-	configVarIDs := make(map[string]bool)
-	configNameToID := make(map[string]string) // Map variable names to IDs
-	for _, v := range appConfig.Variables {
-		idToName[v.ID] = v.Name
-		configVarIDs[v.ID] = true
-		configNameToID[v.Name] = v.ID
+// writeVarsAndSecrets splits variables by encryption flag and writes vars.yml / secrets.yml.
+func (h *SaveAppHandler) writeVarsAndSecrets(varsDir string, cfg *model.AppConfig, input model.VariableMap) error {
+	varsFile := filepath.Join(varsDir, "vars.yml")
+	secretsFile := filepath.Join(varsDir, "secrets.yml")
+
+	// Load existing secrets (if any) to keep unchanged values when "<encrypted>" placeholder is passed.
+	existingSecrets := make(map[string]string)
+	if data, err := os.ReadFile(secretsFile); err == nil {
+		_ = yaml.UnmarshalYAML(data, &existingSecrets) // ignore parse errors; fallback to empty map
 	}
 
-	// Check if file exists and read it
-	existingNamedValues := make(map[string]string)
-	if _, err := os.Stat(filePath); err == nil {
-		// File exists, read it
-		yamlData, err := os.ReadFile(filePath)
-		if err != nil {
-			return fmt.Errorf("error reading existing %s file: %w", filePath, err)
+	// Prepare maps keyed by variable name
+	plain := make(map[string]string)
+	secrets := make(map[string]string)
+
+	for _, v := range cfg.Variables {
+		value, ok := input[v.ID]
+		if !ok {
+			continue // nothing provided -> skip
 		}
 
-		// Parse YAML using pkg/yaml
-		if err := yaml.UnmarshalYAML(yamlData, &existingNamedValues); err != nil {
-			return fmt.Errorf("error parsing existing %s file: %w", filePath, err)
-		}
-
-		// Keep only values that are in the appConfig
-		for name := range existingNamedValues {
-			if _, exists := configNameToID[name]; !exists {
-				// Value not in appConfig, remove it
-				delete(existingNamedValues, name)
-			}
-		}
-	}
-
-	// Replace IDs with names and only include values that are in the appConfig
-	for id, value := range variableMap {
-		// Only process values that are in the appConfig
-		if configVarIDs[id] {
-			// If the value is "<encrypted>", use the current value from the secrets file
-			if value == "<encrypted>" && decrypt {
-				name, ok := idToName[id]
-				if ok && existingNamedValues[name] != "" {
-					// Skip this value as we'll keep the existing one
-					continue
-				} else {
-					// For encrypted variables with no existing value, we need to store an empty string
-					// This ensures the variable is included in the secrets.yml file
-					name, ok := idToName[id]
-					if ok {
-						existingNamedValues[name] = ""
-					} else {
-						existingNamedValues[id] = ""
-					}
-					continue
-				}
-			}
-
-			// Decrypt the value if needed
-			if decrypt && h.PrivateKeyPath != "" {
-				decryptedValue, err := certs.DecryptWithPrivateKey(h.PrivateKeyPath, value)
-				if err != nil {
-					log.Error("Error decrypting value for ID %s: %v", id, err)
-					// Continue with the original value if decryption fails
-				} else {
-					value = decryptedValue
-				}
-			}
-
-			name, ok := idToName[id]
-			if ok {
-				existingNamedValues[name] = value
-			} else {
-				// Keep original ID if name not found
-				existingNamedValues[id] = value
-			}
-		}
-	}
-
-	// If the map is empty, create an empty file
-	if len(existingNamedValues) == 0 {
-		// Create empty file
-		if err := os.WriteFile(filePath, []byte{}, 0644); err != nil {
-			return fmt.Errorf("error creating empty %s file: %w", filePath, err)
-		}
-	} else {
-		// Convert to JSON and then to YAML
-		valuesJSON, err := json.Marshal(existingNamedValues)
-		if err != nil {
-			return fmt.Errorf("error marshaling values to JSON: %w", err)
-		}
-
-		// Convert from JSON to YAML
-		valuesYAML, err := yaml.JSONToYAML(valuesJSON)
-		if err != nil {
-			return fmt.Errorf("error converting values to YAML: %w", err)
-		}
-
-		// Create file
-		if err := os.WriteFile(filePath, valuesYAML, 0644); err != nil {
-			return fmt.Errorf("error creating %s file: %w", filePath, err)
-		}
-	}
-
-	return nil
-}
-
-// processVariables processes the variables for the app
-func (h *SaveAppHandler) processVariables(varsFile string, appConfig *model.AppConfig, variables model.VariableMap) error {
-	// Filter variables to only include non-secrets
-	nonSecretVars := make(model.VariableMap)
-	for _, v := range appConfig.Variables {
-		if !v.IsEncrypted {
-			if value, exists := variables[v.ID]; exists {
-				nonSecretVars[v.ID] = value
-			}
-		}
-	}
-	return h.processMap(varsFile, appConfig, nonSecretVars, false)
-}
-
-// processSecrets processes the secrets for the app
-func (h *SaveAppHandler) processSecrets(secretsFile string, appConfig *model.AppConfig, variables model.VariableMap) error {
-	// Filter variables to only include secrets
-	secretVars := make(model.VariableMap)
-	for _, v := range appConfig.Variables {
 		if v.IsEncrypted {
-			if value, exists := variables[v.ID]; exists {
-				secretVars[v.ID] = value
+			if value == "<encrypted>" {
+				// Keep existing value if present, otherwise store empty string
+				if existing, ok := existingSecrets[v.Name]; ok {
+					secrets[v.Name] = existing
+				} else {
+					secrets[v.Name] = ""
+				}
+			} else {
+				secrets[v.Name] = value
 			}
+		} else {
+			plain[v.Name] = value
 		}
 	}
 
-	// Create the directory if it doesn't exist
-	secretsDir := filepath.Dir(secretsFile)
-	if err := os.MkdirAll(secretsDir, 0755); err != nil {
-		return fmt.Errorf("error creating secrets directory: %w", err)
+	// Helper closure to write YAML file from map
+	write := func(path string, values map[string]string, decrypt bool) error {
+		if len(values) == 0 {
+			// Ensure empty file exists
+			return os.WriteFile(path, []byte{}, 0o644)
+		}
+
+		// Optionally decrypt before saving (only for secrets)
+		if decrypt && h.PrivateKeyPath != "" {
+			for k, v := range values {
+				if v == "" { // skip empty placeholders
+					continue
+				}
+				dec, err := certs.DecryptWithPrivateKey(h.PrivateKeyPath, v)
+				if err == nil {
+					values[k] = dec
+				} else {
+					log.Warn("Failed to decrypt variable %s: %v", k, err)
+				}
+			}
+		}
+
+		j, err := json.Marshal(values)
+		if err != nil {
+			return fmt.Errorf("error marshaling vars for %s: %w", path, err)
+		}
+		y, err := yaml.JSONToYAML(j)
+		if err != nil {
+			return fmt.Errorf("error converting vars to YAML for %s: %w", path, err)
+		}
+		return os.WriteFile(path, y, 0o644)
 	}
 
-	// Process the secrets map
-	if err := h.processMap(secretsFile, appConfig, secretVars, true); err != nil {
+	if err := write(varsFile, plain, false); err != nil {
 		return err
 	}
-
-	// Ensure the secrets file exists even if there are no secrets
-	if _, err := os.Stat(secretsFile); os.IsNotExist(err) {
-		if err := os.WriteFile(secretsFile, []byte{}, 0644); err != nil {
-			return fmt.Errorf("error creating empty secrets file: %w", err)
-		}
+	if err := write(secretsFile, secrets, true); err != nil {
+		return err
 	}
 
 	return nil
