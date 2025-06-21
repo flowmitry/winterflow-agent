@@ -6,12 +6,6 @@
 
   roles:
     - role: check_requirements
-    - role: docker
-      when: orchestrator == 'docker_compose'
-      become: true
-    - role: docker_compose
-      become: true
-      when: orchestrator == 'docker_compose'
 
   pre_tasks:
     - name: Validate required variables
@@ -46,10 +40,6 @@
     - name: Load variables
       include_vars:
         file: "{{ _app_role_dir }}/vars/vars.yml"
-
-    - name: Load secrets
-      include_vars:
-        file: "{{ _app_role_dir }}/vars/secrets.yml"
 
     - name: Create a destination directory
       file:

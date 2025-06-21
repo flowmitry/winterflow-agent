@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
-	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	ansiblepkg "winterflow-agent/pkg/ansible"
 	log "winterflow-agent/pkg/log"
 )
@@ -20,34 +19,23 @@ type ControlAppHandler struct {
 
 // Handle executes the ControlAppCommand
 func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
-	if cmd.Request == nil {
-		return log.Errorf("invalid request: request is nil")
-	}
-
-	if cmd.Request.Base == nil {
-		return log.Errorf("invalid request: base message is nil")
-	}
-
-	messageID := cmd.Request.Base.MessageId
-	log.Debug("Processing control app request for message ID: %s, app ID: %s, action: %s",
-		messageID, cmd.Request.AppId, cmd.Request.Action.String())
+	log.Debug("Processing control app request for app ID: %s, action: %d", cmd.AppID, cmd.Action)
 
 	// Validate the app ID
-	appID := cmd.Request.AppId
-	if appID == "" {
+	if cmd.AppID == "" {
 		return log.Errorf("app ID is required for control app command")
 	}
 
 	// Get the app config
-	appConfig, err := getAppConfig(h.AnsibleAppsRolesPath, appID, h.AnsibleAppsRolesCurrentVersion)
+	appConfig, err := getAppConfig(h.AnsibleAppsRolesPath, cmd.AppID, h.AnsibleAppsRolesCurrentVersion)
 	if err != nil {
-		return log.Errorf("failed to get app config for app ID %s: %w", appID, err)
+		return log.Errorf("failed to get app config for app ID %s: %w", cmd.AppID, err)
 	}
 
 	// Determine the app version to use
 	var appVersion string
-	if cmd.Request.AppVersion > 0 {
-		appVersion = fmt.Sprintf("%d", cmd.Request.AppVersion)
+	if cmd.AppVersion > 0 {
+		appVersion = fmt.Sprintf("%d", cmd.AppVersion)
 	} else {
 		appVersion = h.AnsibleAppsRolesCurrentVersion
 	}
@@ -55,21 +43,21 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	// Determine the action to perform
 	var playbook string
 	var result ansiblepkg.Result
-	switch cmd.Request.Action {
-	case pb.AppAction_START:
+	switch cmd.Action {
+	case AppActionStart:
 		playbook = "deploy_app"
-		result = h.ansible.DeployApp(appID, appVersion)
-	case pb.AppAction_STOP:
+		result = h.ansible.DeployApp(cmd.AppID, appVersion)
+	case AppActionStop:
 		playbook = "stop_app"
-		result = h.ansible.StopApp(appID)
-	case pb.AppAction_RESTART:
+		result = h.ansible.StopApp(cmd.AppID)
+	case AppActionRestart:
 		playbook = "restart_app"
-		result = h.ansible.RestartApp(appID, appVersion)
-	case pb.AppAction_UPDATE:
+		result = h.ansible.RestartApp(cmd.AppID, appVersion)
+	case AppActionUpdate:
 		playbook = "update_app"
-		result = h.ansible.UpdateApp(appID)
+		result = h.ansible.UpdateApp(cmd.AppID)
 	default:
-		return log.Errorf("unsupported action: %s", cmd.Request.Action.String())
+		return log.Errorf("unsupported action: %d", cmd.Action)
 	}
 
 	if result.ExitCode != 0 {

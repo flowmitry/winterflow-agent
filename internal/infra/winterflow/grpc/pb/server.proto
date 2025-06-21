@@ -121,8 +121,7 @@ message AppV1 {
   // JSON
   bytes config = 2;
   repeated AppVarV1 variables = 3;
-  repeated AppVarV1 secrets = 4;
-  repeated AppFileV1 files = 5;
+  repeated AppFileV1 files = 4;
 }
 
 message GetAppRequestV1 {
@@ -154,7 +153,6 @@ message SaveAppRequestV1 {
 
 message SaveAppResponseV1 {
   BaseResponse base = 1;
-  AppV1 app = 2;
 }
 
 message DeleteAppRequestV1 {
@@ -177,10 +175,6 @@ message ControlAppRequestV1 {
 
 message ControlAppResponseV1 {
   BaseResponse base = 1;
-  // UUID
-  string app_id = 2;
-  uint32 app_version = 3;
-  AppStatusCode status_code = 4;
 }
 
 message GetAppsStatusRequestV1 {

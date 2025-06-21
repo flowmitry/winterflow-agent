@@ -1,12 +1,24 @@
 package control_app
 
-import (
-	"winterflow-agent/internal/infra/winterflow/grpc/pb"
+// AppAction represents the action to perform on an application
+type AppAction int
+
+const (
+	// AppActionStop stops the application
+	AppActionStop AppAction = iota
+	// AppActionStart starts the application
+	AppActionStart
+	// AppActionRestart restarts the application
+	AppActionRestart
+	// AppActionUpdate updates the application
+	AppActionUpdate
 )
 
 // ControlAppCommand represents a command to control the state of an application
 type ControlAppCommand struct {
-	Request *pb.ControlAppRequestV1
+	AppID      string
+	AppVersion uint32
+	Action     AppAction
 }
 
 // Name returns the name of the command

@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"winterflow-agent/internal/application/config"
 	agentversion "winterflow-agent/internal/application/version"
-	"winterflow-agent/internal/config"
 	log "winterflow-agent/pkg/log"
 )
 
@@ -23,17 +23,8 @@ func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
 		return log.Errorf("Update agent feature is disabled")
 	}
 
-	if cmd.Request == nil {
-		return log.Errorf("invalid request: request is nil")
-	}
-
-	if cmd.Request.Base == nil {
-		return log.Errorf("invalid request: base message is nil")
-	}
-
-	messageID := cmd.Request.Base.MessageId
-	targetVersion := cmd.Request.Version
-	log.Debug("Processing update agent request", "message_id", messageID, "current_version", agentversion.GetVersion(), "target_version", targetVersion)
+	targetVersion := cmd.Version
+	log.Debug("Processing update agent request", "current_version", agentversion.GetVersion(), "target_version", targetVersion)
 
 	if targetVersion == "" {
 		return log.Errorf("targetVersion is required for update agent command")

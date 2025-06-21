@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"winterflow-agent/internal/application/command/control_app"
 	"winterflow-agent/internal/application/command/delete_app"
 	"winterflow-agent/internal/application/command/save_app"
 	"winterflow-agent/internal/application/command/update_agent"
@@ -14,9 +13,11 @@ import (
 // HandleSaveAppRequest handles the command dispatch and creates the appropriate response message
 func HandleSaveAppRequest(commandBus cqrs.CommandBus, saveAppRequest *pb.SaveAppRequestV1, agentID string) (*pb.AgentMessage, error) {
 	log.Debug("Processing save app request", "app_id", saveAppRequest.App.AppId)
-
+	app := ProtoAppV1ToApp(saveAppRequest.App)
 	// Create and dispatch the command
-	cmd := save_app.SaveAppCommand{Request: saveAppRequest}
+	cmd := save_app.SaveAppCommand{
+		App: app,
+	}
 
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage string = "App saved successfully"
@@ -31,7 +32,6 @@ func HandleSaveAppRequest(commandBus cqrs.CommandBus, saveAppRequest *pb.SaveApp
 	baseResp := createBaseResponse(saveAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	saveAppResp := &pb.SaveAppResponseV1{
 		Base: &baseResp,
-		App:  saveAppRequest.App,
 	}
 
 	agentMsg := &pb.AgentMessage{
@@ -48,7 +48,9 @@ func HandleDeleteAppRequest(commandBus cqrs.CommandBus, deleteAppRequest *pb.Del
 	log.Debug("Processing delete app request", "app_id", deleteAppRequest.AppId)
 
 	// Create and dispatch the command
-	cmd := delete_app.DeleteAppCommand{Request: deleteAppRequest}
+	cmd := delete_app.DeleteAppCommand{
+		AppID: deleteAppRequest.AppId,
+	}
 
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage string = "App deleted successfully"
@@ -79,11 +81,10 @@ func HandleControlAppRequest(commandBus cqrs.CommandBus, controlAppRequest *pb.C
 	log.Debug("Processing control app request", "app_id", controlAppRequest.AppId, "action", controlAppRequest.Action)
 
 	// Create and dispatch the command
-	cmd := control_app.ControlAppCommand{Request: controlAppRequest}
+	cmd := ProtoControlAppRequestV1ToControlAppCommand(controlAppRequest)
 
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage string = "App control action executed successfully"
-	var statusCode pb.AppStatusCode = pb.AppStatusCode_APP_STATUS_CODE_ACTIVE
 
 	// Dispatch the command to the handler
 	if err := commandBus.Dispatch(cmd); err != nil {
@@ -94,10 +95,7 @@ func HandleControlAppRequest(commandBus cqrs.CommandBus, controlAppRequest *pb.C
 
 	baseResp := createBaseResponse(controlAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	controlAppResp := &pb.ControlAppResponseV1{
-		Base:       &baseResp,
-		AppId:      controlAppRequest.AppId,
-		AppVersion: controlAppRequest.AppVersion,
-		StatusCode: statusCode,
+		Base: &baseResp,
 	}
 
 	agentMsg := &pb.AgentMessage{
@@ -114,7 +112,9 @@ func HandleUpdateAgentRequest(commandBus cqrs.CommandBus, updateAgentRequest *pb
 	log.Debug("Processing update agent request", "version", updateAgentRequest.Version)
 
 	// Create and dispatch the command
-	cmd := update_agent.UpdateAgentCommand{Request: updateAgentRequest}
+	cmd := update_agent.UpdateAgentCommand{
+		Version: updateAgentRequest.Version,
+	}
 
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage string = "Agent update initiated successfully"

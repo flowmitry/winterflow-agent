@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 	"winterflow-agent/internal/application/command"
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/application/query"
-	"winterflow-agent/internal/config"
 	"winterflow-agent/internal/domain/repository"
 	log "winterflow-agent/pkg/log"
 
@@ -716,7 +716,6 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							baseResp := createBaseResponse(cmd.SaveAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
 							saveAppResp := &pb.SaveAppResponseV1{
 								Base: &baseResp,
-								App:  cmd.SaveAppRequestV1.App,
 							}
 
 							agentMsg := &pb.AgentMessage{
@@ -768,10 +767,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							// Create and send error response immediately
 							baseResp := createBaseResponse(cmd.ControlAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
 							controlAppResp := &pb.ControlAppResponseV1{
-								Base:       &baseResp,
-								AppId:      cmd.ControlAppRequestV1.AppId,
-								AppVersion: cmd.ControlAppRequestV1.AppVersion,
-								StatusCode: pb.AppStatusCode_APP_STATUS_CODE_PROBLEMATIC,
+								Base: &baseResp,
 							}
 
 							agentMsg := &pb.AgentMessage{

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"winterflow-agent/internal/application/query/get_app"
 	"winterflow-agent/internal/application/query/get_apps_status"
+	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	"winterflow-agent/pkg/cqrs"
 	log "winterflow-agent/pkg/log"
@@ -13,8 +14,11 @@ import (
 func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1, agentID string) (*pb.AgentMessage, error) {
 	log.Debug("Processing get app request for app ID: %s", getAppRequest.AppId)
 
-	// Create the query
-	query := get_app.GetAppQuery{Request: getAppRequest}
+	// Create the query with properties directly
+	query := get_app.GetAppQuery{
+		AppID:      getAppRequest.AppId,
+		AppVersion: getAppRequest.AppVersion,
+	}
 
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage string = "App retrieved successfully"
@@ -29,11 +33,14 @@ func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1
 	} else {
 		// Type assertion to get the app data
 		var ok bool
-		app, ok = result.(*pb.AppV1)
+		domainApp, ok := result.(*model.App)
 		if !ok {
 			log.Error("Error retrieving app: unexpected result type")
 			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 			responseMessage = "Error retrieving app: unexpected result type"
+		} else {
+			// Convert domain model to protobuf
+			app = AppToProtoAppV1(domainApp)
 		}
 	}
 
@@ -57,8 +64,8 @@ func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1
 func HandleGetAppsStatusQuery(queryBus cqrs.QueryBus, getAppsStatusRequest *pb.GetAppsStatusRequestV1, agentID string) (*pb.AgentMessage, error) {
 	log.Debug("Processing get apps status request")
 
-	// Create the query
-	query := get_apps_status.GetAppsStatusQuery{Request: getAppsStatusRequest}
+	// Create the query (no properties needed)
+	query := get_apps_status.GetAppsStatusQuery{}
 
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage string = "Apps statuses retrieved successfully"
@@ -73,11 +80,13 @@ func HandleGetAppsStatusQuery(queryBus cqrs.QueryBus, getAppsStatusRequest *pb.G
 	} else {
 		// Type assertion to get the app statuses
 		var ok bool
-		appStatuses, ok = result.([]*pb.AppStatusV1)
+		domainResult, ok := result.(*model.GetAppsStatusResult)
 		if !ok {
 			log.Error("Error retrieving apps statuses: unexpected result type")
 			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 			responseMessage = "Error retrieving apps statuses: unexpected result type"
+		} else {
+			appStatuses = ContainerAppsToProtoAppStatusesV1(domainResult.Apps)
 		}
 	}
 

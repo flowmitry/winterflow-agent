@@ -6,7 +6,7 @@ import (
 	"winterflow-agent/internal/domain/repository"
 	log "winterflow-agent/pkg/log"
 
-	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/infra/winterflow/grpc/client"
 	"winterflow-agent/pkg/metrics"
 )

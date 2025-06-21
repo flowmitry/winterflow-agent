@@ -1,7 +1,7 @@
 package ansible
 
 import (
-	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/application/config"
 	pkgansible "winterflow-agent/pkg/ansible"
 )
 

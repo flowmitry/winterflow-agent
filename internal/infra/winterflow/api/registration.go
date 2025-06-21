@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"time"
 
-	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/pkg/certs"
 )
 

@@ -6,7 +6,7 @@ API_URL=http://127.0.0.1:8080
 BUILD_DIR=.
 
 # Go build flags
-LDFLAGS=-X winterflow-agent/internal/application/version.version=${VERSION} -X winterflow-agent/internal/config.grpcServerAddress=${GRPC_ADDR} -X winterflow-agent/internal/config.apiBaseURL=${API_URL}
+LDFLAGS=-X winterflow-agent/internal/application/version.version=${VERSION} -X winterflow-agent/internal/application/config.grpcServerAddress=${GRPC_ADDR} -X winterflow-agent/internal/application/config.apiBaseURL=${API_URL}
 BUILD_FLAGS=-v
 
 .PHONY: all clean grpc build run install-tools ansible-version
@@ -36,12 +36,12 @@ run: build
 clean:
 	@echo "Cleaning build directory..."
 	@rm -f ${BUILD_DIR}/${BINARY_NAME}
-	@rm -f internal/grpc/pb/*.pb.go
+	@rm -f internal/infra/winterflow/grpc/pb/*.pb.go
 	@rm -f ansible/version.txt
 
 grpc:
 	@echo "Generating gRPC code..."
-	@PATH="$$PATH:$$(go env GOPATH)/bin" protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative internal/winterflow/grpc/pb/server.proto
+	@PATH="$$PATH:$$(go env GOPATH)/bin" protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative internal/infra/winterflow/grpc/pb/server.proto
 
 install-tools:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0

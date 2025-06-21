@@ -1,11 +1,11 @@
-package files
+package certs
 
 import (
 	"io/fs"
+	"winterflow-agent/internal/application/version"
 	log "winterflow-agent/pkg/log"
 
-	"winterflow-agent/internal/application/version"
-	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/pkg/embedded"
 )
 
@@ -22,17 +22,14 @@ func NewManager(embeddedFS fs.FS, configPath string) *Manager {
 	}
 
 	return &Manager{
-		embeddedManager: embedded.NewManager(embeddedFS, cfg.GetAnsibleFolder(), version.GetVersion(), []string{
-			"inventory/defaults.yml",
-			"playbooks",
-			"roles",
-			"ansible.cfg",
-			"apps_roles/README.md",
+		embeddedManager: embedded.NewManager(embeddedFS, cfg.GetEmbeddedCertificatesFolder(), version.GetVersion(), []string{
+			cfg.GetCACertificateFile(),
 		}),
 	}
 }
 
-// SyncFiles ensures the ansible directory is up to date with the embedded files
+// SyncFiles synchronizes the certificate files using the embeddedManager's SyncFiles method.
 func (m *Manager) SyncFiles() error {
+	log.Printf("Syncing certificates")
 	return m.embeddedManager.SyncFiles()
 }

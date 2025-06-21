@@ -2,7 +2,7 @@ package ansible
 
 import (
 	"sync"
-	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/domain/repository"
 	pkgansible "winterflow-agent/pkg/ansible"
 	log "winterflow-agent/pkg/log"

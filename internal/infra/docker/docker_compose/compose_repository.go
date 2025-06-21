@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"winterflow-agent/internal/config"
+	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
 	"winterflow-agent/internal/infra/docker"
