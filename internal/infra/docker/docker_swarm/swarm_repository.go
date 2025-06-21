@@ -25,7 +25,7 @@ type swarmRepository struct {
 }
 
 // NewSwarmRepository creates a new Docker Swarm repository
-func NewSwarmRepository(config *config.Config, dockerClient *client.Client) repository.ContainerAppRepository {
+func NewSwarmRepository(config *config.Config, dockerClient *client.Client) repository.AppRepository {
 	return &swarmRepository{
 		client: dockerClient,
 		config: config,
@@ -192,4 +192,24 @@ func (r *swarmRepository) GetAppsStatus(ctx context.Context) (model.GetAppsStatu
 	log.Debug("Docker Swarm apps status retrieved", "apps_count", len(apps))
 
 	return model.GetAppsStatusResult{Apps: apps}, nil
+}
+
+func (r *swarmRepository) DeployApp(appID, appVersion string) error {
+	return fmt.Errorf("DeployApp is not implemented for docker_swarm orchestrator")
+}
+
+func (r *swarmRepository) StopApp(appID string) error {
+	return fmt.Errorf("StopApp is not implemented for docker_swarm orchestrator")
+}
+
+func (r *swarmRepository) RestartApp(appID, appVersion string) error {
+	return fmt.Errorf("RestartApp is not implemented for docker_swarm orchestrator")
+}
+
+func (r *swarmRepository) UpdateApp(appID string) error {
+	return fmt.Errorf("UpdateApp is not implemented for docker_swarm orchestrator")
+}
+
+func (r *swarmRepository) DeleteApp(appID string) error {
+	return fmt.Errorf("DeleteApp is not implemented for docker_swarm orchestrator")
 }

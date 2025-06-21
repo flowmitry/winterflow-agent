@@ -6,13 +6,12 @@ import (
 	"path/filepath"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
-	ansiblepkg "winterflow-agent/pkg/ansible"
 	log "winterflow-agent/pkg/log"
 )
 
 // ControlAppHandler handles the ControlAppCommand
 type ControlAppHandler struct {
-	ansible                        repository.RunnerRepository
+	repository                     repository.AppRepository
 	AnsibleAppsRolesPath           string
 	AnsibleAppsRolesCurrentVersion string
 }
@@ -42,26 +41,26 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 
 	// Determine the action to perform
 	var playbook string
-	var result ansiblepkg.Result
+	var actionErr error
 	switch cmd.Action {
 	case AppActionStart:
 		playbook = "deploy_app"
-		result = h.ansible.DeployApp(cmd.AppID, appVersion)
+		actionErr = h.repository.DeployApp(cmd.AppID, appVersion)
 	case AppActionStop:
 		playbook = "stop_app"
-		result = h.ansible.StopApp(cmd.AppID)
+		actionErr = h.repository.StopApp(cmd.AppID)
 	case AppActionRestart:
 		playbook = "restart_app"
-		result = h.ansible.RestartApp(cmd.AppID, appVersion)
+		actionErr = h.repository.RestartApp(cmd.AppID, appVersion)
 	case AppActionUpdate:
 		playbook = "update_app"
-		result = h.ansible.UpdateApp(cmd.AppID)
+		actionErr = h.repository.UpdateApp(cmd.AppID)
 	default:
 		return log.Errorf("unsupported action: %d", cmd.Action)
 	}
 
-	if result.ExitCode != 0 {
-		return log.Errorf("command failed with exit code %d: %v", result.ExitCode, result.Error)
+	if actionErr != nil {
+		return log.Errorf("command failed with error: %v", actionErr)
 	}
 
 	log.Printf("Successfully executed %s playbook on app %s", playbook, appConfig.Name)
@@ -92,9 +91,9 @@ func getAppConfig(AnsibleAppsRolesPath, appID, version string) (*model.AppConfig
 }
 
 // NewControlAppHandler creates a new ControlAppHandler
-func NewControlAppHandler(ansible repository.RunnerRepository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *ControlAppHandler {
+func NewControlAppHandler(repository repository.AppRepository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *ControlAppHandler {
 	return &ControlAppHandler{
-		ansible:                        ansible,
+		repository:                     repository,
 		AnsibleAppsRolesPath:           ansibleAppsRolesPath,
 		AnsibleAppsRolesCurrentVersion: ansibleAppsRolesCurrentVersion,
 	}

@@ -18,7 +18,6 @@ import (
 	"winterflow-agent/internal/application/agent"
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/application/version"
-	ansibleEmbedded "winterflow-agent/internal/infra/ansible/embedded"
 	"winterflow-agent/internal/infra/winterflow/api"
 )
 
@@ -182,17 +181,6 @@ func syncEmbeddedFiles(configPath string, ansibleFS embed.FS, certsFS embed.FS) 
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		fmt.Printf("\nFailed to load configuration: %v", err)
-		return err
-	}
-
-	fsysAnsible, err := fs.Sub(ansibleFS, cfg.GetAnsibleFolder())
-	if err != nil {
-		fmt.Printf("\nError accessing ansible filesystem: %v", err)
-		return err
-	}
-	ansibleManager := ansibleEmbedded.NewManager(fsysAnsible, configPath)
-	if err := ansibleManager.SyncFiles(); err != nil {
-		fmt.Printf("\nError syncing ansible files: %v", err)
 		return err
 	}
 

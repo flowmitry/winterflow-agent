@@ -3,13 +3,18 @@ package docker_compose
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
+
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
 	"winterflow-agent/internal/infra/docker"
 	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/yaml"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -25,7 +30,7 @@ type composeRepository struct {
 }
 
 // NewComposeRepository creates a new Docker Compose repository
-func NewComposeRepository(config *config.Config, dockerClient *client.Client) repository.ContainerAppRepository {
+func NewComposeRepository(config *config.Config, dockerClient *client.Client) repository.AppRepository {
 	return &composeRepository{
 		client: dockerClient,
 		config: config,
@@ -150,4 +155,292 @@ func (r *composeRepository) GetAppsStatus(ctx context.Context) (model.GetAppsSta
 	log.Debug("Docker Compose apps status retrieved", "apps_count", len(apps))
 
 	return model.GetAppsStatusResult{Apps: apps}, nil
+}
+
+func (r *composeRepository) DeployApp(appID, appVersion string) error {
+	// Determine important directories based on the agent configuration
+	roleDir := filepath.Join(r.config.GetAnsibleAppsRolesPath(), appID, appVersion)
+	outputDir := filepath.Join(r.config.BasePath, "apps", appID)
+
+	// Validate that the role directory exists
+	if _, err := os.Stat(roleDir); err != nil {
+		return fmt.Errorf("role directory %s does not exist: %w", roleDir, err)
+	}
+
+	// Ensure the output directory exists
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create output directory %s: %w", outputDir, err)
+	}
+
+	// Load variables (defaults first, then override with vars)
+	vars, err := r.loadTemplateVariables(roleDir)
+	if err != nil {
+		return fmt.Errorf("failed to load template variables: %w", err)
+	}
+
+	// Render templates into the output directory
+	if err := r.renderTemplates(roleDir, outputDir, vars); err != nil {
+		return fmt.Errorf("failed to render templates: %w", err)
+	}
+
+	// Finally start the application containers
+	if err := r.composeUp(outputDir); err != nil {
+		return fmt.Errorf("docker compose up failed: %w", err)
+	}
+
+	log.Info("[Deploy] successfully deployed app", "app_id", appID, "version", appVersion)
+	return nil
+}
+
+func (r *composeRepository) StopApp(appID string) error {
+	appDir := filepath.Join(r.config.BasePath, "apps", appID)
+	if _, err := os.Stat(appDir); err != nil {
+		if os.IsNotExist(err) {
+			log.Warn("[Stop] app directory does not exist, skipping", "app_id", appID)
+			return nil
+		}
+		return fmt.Errorf("failed to stat app directory: %w", err)
+	}
+
+	if err := r.composeDown(appDir); err != nil {
+		return fmt.Errorf("docker compose down failed: %w", err)
+	}
+
+	log.Info("[Stop] successfully stopped app", "app_id", appID)
+	return nil
+}
+
+func (r *composeRepository) RestartApp(appID, _ string) error {
+	// The playbook for restart simply issues a compose restart, keeping existing files.
+	appDir := filepath.Join(r.config.BasePath, "apps", appID)
+	if _, err := os.Stat(appDir); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("app directory %s does not exist", appDir)
+		}
+		return fmt.Errorf("failed to stat app directory: %w", err)
+	}
+
+	if err := r.composeRestart(appDir); err != nil {
+		return fmt.Errorf("docker compose restart failed: %w", err)
+	}
+
+	log.Info("[Restart] successfully restarted app", "app_id", appID)
+	return nil
+}
+
+func (r *composeRepository) UpdateApp(appID string) error {
+	appDir := filepath.Join(r.config.BasePath, "apps", appID)
+	if _, err := os.Stat(appDir); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("app directory %s does not exist", appDir)
+		}
+		return fmt.Errorf("failed to stat app directory: %w", err)
+	}
+
+	// Pull the latest images first
+	if err := r.composePull(appDir); err != nil {
+		return fmt.Errorf("docker compose pull failed: %w", err)
+	}
+
+	// Recreate containers
+	if err := r.composeUp(appDir); err != nil {
+		return fmt.Errorf("docker compose up (after pull) failed: %w", err)
+	}
+
+	log.Info("[Update] successfully updated app", "app_id", appID)
+	return nil
+}
+
+func (r *composeRepository) DeleteApp(appID string) error {
+	// Stop the application first; ignore error if already stopped
+	_ = r.StopApp(appID)
+	log.Debug("[Delete] stopping app completed", "app_id", appID)
+
+	// No other docker-specific resources need to be cleaned up here – files will be removed by the caller
+	log.Info("[Delete] docker compose cleanup completed", "app_id", appID)
+	return nil
+}
+
+// -----------------------------------------------------------------------------
+// Helper functions
+// -----------------------------------------------------------------------------
+
+// loadTemplateVariables merges defaults and vars files into a single map.
+func (r *composeRepository) loadTemplateVariables(roleDir string) (map[string]string, error) {
+	vars := make(map[string]string)
+
+	// Helper to read YAML into the map (string keys/values)
+	read := func(path string) error {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		var tmp map[string]interface{}
+		if err := yaml.UnmarshalYAML(data, &tmp); err != nil {
+			return err
+		}
+		for k, v := range tmp {
+			if str, ok := v.(string); ok {
+				vars[k] = str
+			}
+		}
+		return nil
+	}
+
+	// Defaults first (they may be empty values)
+	defaultsPath := filepath.Join(roleDir, "defaults", "main.yml")
+	_ = read(defaultsPath) // ignore error – defaults file may be absent
+
+	// Vars override defaults
+	varsPath := filepath.Join(roleDir, "vars", "vars.yml")
+	if err := read(varsPath); err != nil {
+		// If vars file does not exist – treat as non-fatal, otherwise propagate error
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+	}
+
+	return vars, nil
+}
+
+// renderTemplates processes *.j2 files from roleDir/templates into destDir, performing a naive variable substitution.
+func (r *composeRepository) renderTemplates(roleDir, destDir string, vars map[string]string) error {
+	templatesPattern := filepath.Join(roleDir, "templates", "*.j2")
+	files, err := filepath.Glob(templatesPattern)
+	if err != nil {
+		return fmt.Errorf("failed to list template files: %w", err)
+	}
+
+	for _, src := range files {
+		contentBytes, err := os.ReadFile(src)
+		if err != nil {
+			return fmt.Errorf("failed to read template %s: %w", src, err)
+		}
+		content := string(contentBytes)
+
+		// Very naive substitution – replace {{ var }} and {{var}} occurrences
+		for name, value := range vars {
+			patterns := []string{
+				fmt.Sprintf("{{ %s }}", name),
+				fmt.Sprintf("{{%s}}", name),
+			}
+			for _, p := range patterns {
+				content = strings.ReplaceAll(content, p, value)
+			}
+		}
+
+		// Remove any leftover Jinja delimiters to avoid compose errors
+		content = strings.ReplaceAll(content, "{{", "")
+		content = strings.ReplaceAll(content, "}}", "")
+
+		dstFilename := filepath.Base(src)
+		dstFilename = strings.TrimSuffix(dstFilename, ".j2")
+		dstPath := filepath.Join(destDir, dstFilename)
+		if err := os.WriteFile(dstPath, []byte(content), 0o644); err != nil {
+			return fmt.Errorf("failed to write rendered template to %s: %w", dstPath, err)
+		}
+	}
+	return nil
+}
+
+// composeUp performs `docker compose up -d` using the most appropriate compose files present in appDir.
+func (r *composeRepository) composeUp(appDir string) error {
+	files, err := r.detectComposeFiles(appDir)
+	if err != nil {
+		return err
+	}
+	args := append(r.buildComposeFileArgs(files), "up", "-d")
+	return r.runDockerCompose(appDir, args...)
+}
+
+func (r *composeRepository) composeDown(appDir string) error {
+	files, err := r.detectComposeFiles(appDir)
+	if err != nil {
+		return err
+	}
+	args := append(r.buildComposeFileArgs(files), "down", "--remove-orphans")
+	return r.runDockerCompose(appDir, args...)
+}
+
+func (r *composeRepository) composeRestart(appDir string) error {
+	files, err := r.detectComposeFiles(appDir)
+	if err != nil {
+		return err
+	}
+	args := append(r.buildComposeFileArgs(files), "restart")
+	return r.runDockerCompose(appDir, args...)
+}
+
+func (r *composeRepository) composePull(appDir string) error {
+	files, err := r.detectComposeFiles(appDir)
+	if err != nil {
+		return err
+	}
+	args := append(r.buildComposeFileArgs(files), "pull")
+	return r.runDockerCompose(appDir, args...)
+}
+
+// detectComposeFiles determines which compose files exist and returns them in the correct order
+// mimicking the logic of the original Ansible playbooks.
+func (r *composeRepository) detectComposeFiles(appDir string) ([]string, error) {
+	var files []string
+
+	custom := filepath.Join(appDir, "compose.custom.yml")
+	override := filepath.Join(appDir, "compose.override.yml")
+	compose := filepath.Join(appDir, "compose.yml")
+
+	customExists := fileExists(custom)
+	overrideExists := fileExists(override)
+	composeExists := fileExists(compose)
+
+	switch {
+	case customExists && overrideExists:
+		files = []string{custom, override}
+	case customExists:
+		files = []string{custom}
+	case composeExists && overrideExists:
+		files = []string{compose, override}
+	case composeExists:
+		// With standard compose.yml only we don't need to specify -f flag – docker compose will auto-detect it.
+		// Return empty slice to indicate default behaviour.
+		files = nil
+	default:
+		return nil, fmt.Errorf("no compose file found in %s", appDir)
+	}
+	return files, nil
+}
+
+// buildComposeFileArgs converts a slice of compose files into command-line arguments.
+func (r *composeRepository) buildComposeFileArgs(files []string) []string {
+	if len(files) == 0 {
+		return nil
+	}
+	var args []string
+	for _, f := range files {
+		args = append(args, "-f", filepath.Base(f))
+	}
+	return args
+}
+
+// runDockerCompose executes `docker compose` with the provided arguments in the specified directory.
+func (r *composeRepository) runDockerCompose(dir string, args ...string) error {
+	fullCmd := append([]string{"compose"}, args...)
+	cmd := exec.Command("docker", fullCmd...)
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Error("docker compose command failed", "dir", dir, "args", fullCmd, "output", string(output), "error", err)
+		return fmt.Errorf("docker compose %v failed: %w", args, err)
+	}
+	log.Debug("docker compose executed", "dir", dir, "args", fullCmd, "output", string(output))
+	return nil
+}
+
+// fileExists returns true if the given file exists and is not a directory.
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
 }

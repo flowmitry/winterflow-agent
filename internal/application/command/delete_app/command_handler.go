@@ -9,7 +9,7 @@ import (
 
 // DeleteAppHandler handles the DeleteAppCommand
 type DeleteAppHandler struct {
-	ansible                        repository.RunnerRepository
+	repository                     repository.AppRepository
 	AnsibleAppsRolesPath           string
 	AnsibleAppsRolesCurrentVersion string
 }
@@ -32,9 +32,9 @@ func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
 		return nil
 	}
 
-	result := h.ansible.DeleteApp(appID)
-	if result.ExitCode != 0 {
-		return log.Errorf("Deletion app command failed with exit code %d: %v", result.ExitCode, result.Error)
+	err := h.repository.DeleteApp(appID)
+	if err != nil {
+		return log.Errorf("Deletion app command failed with error: %v", err)
 	}
 
 	// Delete the app directory
@@ -47,9 +47,9 @@ func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
 }
 
 // NewDeleteAppHandler creates a new DeleteAppHandler
-func NewDeleteAppHandler(ansible repository.RunnerRepository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *DeleteAppHandler {
+func NewDeleteAppHandler(repository repository.AppRepository, ansibleAppsRolesPath, ansibleAppsRolesCurrentVersion string) *DeleteAppHandler {
 	return &DeleteAppHandler{
-		ansible:                        ansible,
+		repository:                     repository,
 		AnsibleAppsRolesPath:           ansibleAppsRolesPath,
 		AnsibleAppsRolesCurrentVersion: ansibleAppsRolesCurrentVersion,
 	}

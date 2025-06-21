@@ -10,7 +10,7 @@ import (
 
 // GetAppsStatusQueryHandler handles the GetAppsStatusQuery
 type GetAppsStatusQueryHandler struct {
-	containerAppRepository repository.ContainerAppRepository
+	containerAppRepository repository.AppRepository
 }
 
 // Handle executes the GetAppsStatusQuery and returns the result
@@ -35,7 +35,7 @@ func (h *GetAppsStatusQueryHandler) Handle(query GetAppsStatusQuery) (*model.Get
 }
 
 // NewGetAppsStatusQueryHandler creates a new GetAppsStatusQueryHandler
-func NewGetAppsStatusQueryHandler(orchestrator repository.ContainerAppRepository) *GetAppsStatusQueryHandler {
+func NewGetAppsStatusQueryHandler(orchestrator repository.AppRepository) *GetAppsStatusQueryHandler {
 	return &GetAppsStatusQueryHandler{
 		containerAppRepository: orchestrator,
 	}
