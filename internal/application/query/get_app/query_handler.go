@@ -1,7 +1,6 @@
 package get_app
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,138 +18,124 @@ type GetAppQueryHandler struct {
 func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.App, error) {
 	log.Printf("Processing get app request for app ID: %s", query.AppID)
 
-	// Get the app ID from the query
 	appID := query.AppID
 
-	// Determine the app version to use
-	var versionDir string
+	// 1. Determine version directory
+	versionDir := h.AnsibleAppsRolesCurrentVersion
 	if query.AppVersion > 0 {
 		versionDir = fmt.Sprintf("%d", query.AppVersion)
-	} else {
-		versionDir = h.AnsibleAppsRolesCurrentVersion
 	}
 
-	// Define the paths to the app files
 	rolesDir := filepath.Join(h.AnsibleAppsRolesPath, appID, versionDir)
 	rolesVarsDir := filepath.Join(rolesDir, "vars")
 	rolesTemplatesDir := filepath.Join(rolesDir, "templates")
 
-	// Check if the app directory exists
 	if _, err := os.Stat(rolesDir); os.IsNotExist(err) {
 		return nil, fmt.Errorf("app with ID %s not found", appID)
 	}
 
-	// Read the config file
-	configFile := filepath.Join(rolesDir, "config.json")
-	configBytes, err := os.ReadFile(configFile)
+	// 2. Load and parse config
+	configPath := filepath.Join(rolesDir, "config.json")
+	configBytes, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading config file: %w", err)
 	}
-
-	// Read the variables file
-	varsFile := filepath.Join(rolesVarsDir, "vars.yml")
-	varsBytes, err := os.ReadFile(varsFile)
-	if err != nil {
-		return nil, fmt.Errorf("error reading vars file: %w", err)
-	}
-
-	// Read the secrets file
-	secretsFile := filepath.Join(rolesVarsDir, "secrets.yml")
-	secretsBytes, err := os.ReadFile(secretsFile)
-	if err != nil {
-		return nil, fmt.Errorf("error reading secrets file: %w", err)
-	}
-
-	// Convert variables from YAML to JSON with "id": "value" format
-	varsJSON, err := convertYAMLToIDValueJSON(configBytes, varsBytes)
-	if err != nil {
-		return nil, fmt.Errorf("error converting variables to JSON: %w", err)
-	}
-
-	// Convert variables JSON to variable map
-	variables, err := convertJSONToVariableMap(varsJSON)
-	if err != nil {
-		return nil, fmt.Errorf("error converting variables JSON to variable map: %w", err)
-	}
-
-	// Convert secrets from YAML to JSON with "id": "value" format
-	secretsJSON, err := convertYAMLToIDValueJSON(configBytes, secretsBytes)
-	if err != nil {
-		return nil, fmt.Errorf("error converting secrets to JSON: %w", err)
-	}
-
-	// Convert secrets JSON to variable map with encrypted values
-	secrets, err := convertJSONToEncryptedVariableMap(secretsJSON)
-	if err != nil {
-		return nil, fmt.Errorf("error converting secrets JSON to encrypted variable map: %w", err)
-	}
-
-	// Parse config to get list of files
-	var configData map[string]interface{}
-	if err := json.Unmarshal(configBytes, &configData); err != nil {
-		return nil, fmt.Errorf("error parsing config JSON: %w", err)
-	}
-
-	// Extract files from config
-	configFiles, ok := configData["files"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("files not found in config or not an array")
-	}
-
-	// Create a map of file info for quick lookup
-	fileInfo := make(map[string]string) // map[filename]fileID
-	for _, f := range configFiles {
-		file, ok := f.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		filename, filenameOk := file["filename"].(string)
-		id, idOk := file["id"].(string)
-		if filenameOk && idOk {
-			fileInfo[filename] = id
-		}
-	}
-
-	// Read only the files listed in the config
-	files := make(map[string][]byte)
-	for filename, fileID := range fileInfo {
-		// Construct the full path to the file
-		filePath := filepath.Join(rolesTemplatesDir, filename+".j2")
-
-		// Check if the file exists
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			log.Printf("Warning: File %s listed in config but not found in templates directory", filename)
-			continue
-		}
-
-		// Read the file content
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("error reading template file %s: %w", filePath, err)
-		}
-
-		// Add the file to the map
-		files[fileID] = content
-	}
-
-	// Combine variables and secrets into a single map
-	for k, _ := range secrets {
-		variables[k] = "<encrypted>"
-	}
-
-	// Parse config bytes into AppConfig
 	appConfig, err := model.ParseAppConfig(configBytes)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing config: %w", err)
 	}
 
-	// Create and return the app data
+	// 3. Build variables map
+	varsMap, err := h.loadVariables(appConfig, configBytes, rolesVarsDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. Build files map
+	filesMap, err := h.loadFiles(appConfig, rolesTemplatesDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// 5. Return App model
 	return &model.App{
 		ID:        appID,
 		Config:    appConfig,
-		Variables: variables,
-		Files:     files,
+		Variables: varsMap,
+		Files:     filesMap,
 	}, nil
+}
+
+// loadVariables builds the final VariableMap taking into account encryption flags.
+func (h *GetAppQueryHandler) loadVariables(appConfig *model.AppConfig, configBytes []byte, varsDir string) (model.VariableMap, error) {
+	varsFilePath := filepath.Join(varsDir, "vars.yml")
+	varsBytes, err := os.ReadFile(varsFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading vars file: %w", err)
+	}
+
+	secretsFilePath := filepath.Join(varsDir, "secrets.yml")
+	secretsBytes, err := os.ReadFile(secretsFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading secrets file: %w", err)
+	}
+
+	// non-encrypted values from vars.yml
+	varsJSON, err := convertYAMLToIDValueJSON(configBytes, varsBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error converting vars YAML: %w", err)
+	}
+	variables, err := convertJSONToVariableMap(varsJSON)
+	if err != nil {
+		return nil, fmt.Errorf("error converting vars JSON to map: %w", err)
+	}
+
+	// encrypted values from secrets.yml
+	secretsJSON, err := convertYAMLToIDValueJSON(configBytes, secretsBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error converting secrets YAML: %w", err)
+	}
+	secrets, err := convertJSONToEncryptedVariableMap(secretsJSON)
+	if err != nil {
+		return nil, fmt.Errorf("error converting secrets JSON to map: %w", err)
+	}
+
+	// merge secrets over vars (encrypted wins)
+	for id, v := range secrets {
+		variables[id] = v
+	}
+
+	// finally, honour IsEncrypted flag from the config itself (in case value is stored in vars.yml)
+	for _, v := range appConfig.Variables {
+		if v.IsEncrypted {
+			variables[v.ID] = "<encrypted>"
+		}
+	}
+
+	return variables, nil
+}
+
+// loadFiles reads template files according to the config and applies encryption flag.
+func (h *GetAppQueryHandler) loadFiles(appConfig *model.AppConfig, templatesDir string) (map[string][]byte, error) {
+	files := make(map[string][]byte)
+
+	for _, f := range appConfig.Files {
+		if f.IsEncrypted {
+			files[f.ID] = []byte("<encrypted>")
+			continue
+		}
+
+		filePath := filepath.Join(templatesDir, f.Filename+".j2")
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			// If the file is missing we log and continue – it might be optional.
+			log.Printf("Warning: template file %s not found: %v", filePath, err)
+			continue
+		}
+		files[f.ID] = content
+	}
+
+	return files, nil
 }
 
 // NewGetAppQueryHandler creates a new GetAppQueryHandler
