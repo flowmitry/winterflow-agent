@@ -43,7 +43,7 @@ LOGS_DIR="/var/log/winterflow/"
 GITHUB_API="https://api.github.com/repos/flowmitry/winterflow-agent/releases"
 
 # Required packages (fail if not installed)
-REQUIRED_PACKAGES="curl jq"
+REQUIRED_PACKAGES="curl"
 
 # User settings
 USER="winterflow"

@@ -4,10 +4,10 @@
 
 ## Requirements
 
-- Recommended OS: Ubuntu 22+ and Debian 12+.
+- Recommended OS: Ubuntu 22+ or Debian 12+.
 - System Resources: at least 1 vCPU and 2GB RAM for Docker.
+- Software: jq, curl, [docker](https://docs.docker.com/engine/install/), [docker compose (plugin)](https://docs.docker.com/compose/install/linux/)
 
-Note: Only the Debian OS family is supported.
 
 ## Agent Installation
 
@@ -17,15 +17,13 @@ Run on your server as root (use sudo):
 curl -fsSL https://get.winterflow.io/agent | sudo bash
 ```
 
-The installation process includes the setup of necessary dependencies(`curl jq`) and the generation of a unique
+The installation process includes the generation of a unique
 6-character code. This code is required for your server's registration
 at [https://app.winterflow.io](https://app.winterflow.io).
 
 ## Manual Agent installation
 
 You can manually download and execute the [./install.sh](./install.sh) script with `sudo`.
-
-Use `sudo source install.sh --force` if you use Debian-based distributive outside of recommended.
 
 ### Manual Agent Registration
 
