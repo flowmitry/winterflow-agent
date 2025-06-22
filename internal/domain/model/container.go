@@ -1,7 +1,5 @@
 package model
 
-type ContainerAppStatusCode int8
-
 type ContainerStatusCode int8
 
 const (
@@ -14,9 +12,10 @@ const (
 )
 
 type ContainerApp struct {
-	ID         string      `json:"id"`
-	Name       string      `json:"name"`
-	Containers []Container `json:"containers"`
+	ID         string              `json:"id"`
+	Name       string              `json:"name"`
+	StatusCode ContainerStatusCode `json:"status_code"`
+	Containers []Container         `json:"containers"`
 }
 
 type Container struct {

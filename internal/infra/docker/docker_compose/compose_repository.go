@@ -49,6 +49,13 @@ func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (mod
 	}
 	log.Debug("Getting Docker Compose app status", "app_id", appID, "app_name", appName)
 
+	// Determine if the application output directory exists. This helps us
+	// distinguish between a "stopped" application (output directory exists
+	// but no containers are running) and an "unknown" application (no
+	// output directory found for the project).
+	appDir := filepath.Join(r.config.GetAppsPath(), appName)
+	dirExists := fileExists(appDir)
+
 	// List containers with the app name as the project label filter
 	filterArgs := filters.NewArgs()
 	filterArgs.Add("label", fmt.Sprintf("com.docker.compose.project=%s", appName))
@@ -71,12 +78,7 @@ func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (mod
 		Containers: make([]model.Container, 0, len(dockerContainers)),
 	}
 
-	if len(dockerContainers) == 0 {
-		log.Debug("No containers found for app", "app_id", appID)
-		return model.GetAppStatusResult{App: containerApp}, nil
-	}
-
-	// Convert Docker containers to Container models
+	// Convert Docker containers to Container models (if any)
 	for _, dockerContainer := range dockerContainers {
 		containerInstance := model.Container{
 			ID:         dockerContainer.ID,
@@ -94,7 +96,18 @@ func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (mod
 		containerApp.Containers = append(containerApp.Containers, containerInstance)
 	}
 
-	log.Debug("Docker Compose app status retrieved", "app_id", appID, "containers", len(containerApp.Containers))
+	// Determine overall application status.
+	if len(containerApp.Containers) == 0 {
+		if dirExists {
+			containerApp.StatusCode = model.ContainerStatusStopped
+		} else {
+			containerApp.StatusCode = model.ContainerStatusUnknown
+		}
+	} else {
+		containerApp.StatusCode = determineContainerAppStatus(containerApp.Containers)
+	}
+
+	log.Debug("Docker Compose app status retrieved", "app_id", appID, "containers", len(containerApp.Containers), "status_code", containerApp.StatusCode)
 
 	return model.GetAppStatusResult{App: containerApp}, nil
 }
@@ -150,6 +163,18 @@ func (r *composeRepository) GetAppsStatus(ctx context.Context) (model.GetAppsSta
 			}
 
 			containerApp.Containers = append(containerApp.Containers, containerInstance)
+		}
+
+		// Determine overall app status
+		if len(containerApp.Containers) == 0 {
+			appDir := filepath.Join(r.config.GetAppsPath(), appID)
+			if fileExists(appDir) {
+				containerApp.StatusCode = model.ContainerStatusStopped
+			} else {
+				containerApp.StatusCode = model.ContainerStatusUnknown
+			}
+		} else {
+			containerApp.StatusCode = determineContainerAppStatus(containerApp.Containers)
 		}
 
 		apps = append(apps, containerApp)
@@ -518,4 +543,55 @@ func (r *composeRepository) RenameApp(appID string, appName string) error {
 
 	log.Info("[Rename] successfully renamed and restarted app", "old_dir", oldDir, "new_dir", newDir)
 	return nil
+}
+
+// determineContainerAppStatus analyses containers and calculates an overall
+// status for the application based on the rules described in the
+// `determineAppStatus` reference implementation provided.
+func determineContainerAppStatus(containers []model.Container) model.ContainerStatusCode {
+	// Port of the logic provided by the user, adapted to
+	// model.ContainerStatusCode values.
+	if len(containers) == 0 {
+		return model.ContainerStatusStopped
+	}
+
+	var active, idle, stopped, restarting, problematic int
+	for _, c := range containers {
+		switch c.StatusCode {
+		case model.ContainerStatusActive:
+			active++
+		case model.ContainerStatusIdle:
+			idle++
+		case model.ContainerStatusStopped:
+			stopped++
+		case model.ContainerStatusRestarting:
+			// If exit code is non-zero treat it as problematic, otherwise restarting
+			if c.ExitCode != 0 {
+				problematic++
+			} else {
+				restarting++
+			}
+		case model.ContainerStatusProblematic:
+			problematic++
+		default:
+			problematic++
+		}
+	}
+
+	if problematic > 0 {
+		return model.ContainerStatusProblematic
+	}
+	if restarting > 0 {
+		return model.ContainerStatusRestarting
+	}
+	if active > 0 && stopped == 0 && idle == 0 {
+		return model.ContainerStatusActive
+	}
+	if stopped > 0 && active == 0 && idle == 0 {
+		return model.ContainerStatusStopped
+	}
+	if idle > 0 || (active > 0 && stopped > 0) {
+		return model.ContainerStatusIdle
+	}
+	return model.ContainerStatusUnknown
 }
