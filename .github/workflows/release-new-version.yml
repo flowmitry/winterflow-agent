@@ -50,7 +50,7 @@ jobs:
           
           # Build for linux/amd64
           echo "Building for linux/amd64..."
-          GOOS=linux GOARCH=amd64 go build -v -ldflags="-s -w -X winterflow-agent/internal/version.version=${SEMVER}" -o winterflow-agent-linux-amd64 ./cmd/agent/main.go
+          GOOS=linux GOARCH=amd64 go build -v -ldflags="-s -w -X winterflow-agent/internal/config/version.version=${SEMVER}" -o winterflow-agent-linux-amd64 ./cmd/agent/main.go
           
           # Build for linux/arm64
           echo "Building for linux/arm64..."
