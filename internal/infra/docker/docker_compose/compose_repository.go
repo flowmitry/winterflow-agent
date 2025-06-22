@@ -43,11 +43,15 @@ func (r *composeRepository) GetClient() *client.Client {
 }
 
 func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (model.GetAppStatusResult, error) {
-	log.Debug("Getting Docker Compose app status", "app_id", appID)
+	appName, err := r.getAppName(appID)
+	if err != nil {
+		return model.GetAppStatusResult{}, fmt.Errorf("cannot get app status: %w", err)
+	}
+	log.Debug("Getting Docker Compose app status", "app_id", appID, "app_name", appName)
 
-	// List containers with the app ID label filter
+	// List containers with the app name as the project label filter
 	filterArgs := filters.NewArgs()
-	filterArgs.Add("label", fmt.Sprintf("com.docker.compose.project=%s", appID))
+	filterArgs.Add("label", fmt.Sprintf("com.docker.compose.project=%s", appName))
 
 	options := container.ListOptions{
 		All:     true,
@@ -63,7 +67,7 @@ func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (mod
 	// Create ContainerApp model
 	containerApp := &model.ContainerApp{
 		ID:         appID,
-		Name:       appID, // For Docker Compose, use project name as app name
+		Name:       appName,
 		Containers: make([]model.Container, 0, len(dockerContainers)),
 	}
 
@@ -159,7 +163,14 @@ func (r *composeRepository) GetAppsStatus(ctx context.Context) (model.GetAppsSta
 func (r *composeRepository) DeployApp(appID, appVersion string) error {
 	// Determine important directories based on the agent configuration
 	templateDir := filepath.Join(r.config.GetAppsTemplatesPath(), appID, appVersion)
-	outputDir := filepath.Join(r.config.GetAppsPath(), appID)
+
+	// Retrieve application name from the config to construct the output directory name
+	appName, err := r.getAppName(appID)
+	if err != nil {
+		return fmt.Errorf("cannot deploy app: %w", err)
+	}
+
+	outputDir := filepath.Join(r.config.GetAppsPath(), appName)
 
 	// Validate that the role directory exists
 	if _, err := os.Stat(templateDir); err != nil {
@@ -187,12 +198,16 @@ func (r *composeRepository) DeployApp(appID, appVersion string) error {
 		return fmt.Errorf("docker compose up failed: %w", err)
 	}
 
-	log.Info("[Deploy] successfully deployed app", "app_id", appID, "version", appVersion)
+	log.Info("[Deploy] successfully deployed app", "app_id", appID, "app_name", appName, "version", appVersion)
 	return nil
 }
 
 func (r *composeRepository) StopApp(appID string) error {
-	appDir := filepath.Join(r.config.GetAppsPath(), appID)
+	appName, err := r.getAppName(appID)
+	if err != nil {
+		return fmt.Errorf("cannot stop app: %w", err)
+	}
+	appDir := filepath.Join(r.config.GetAppsPath(), appName)
 	if _, err := os.Stat(appDir); err != nil {
 		if os.IsNotExist(err) {
 			log.Warn("[Stop] app directory does not exist, skipping", "app_id", appID)
@@ -210,8 +225,11 @@ func (r *composeRepository) StopApp(appID string) error {
 }
 
 func (r *composeRepository) RestartApp(appID, _ string) error {
-	// The playbook for restart simply issues a compose restart, keeping existing files.
-	appDir := filepath.Join(r.config.GetAppsPath(), appID)
+	appName, err := r.getAppName(appID)
+	if err != nil {
+		return fmt.Errorf("cannot restart app: %w", err)
+	}
+	appDir := filepath.Join(r.config.GetAppsPath(), appName)
 	if _, err := os.Stat(appDir); err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("app directory %s does not exist", appDir)
@@ -228,7 +246,11 @@ func (r *composeRepository) RestartApp(appID, _ string) error {
 }
 
 func (r *composeRepository) UpdateApp(appID string) error {
-	appDir := filepath.Join(r.config.GetAppsPath(), appID)
+	appName, err := r.getAppName(appID)
+	if err != nil {
+		return fmt.Errorf("cannot update app: %w", err)
+	}
+	appDir := filepath.Join(r.config.GetAppsPath(), appName)
 	if _, err := os.Stat(appDir); err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("app directory %s does not exist", appDir)
@@ -431,4 +453,69 @@ func fileExists(path string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+// Helper getAppName reads app config and returns its Name field; falls back to appID if not found.
+func (r *composeRepository) getAppName(appID string) (string, error) {
+	// Build path to the current version config.json for the app
+	configPath := filepath.Join(
+		r.config.GetAppsTemplatesPath(),
+		appID,
+		r.config.GetAppsCurrentVersionFolder(),
+		"config.json",
+	)
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return appID, fmt.Errorf("failed to read app config: %w", err)
+	}
+
+	appConfig, err := model.ParseAppConfig(data)
+	if err != nil {
+		return appID, fmt.Errorf("failed to parse app config: %w", err)
+	}
+
+	if strings.TrimSpace(appConfig.Name) == "" {
+		return "", fmt.Errorf("application name is empty in config for app %s", appID)
+	}
+	return appConfig.Name, nil
+}
+
+// Implement RenameApp method to satisfy AppRepository interface.
+func (r *composeRepository) RenameApp(appID string, appName string) error {
+	if appID == appName {
+		// Nothing to do
+		return nil
+	}
+
+	oldDir := filepath.Join(r.config.GetAppsPath(), appID)
+	newDir := filepath.Join(r.config.GetAppsPath(), appName)
+
+	// If old directory doesn't exist, nothing to rename
+	if _, err := os.Stat(oldDir); os.IsNotExist(err) {
+		return fmt.Errorf("app directory %s does not exist", oldDir)
+	}
+
+	// Ensure we don't overwrite an existing directory
+	if _, err := os.Stat(newDir); err == nil {
+		return fmt.Errorf("target app directory %s already exists", newDir)
+	}
+
+	// Step 1: stop running containers under the old project name
+	if err := r.composeDown(oldDir); err != nil {
+		return fmt.Errorf("failed to stop containers before rename: %w", err)
+	}
+
+	// Step 2: rename the directory
+	if err := os.Rename(oldDir, newDir); err != nil {
+		return fmt.Errorf("failed to rename app directory from %s to %s: %w", oldDir, newDir, err)
+	}
+
+	// Step 3: start containers under the new project name
+	if err := r.composeUp(newDir); err != nil {
+		return fmt.Errorf("failed to start containers after rename: %w", err)
+	}
+
+	log.Info("[Rename] successfully renamed and restarted app", "old_dir", oldDir, "new_dir", newDir)
+	return nil
 }

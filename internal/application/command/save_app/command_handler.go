@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/pkg/certs"
 	log "winterflow-agent/pkg/log"
@@ -25,6 +26,19 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	app := cmd.App
 
 	log.Printf("Processing save app request for app ID: %s", app.ID)
+
+	// Validate that the application name is provided and unique
+	if strings.TrimSpace(app.Config.Name) == "" {
+		return fmt.Errorf("application name cannot be empty")
+	}
+
+	unique, err := h.isNameUnique(app.Config.Name, app.ID)
+	if err != nil {
+		return err
+	}
+	if !unique {
+		return fmt.Errorf("application name '%s' is already in use by another app", app.Config.Name)
+	}
 
 	// Resolve important directories once
 	baseDir := filepath.Join(h.AppsTemplatesPath, app.ID)
@@ -178,6 +192,43 @@ func (h *SaveAppHandler) writeVars(varsDir string, cfg *model.AppConfig, input m
 	}
 
 	return nil
+}
+
+// isNameUnique checks that the given application name is not used by any other application (different appID).
+func (h *SaveAppHandler) isNameUnique(name string, currentAppID string) (bool, error) {
+	entries, err := os.ReadDir(h.AppsTemplatesPath)
+	if err != nil {
+		return false, fmt.Errorf("failed to read apps templates directory: %w", err)
+	}
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+
+		appID := e.Name()
+		if appID == currentAppID {
+			// Skip the current app (we allow renaming within same ID)
+			continue
+		}
+
+		cfgPath := filepath.Join(h.AppsTemplatesPath, appID, h.AppsCurrentVersion, "config.json")
+		data, err := os.ReadFile(cfgPath)
+		if err != nil {
+			continue // ignore missing configs or read errors – not critical for uniqueness check
+		}
+
+		cfg, err := model.ParseAppConfig(data)
+		if err != nil {
+			continue // skip invalid configs
+		}
+
+		if strings.EqualFold(strings.TrimSpace(cfg.Name), strings.TrimSpace(name)) {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 // SaveAppResult represents the result of creating an app
