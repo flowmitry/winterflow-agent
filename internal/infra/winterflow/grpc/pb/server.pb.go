@@ -87,64 +87,6 @@ func (ResponseCode) EnumDescriptor() ([]byte, []int) {
 	return file_internal_infra_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{0}
 }
 
-type AppStatusCode int32
-
-const (
-	AppStatusCode_APP_STATUS_CODE_UNKNOWN     AppStatusCode = 0
-	AppStatusCode_APP_STATUS_CODE_ACTIVE      AppStatusCode = 1
-	AppStatusCode_APP_STATUS_CODE_IDLE        AppStatusCode = 2
-	AppStatusCode_APP_STATUS_CODE_RESTARTING  AppStatusCode = 3
-	AppStatusCode_APP_STATUS_CODE_PROBLEMATIC AppStatusCode = 4
-	AppStatusCode_APP_STATUS_CODE_STOPPED     AppStatusCode = 5
-)
-
-// Enum value maps for AppStatusCode.
-var (
-	AppStatusCode_name = map[int32]string{
-		0: "APP_STATUS_CODE_UNKNOWN",
-		1: "APP_STATUS_CODE_ACTIVE",
-		2: "APP_STATUS_CODE_IDLE",
-		3: "APP_STATUS_CODE_RESTARTING",
-		4: "APP_STATUS_CODE_PROBLEMATIC",
-		5: "APP_STATUS_CODE_STOPPED",
-	}
-	AppStatusCode_value = map[string]int32{
-		"APP_STATUS_CODE_UNKNOWN":     0,
-		"APP_STATUS_CODE_ACTIVE":      1,
-		"APP_STATUS_CODE_IDLE":        2,
-		"APP_STATUS_CODE_RESTARTING":  3,
-		"APP_STATUS_CODE_PROBLEMATIC": 4,
-		"APP_STATUS_CODE_STOPPED":     5,
-	}
-)
-
-func (x AppStatusCode) Enum() *AppStatusCode {
-	p := new(AppStatusCode)
-	*p = x
-	return p
-}
-
-func (x AppStatusCode) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (AppStatusCode) Descriptor() protoreflect.EnumDescriptor {
-	return file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[1].Descriptor()
-}
-
-func (AppStatusCode) Type() protoreflect.EnumType {
-	return &file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[1]
-}
-
-func (x AppStatusCode) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use AppStatusCode.Descriptor instead.
-func (AppStatusCode) EnumDescriptor() ([]byte, []int) {
-	return file_internal_infra_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{1}
-}
-
 type ContainerStatusCode int32
 
 const (
@@ -187,11 +129,11 @@ func (x ContainerStatusCode) String() string {
 }
 
 func (ContainerStatusCode) Descriptor() protoreflect.EnumDescriptor {
-	return file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[2].Descriptor()
+	return file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[1].Descriptor()
 }
 
 func (ContainerStatusCode) Type() protoreflect.EnumType {
-	return &file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[2]
+	return &file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[1]
 }
 
 func (x ContainerStatusCode) Number() protoreflect.EnumNumber {
@@ -200,7 +142,7 @@ func (x ContainerStatusCode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ContainerStatusCode.Descriptor instead.
 func (ContainerStatusCode) EnumDescriptor() ([]byte, []int) {
-	return file_internal_infra_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{2}
+	return file_internal_infra_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{1}
 }
 
 type AppAction int32
@@ -239,11 +181,11 @@ func (x AppAction) String() string {
 }
 
 func (AppAction) Descriptor() protoreflect.EnumDescriptor {
-	return file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[3].Descriptor()
+	return file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[2].Descriptor()
 }
 
 func (AppAction) Type() protoreflect.EnumType {
-	return &file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[3]
+	return &file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[2]
 }
 
 func (x AppAction) Number() protoreflect.EnumNumber {
@@ -252,7 +194,7 @@ func (x AppAction) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AppAction.Descriptor instead.
 func (AppAction) EnumDescriptor() ([]byte, []int) {
-	return file_internal_infra_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{3}
+	return file_internal_infra_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{2}
 }
 
 type AppType int32
@@ -285,11 +227,11 @@ func (x AppType) String() string {
 }
 
 func (AppType) Descriptor() protoreflect.EnumDescriptor {
-	return file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[4].Descriptor()
+	return file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[3].Descriptor()
 }
 
 func (AppType) Type() protoreflect.EnumType {
-	return &file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[4]
+	return &file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes[3]
 }
 
 func (x AppType) Number() protoreflect.EnumNumber {
@@ -298,7 +240,7 @@ func (x AppType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AppType.Descriptor instead.
 func (AppType) EnumDescriptor() ([]byte, []int) {
-	return file_internal_infra_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{4}
+	return file_internal_infra_winterflow_grpc_pb_server_proto_rawDescGZIP(), []int{3}
 }
 
 type BaseMessage struct {
@@ -723,7 +665,8 @@ type AppStatusV1 struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// UUID
 	AppId         string               `protobuf:"bytes,1,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
-	Containers    []*ContainerStatusV1 `protobuf:"bytes,2,rep,name=containers,proto3" json:"containers,omitempty"`
+	StatusCode    ContainerStatusCode  `protobuf:"varint,2,opt,name=status_code,json=statusCode,proto3,enum=pb.ContainerStatusCode" json:"status_code,omitempty"`
+	Containers    []*ContainerStatusV1 `protobuf:"bytes,3,rep,name=containers,proto3" json:"containers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -763,6 +706,13 @@ func (x *AppStatusV1) GetAppId() string {
 		return x.AppId
 	}
 	return ""
+}
+
+func (x *AppStatusV1) GetStatusCode() ContainerStatusCode {
+	if x != nil {
+		return x.StatusCode
+	}
+	return ContainerStatusCode_CONTAINER_STATUS_CODE_UNKNOWN
 }
 
 func (x *AppStatusV1) GetContainers() []*ContainerStatusV1 {
@@ -1941,11 +1891,13 @@ const file_internal_infra_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\vstatus_code\x18\x03 \x01(\x0e2\x17.pb.ContainerStatusCodeR\n" +
 	"statusCode\x12\x1b\n" +
 	"\texit_code\x18\x04 \x01(\x05R\bexitCode\x12\x14\n" +
-	"\x05error\x18\x05 \x01(\tR\x05error\"[\n" +
+	"\x05error\x18\x05 \x01(\tR\x05error\"\x95\x01\n" +
 	"\vAppStatusV1\x12\x15\n" +
-	"\x06app_id\x18\x01 \x01(\tR\x05appId\x125\n" +
+	"\x06app_id\x18\x01 \x01(\tR\x05appId\x128\n" +
+	"\vstatus_code\x18\x02 \x01(\x0e2\x17.pb.ContainerStatusCodeR\n" +
+	"statusCode\x125\n" +
 	"\n" +
-	"containers\x18\x02 \x03(\v2\x15.pb.ContainerStatusV1R\n" +
+	"containers\x18\x03 \x03(\v2\x15.pb.ContainerStatusV1R\n" +
 	"containers\"5\n" +
 	"\tAppFileV1\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
@@ -2022,14 +1974,7 @@ const file_internal_infra_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x1aRESPONSE_CODE_UNAUTHORIZED\x10\x04\x12\x1e\n" +
 	"\x1aRESPONSE_CODE_SERVER_ERROR\x10\x05\x12!\n" +
 	"\x1dRESPONSE_CODE_AGENT_NOT_FOUND\x10\x06\x12)\n" +
-	"%RESPONSE_CODE_AGENT_ALREADY_CONNECTED\x10\a*\xc0\x01\n" +
-	"\rAppStatusCode\x12\x1b\n" +
-	"\x17APP_STATUS_CODE_UNKNOWN\x10\x00\x12\x1a\n" +
-	"\x16APP_STATUS_CODE_ACTIVE\x10\x01\x12\x18\n" +
-	"\x14APP_STATUS_CODE_IDLE\x10\x02\x12\x1e\n" +
-	"\x1aAPP_STATUS_CODE_RESTARTING\x10\x03\x12\x1f\n" +
-	"\x1bAPP_STATUS_CODE_PROBLEMATIC\x10\x04\x12\x1b\n" +
-	"\x17APP_STATUS_CODE_STOPPED\x10\x05*\xea\x01\n" +
+	"%RESPONSE_CODE_AGENT_ALREADY_CONNECTED\x10\a*\xea\x01\n" +
 	"\x13ContainerStatusCode\x12!\n" +
 	"\x1dCONTAINER_STATUS_CODE_UNKNOWN\x10\x00\x12 \n" +
 	"\x1cCONTAINER_STATUS_CODE_ACTIVE\x10\x01\x12\x1e\n" +
@@ -2062,98 +2007,98 @@ func file_internal_infra_winterflow_grpc_pb_server_proto_rawDescGZIP() []byte {
 	return file_internal_infra_winterflow_grpc_pb_server_proto_rawDescData
 }
 
-var file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_internal_infra_winterflow_grpc_pb_server_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_internal_infra_winterflow_grpc_pb_server_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_internal_infra_winterflow_grpc_pb_server_proto_goTypes = []any{
 	(ResponseCode)(0),               // 0: pb.ResponseCode
-	(AppStatusCode)(0),              // 1: pb.AppStatusCode
-	(ContainerStatusCode)(0),        // 2: pb.ContainerStatusCode
-	(AppAction)(0),                  // 3: pb.AppAction
-	(AppType)(0),                    // 4: pb.AppType
-	(*BaseMessage)(nil),             // 5: pb.BaseMessage
-	(*BaseResponse)(nil),            // 6: pb.BaseResponse
-	(*RegisterAgentRequestV1)(nil),  // 7: pb.RegisterAgentRequestV1
-	(*RegisterAgentResponseV1)(nil), // 8: pb.RegisterAgentResponseV1
-	(*AgentHeartbeatV1)(nil),        // 9: pb.AgentHeartbeatV1
-	(*HeartbeatResponseV1)(nil),     // 10: pb.HeartbeatResponseV1
-	(*ContainerStatusV1)(nil),       // 11: pb.ContainerStatusV1
-	(*AppStatusV1)(nil),             // 12: pb.AppStatusV1
-	(*AppFileV1)(nil),               // 13: pb.AppFileV1
-	(*AppVarV1)(nil),                // 14: pb.AppVarV1
-	(*AppV1)(nil),                   // 15: pb.AppV1
-	(*GetAppRequestV1)(nil),         // 16: pb.GetAppRequestV1
-	(*GetAppResponseV1)(nil),        // 17: pb.GetAppResponseV1
-	(*UpdateAgentRequestV1)(nil),    // 18: pb.UpdateAgentRequestV1
-	(*UpdateAgentResponseV1)(nil),   // 19: pb.UpdateAgentResponseV1
-	(*SaveAppRequestV1)(nil),        // 20: pb.SaveAppRequestV1
-	(*SaveAppResponseV1)(nil),       // 21: pb.SaveAppResponseV1
-	(*DeleteAppRequestV1)(nil),      // 22: pb.DeleteAppRequestV1
-	(*DeleteAppResponseV1)(nil),     // 23: pb.DeleteAppResponseV1
-	(*ControlAppRequestV1)(nil),     // 24: pb.ControlAppRequestV1
-	(*ControlAppResponseV1)(nil),    // 25: pb.ControlAppResponseV1
-	(*GetAppsStatusRequestV1)(nil),  // 26: pb.GetAppsStatusRequestV1
-	(*GetAppsStatusResponseV1)(nil), // 27: pb.GetAppsStatusResponseV1
-	(*ServerCommand)(nil),           // 28: pb.ServerCommand
-	(*AgentMessage)(nil),            // 29: pb.AgentMessage
-	nil,                             // 30: pb.RegisterAgentRequestV1.CapabilitiesEntry
-	nil,                             // 31: pb.RegisterAgentRequestV1.FeaturesEntry
-	nil,                             // 32: pb.AgentHeartbeatV1.MetricsEntry
-	(*timestamppb.Timestamp)(nil),   // 33: google.protobuf.Timestamp
+	(ContainerStatusCode)(0),        // 1: pb.ContainerStatusCode
+	(AppAction)(0),                  // 2: pb.AppAction
+	(AppType)(0),                    // 3: pb.AppType
+	(*BaseMessage)(nil),             // 4: pb.BaseMessage
+	(*BaseResponse)(nil),            // 5: pb.BaseResponse
+	(*RegisterAgentRequestV1)(nil),  // 6: pb.RegisterAgentRequestV1
+	(*RegisterAgentResponseV1)(nil), // 7: pb.RegisterAgentResponseV1
+	(*AgentHeartbeatV1)(nil),        // 8: pb.AgentHeartbeatV1
+	(*HeartbeatResponseV1)(nil),     // 9: pb.HeartbeatResponseV1
+	(*ContainerStatusV1)(nil),       // 10: pb.ContainerStatusV1
+	(*AppStatusV1)(nil),             // 11: pb.AppStatusV1
+	(*AppFileV1)(nil),               // 12: pb.AppFileV1
+	(*AppVarV1)(nil),                // 13: pb.AppVarV1
+	(*AppV1)(nil),                   // 14: pb.AppV1
+	(*GetAppRequestV1)(nil),         // 15: pb.GetAppRequestV1
+	(*GetAppResponseV1)(nil),        // 16: pb.GetAppResponseV1
+	(*UpdateAgentRequestV1)(nil),    // 17: pb.UpdateAgentRequestV1
+	(*UpdateAgentResponseV1)(nil),   // 18: pb.UpdateAgentResponseV1
+	(*SaveAppRequestV1)(nil),        // 19: pb.SaveAppRequestV1
+	(*SaveAppResponseV1)(nil),       // 20: pb.SaveAppResponseV1
+	(*DeleteAppRequestV1)(nil),      // 21: pb.DeleteAppRequestV1
+	(*DeleteAppResponseV1)(nil),     // 22: pb.DeleteAppResponseV1
+	(*ControlAppRequestV1)(nil),     // 23: pb.ControlAppRequestV1
+	(*ControlAppResponseV1)(nil),    // 24: pb.ControlAppResponseV1
+	(*GetAppsStatusRequestV1)(nil),  // 25: pb.GetAppsStatusRequestV1
+	(*GetAppsStatusResponseV1)(nil), // 26: pb.GetAppsStatusResponseV1
+	(*ServerCommand)(nil),           // 27: pb.ServerCommand
+	(*AgentMessage)(nil),            // 28: pb.AgentMessage
+	nil,                             // 29: pb.RegisterAgentRequestV1.CapabilitiesEntry
+	nil,                             // 30: pb.RegisterAgentRequestV1.FeaturesEntry
+	nil,                             // 31: pb.AgentHeartbeatV1.MetricsEntry
+	(*timestamppb.Timestamp)(nil),   // 32: google.protobuf.Timestamp
 }
 var file_internal_infra_winterflow_grpc_pb_server_proto_depIdxs = []int32{
-	33, // 0: pb.BaseMessage.timestamp:type_name -> google.protobuf.Timestamp
-	33, // 1: pb.BaseResponse.timestamp:type_name -> google.protobuf.Timestamp
+	32, // 0: pb.BaseMessage.timestamp:type_name -> google.protobuf.Timestamp
+	32, // 1: pb.BaseResponse.timestamp:type_name -> google.protobuf.Timestamp
 	0,  // 2: pb.BaseResponse.response_code:type_name -> pb.ResponseCode
-	5,  // 3: pb.RegisterAgentRequestV1.base:type_name -> pb.BaseMessage
-	30, // 4: pb.RegisterAgentRequestV1.capabilities:type_name -> pb.RegisterAgentRequestV1.CapabilitiesEntry
-	31, // 5: pb.RegisterAgentRequestV1.features:type_name -> pb.RegisterAgentRequestV1.FeaturesEntry
-	6,  // 6: pb.RegisterAgentResponseV1.base:type_name -> pb.BaseResponse
-	5,  // 7: pb.AgentHeartbeatV1.base:type_name -> pb.BaseMessage
-	32, // 8: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
-	6,  // 9: pb.HeartbeatResponseV1.base:type_name -> pb.BaseResponse
-	2,  // 10: pb.ContainerStatusV1.status_code:type_name -> pb.ContainerStatusCode
-	11, // 11: pb.AppStatusV1.containers:type_name -> pb.ContainerStatusV1
-	14, // 12: pb.AppV1.variables:type_name -> pb.AppVarV1
-	13, // 13: pb.AppV1.files:type_name -> pb.AppFileV1
-	5,  // 14: pb.GetAppRequestV1.base:type_name -> pb.BaseMessage
-	6,  // 15: pb.GetAppResponseV1.base:type_name -> pb.BaseResponse
-	15, // 16: pb.GetAppResponseV1.app:type_name -> pb.AppV1
-	5,  // 17: pb.UpdateAgentRequestV1.base:type_name -> pb.BaseMessage
-	6,  // 18: pb.UpdateAgentResponseV1.base:type_name -> pb.BaseResponse
-	5,  // 19: pb.SaveAppRequestV1.base:type_name -> pb.BaseMessage
-	15, // 20: pb.SaveAppRequestV1.app:type_name -> pb.AppV1
-	6,  // 21: pb.SaveAppResponseV1.base:type_name -> pb.BaseResponse
-	5,  // 22: pb.DeleteAppRequestV1.base:type_name -> pb.BaseMessage
-	6,  // 23: pb.DeleteAppResponseV1.base:type_name -> pb.BaseResponse
-	5,  // 24: pb.ControlAppRequestV1.base:type_name -> pb.BaseMessage
-	3,  // 25: pb.ControlAppRequestV1.action:type_name -> pb.AppAction
-	6,  // 26: pb.ControlAppResponseV1.base:type_name -> pb.BaseResponse
-	5,  // 27: pb.GetAppsStatusRequestV1.base:type_name -> pb.BaseMessage
-	6,  // 28: pb.GetAppsStatusResponseV1.base:type_name -> pb.BaseResponse
-	12, // 29: pb.GetAppsStatusResponseV1.apps:type_name -> pb.AppStatusV1
-	10, // 30: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
-	18, // 31: pb.ServerCommand.update_agent_request_v1:type_name -> pb.UpdateAgentRequestV1
-	16, // 32: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
-	20, // 33: pb.ServerCommand.save_app_request_v1:type_name -> pb.SaveAppRequestV1
-	22, // 34: pb.ServerCommand.delete_app_request_v1:type_name -> pb.DeleteAppRequestV1
-	24, // 35: pb.ServerCommand.control_app_request_v1:type_name -> pb.ControlAppRequestV1
-	26, // 36: pb.ServerCommand.get_apps_status_request_v1:type_name -> pb.GetAppsStatusRequestV1
-	9,  // 37: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
-	19, // 38: pb.AgentMessage.update_agent_response_v1:type_name -> pb.UpdateAgentResponseV1
-	17, // 39: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
-	21, // 40: pb.AgentMessage.save_app_response_v1:type_name -> pb.SaveAppResponseV1
-	23, // 41: pb.AgentMessage.delete_app_response_v1:type_name -> pb.DeleteAppResponseV1
-	25, // 42: pb.AgentMessage.control_app_response_v1:type_name -> pb.ControlAppResponseV1
-	27, // 43: pb.AgentMessage.get_apps_status_response_v1:type_name -> pb.GetAppsStatusResponseV1
-	7,  // 44: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
-	29, // 45: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
-	8,  // 46: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
-	28, // 47: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
-	46, // [46:48] is the sub-list for method output_type
-	44, // [44:46] is the sub-list for method input_type
-	44, // [44:44] is the sub-list for extension type_name
-	44, // [44:44] is the sub-list for extension extendee
-	0,  // [0:44] is the sub-list for field type_name
+	4,  // 3: pb.RegisterAgentRequestV1.base:type_name -> pb.BaseMessage
+	29, // 4: pb.RegisterAgentRequestV1.capabilities:type_name -> pb.RegisterAgentRequestV1.CapabilitiesEntry
+	30, // 5: pb.RegisterAgentRequestV1.features:type_name -> pb.RegisterAgentRequestV1.FeaturesEntry
+	5,  // 6: pb.RegisterAgentResponseV1.base:type_name -> pb.BaseResponse
+	4,  // 7: pb.AgentHeartbeatV1.base:type_name -> pb.BaseMessage
+	31, // 8: pb.AgentHeartbeatV1.metrics:type_name -> pb.AgentHeartbeatV1.MetricsEntry
+	5,  // 9: pb.HeartbeatResponseV1.base:type_name -> pb.BaseResponse
+	1,  // 10: pb.ContainerStatusV1.status_code:type_name -> pb.ContainerStatusCode
+	1,  // 11: pb.AppStatusV1.status_code:type_name -> pb.ContainerStatusCode
+	10, // 12: pb.AppStatusV1.containers:type_name -> pb.ContainerStatusV1
+	13, // 13: pb.AppV1.variables:type_name -> pb.AppVarV1
+	12, // 14: pb.AppV1.files:type_name -> pb.AppFileV1
+	4,  // 15: pb.GetAppRequestV1.base:type_name -> pb.BaseMessage
+	5,  // 16: pb.GetAppResponseV1.base:type_name -> pb.BaseResponse
+	14, // 17: pb.GetAppResponseV1.app:type_name -> pb.AppV1
+	4,  // 18: pb.UpdateAgentRequestV1.base:type_name -> pb.BaseMessage
+	5,  // 19: pb.UpdateAgentResponseV1.base:type_name -> pb.BaseResponse
+	4,  // 20: pb.SaveAppRequestV1.base:type_name -> pb.BaseMessage
+	14, // 21: pb.SaveAppRequestV1.app:type_name -> pb.AppV1
+	5,  // 22: pb.SaveAppResponseV1.base:type_name -> pb.BaseResponse
+	4,  // 23: pb.DeleteAppRequestV1.base:type_name -> pb.BaseMessage
+	5,  // 24: pb.DeleteAppResponseV1.base:type_name -> pb.BaseResponse
+	4,  // 25: pb.ControlAppRequestV1.base:type_name -> pb.BaseMessage
+	2,  // 26: pb.ControlAppRequestV1.action:type_name -> pb.AppAction
+	5,  // 27: pb.ControlAppResponseV1.base:type_name -> pb.BaseResponse
+	4,  // 28: pb.GetAppsStatusRequestV1.base:type_name -> pb.BaseMessage
+	5,  // 29: pb.GetAppsStatusResponseV1.base:type_name -> pb.BaseResponse
+	11, // 30: pb.GetAppsStatusResponseV1.apps:type_name -> pb.AppStatusV1
+	9,  // 31: pb.ServerCommand.heartbeat_response_v1:type_name -> pb.HeartbeatResponseV1
+	17, // 32: pb.ServerCommand.update_agent_request_v1:type_name -> pb.UpdateAgentRequestV1
+	15, // 33: pb.ServerCommand.get_app_request_v1:type_name -> pb.GetAppRequestV1
+	19, // 34: pb.ServerCommand.save_app_request_v1:type_name -> pb.SaveAppRequestV1
+	21, // 35: pb.ServerCommand.delete_app_request_v1:type_name -> pb.DeleteAppRequestV1
+	23, // 36: pb.ServerCommand.control_app_request_v1:type_name -> pb.ControlAppRequestV1
+	25, // 37: pb.ServerCommand.get_apps_status_request_v1:type_name -> pb.GetAppsStatusRequestV1
+	8,  // 38: pb.AgentMessage.heartbeat_v1:type_name -> pb.AgentHeartbeatV1
+	18, // 39: pb.AgentMessage.update_agent_response_v1:type_name -> pb.UpdateAgentResponseV1
+	16, // 40: pb.AgentMessage.get_app_response_v1:type_name -> pb.GetAppResponseV1
+	20, // 41: pb.AgentMessage.save_app_response_v1:type_name -> pb.SaveAppResponseV1
+	22, // 42: pb.AgentMessage.delete_app_response_v1:type_name -> pb.DeleteAppResponseV1
+	24, // 43: pb.AgentMessage.control_app_response_v1:type_name -> pb.ControlAppResponseV1
+	26, // 44: pb.AgentMessage.get_apps_status_response_v1:type_name -> pb.GetAppsStatusResponseV1
+	6,  // 45: pb.AgentService.RegisterAgentV1:input_type -> pb.RegisterAgentRequestV1
+	28, // 46: pb.AgentService.AgentStream:input_type -> pb.AgentMessage
+	7,  // 47: pb.AgentService.RegisterAgentV1:output_type -> pb.RegisterAgentResponseV1
+	27, // 48: pb.AgentService.AgentStream:output_type -> pb.ServerCommand
+	47, // [47:49] is the sub-list for method output_type
+	45, // [45:47] is the sub-list for method input_type
+	45, // [45:45] is the sub-list for extension type_name
+	45, // [45:45] is the sub-list for extension extendee
+	0,  // [0:45] is the sub-list for field type_name
 }
 
 func init() { file_internal_infra_winterflow_grpc_pb_server_proto_init() }
@@ -2184,7 +2129,7 @@ func file_internal_infra_winterflow_grpc_pb_server_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_infra_winterflow_grpc_pb_server_proto_rawDesc), len(file_internal_infra_winterflow_grpc_pb_server_proto_rawDesc)),
-			NumEnums:      5,
+			NumEnums:      4,
 			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,

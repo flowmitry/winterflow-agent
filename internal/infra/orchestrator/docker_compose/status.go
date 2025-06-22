@@ -3,6 +3,7 @@ package docker_compose
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -74,60 +75,38 @@ func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (mod
 
 // GetAppsStatus enumerates all compose projects on the host and returns aggregated status information.
 func (r *composeRepository) GetAppsStatus(ctx context.Context) (model.GetAppsStatusResult, error) {
-	log.Debug("Getting Docker Compose apps status for all applications")
+	log.Debug("Getting Docker Compose apps status for available applications")
 
-	filterArgs := filters.NewArgs()
-	filterArgs.Add("label", "com.docker.compose.project")
-
-	dockerContainers, err := r.client.ContainerList(ctx, container.ListOptions{All: true, Filters: filterArgs})
+	// 1. Determine list of available application IDs from templates directory.
+	templatesDir := r.config.GetAppsTemplatesPath()
+	entries, err := os.ReadDir(templatesDir)
 	if err != nil {
-		log.Error("Failed to list containers for all apps", "error", err)
-		return model.GetAppsStatusResult{}, fmt.Errorf("failed to list containers: %w", err)
-	}
-
-	// Group containers by project label.
-	grouped := make(map[string][]container.Summary)
-	for _, dc := range dockerContainers {
-		if project, ok := dc.Labels["com.docker.compose.project"]; ok {
-			grouped[project] = append(grouped[project], dc)
-		}
+		log.Error("Failed to read apps templates directory", "path", templatesDir, "error", err)
+		return model.GetAppsStatusResult{}, fmt.Errorf("failed to read apps templates directory: %w", err)
 	}
 
 	var apps []*model.ContainerApp
-	for project, containers := range grouped {
-		app := &model.ContainerApp{
-			ID:         project,
-			Name:       project,
-			Containers: make([]model.Container, 0, len(containers)),
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue // skip files
 		}
 
-		for _, dc := range containers {
-			c := model.Container{
-				ID:         dc.ID,
-				Name:       strings.TrimPrefix(dc.Names[0], "/"),
-				StatusCode: orchestrator.MapDockerStateToContainerStatus(dc.State),
-				ExitCode:   0,
-				Ports:      orchestrator.MapDockerPortsToContainerPorts(dc.Ports),
-			}
-			if c.StatusCode == model.ContainerStatusProblematic {
-				c.Error = fmt.Sprintf("Container in problematic state: %s", dc.Status)
-			}
-			app.Containers = append(app.Containers, c)
+		appID := entry.Name()
+
+		// Re-use the detailed GetAppStatus for each available app. This ensures
+		// consistent status calculation logic and avoids code duplication.
+		statusResult, err := r.GetAppStatus(ctx, appID)
+		if err != nil {
+			// Log the error but continue processing the remaining apps – one
+			// misconfigured app should not prevent other statuses from being returned.
+			log.Warn("Failed to get status for app", "app_id", appID, "error", err)
+			continue
 		}
 
-		// Overall status for this project.
-		if len(app.Containers) == 0 {
-			appDir := filepath.Join(r.config.GetAppsPath(), project)
-			if fileExists(appDir) {
-				app.StatusCode = model.ContainerStatusStopped
-			} else {
-				app.StatusCode = model.ContainerStatusUnknown
-			}
-		} else {
-			app.StatusCode = determineContainerAppStatus(app.Containers)
+		if statusResult.App != nil {
+			apps = append(apps, statusResult.App)
 		}
-
-		apps = append(apps, app)
 	}
 
 	log.Debug("Docker Compose apps status retrieved", "apps_count", len(apps))

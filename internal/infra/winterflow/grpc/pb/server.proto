@@ -18,15 +18,6 @@ enum ResponseCode {
   RESPONSE_CODE_AGENT_ALREADY_CONNECTED = 7;
 }
 
-enum AppStatusCode {
-  APP_STATUS_CODE_UNKNOWN = 0;
-  APP_STATUS_CODE_ACTIVE = 1;
-  APP_STATUS_CODE_IDLE = 2;
-  APP_STATUS_CODE_RESTARTING = 3;
-  APP_STATUS_CODE_PROBLEMATIC = 4;
-  APP_STATUS_CODE_STOPPED = 5;
-}
-
 enum ContainerStatusCode {
   CONTAINER_STATUS_CODE_UNKNOWN = 0;
   CONTAINER_STATUS_CODE_ACTIVE = 1;
@@ -98,7 +89,8 @@ message ContainerStatusV1 {
 message AppStatusV1 {
   // UUID
   string app_id = 1;
-  repeated ContainerStatusV1 containers = 2;
+  ContainerStatusCode status_code = 2;
+  repeated ContainerStatusV1 containers = 3;
 }
 
 message AppFileV1 {
