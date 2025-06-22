@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"winterflow-agent/internal/domain/model"
-	"winterflow-agent/internal/infra/docker"
+	"winterflow-agent/internal/infra/orchestrator"
 	log "winterflow-agent/pkg/log"
 
 	"github.com/docker/docker/api/types/container"
@@ -47,9 +47,9 @@ func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (mod
 		c := model.Container{
 			ID:         dockerContainer.ID,
 			Name:       strings.TrimPrefix(dockerContainer.Names[0], "/"),
-			StatusCode: docker.MapDockerStateToContainerStatus(dockerContainer.State),
+			StatusCode: orchestrator.MapDockerStateToContainerStatus(dockerContainer.State),
 			ExitCode:   0, // Not available in list response
-			Ports:      docker.MapDockerPortsToContainerPorts(dockerContainer.Ports),
+			Ports:      orchestrator.MapDockerPortsToContainerPorts(dockerContainer.Ports),
 		}
 		if c.StatusCode == model.ContainerStatusProblematic {
 			c.Error = fmt.Sprintf("Container in problematic state: %s", dockerContainer.Status)
@@ -105,9 +105,9 @@ func (r *composeRepository) GetAppsStatus(ctx context.Context) (model.GetAppsSta
 			c := model.Container{
 				ID:         dc.ID,
 				Name:       strings.TrimPrefix(dc.Names[0], "/"),
-				StatusCode: docker.MapDockerStateToContainerStatus(dc.State),
+				StatusCode: orchestrator.MapDockerStateToContainerStatus(dc.State),
 				ExitCode:   0,
-				Ports:      docker.MapDockerPortsToContainerPorts(dc.Ports),
+				Ports:      orchestrator.MapDockerPortsToContainerPorts(dc.Ports),
 			}
 			if c.StatusCode == model.ContainerStatusProblematic {
 				c.Error = fmt.Sprintf("Container in problematic state: %s", dc.Status)

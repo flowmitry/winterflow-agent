@@ -1,4 +1,4 @@
-package docker
+package orchestrator
 
 import (
 	"strings"

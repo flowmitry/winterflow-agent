@@ -4,7 +4,7 @@ import (
 	"winterflow-agent/internal/application/config"
 	pkgconfig "winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/domain/repository"
-	"winterflow-agent/internal/infra/docker/docker_compose"
+	"winterflow-agent/internal/infra/orchestrator/docker_compose"
 	"winterflow-agent/pkg/log"
 
 	"github.com/docker/docker/client"
