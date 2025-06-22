@@ -27,7 +27,24 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 
 	log.Printf("Processing save app request for app ID: %s", app.ID)
 
-	// Validate that the application name is provided and unique
+	// Prevent renaming: if the application already exists, always keep the original name stored on disk.
+	baseDir := filepath.Join(h.AppsTemplatesPath, app.ID)
+	versionDir := filepath.Join(baseDir, h.AppsCurrentVersion)
+
+	existingCfgPath := filepath.Join(versionDir, "config.json")
+	if data, err := os.ReadFile(existingCfgPath); err == nil {
+		if existingCfg, err := model.ParseAppConfig(data); err == nil {
+			// If the stored name differs from the incoming one, keep the old name.
+			storedName := strings.TrimSpace(existingCfg.Name)
+			incomingName := strings.TrimSpace(app.Config.Name)
+			if storedName != "" && !strings.EqualFold(storedName, incomingName) {
+				log.Info("[SaveApp] Rename attempted from '%s' to '%s' for app ID %s – keeping the original name", incomingName, storedName, app.ID)
+				app.Config.Name = existingCfg.Name
+			}
+		}
+	}
+
+	// Validate that the (possibly overridden) application name is provided and unique
 	if strings.TrimSpace(app.Config.Name) == "" {
 		return fmt.Errorf("application name cannot be empty")
 	}
@@ -40,9 +57,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 		return fmt.Errorf("application name '%s' is already in use by another app", app.Config.Name)
 	}
 
-	// Resolve important directories once
-	baseDir := filepath.Join(h.AppsTemplatesPath, app.ID)
-	versionDir := filepath.Join(baseDir, h.AppsCurrentVersion)
+	// Resolve important directories once (baseDir & versionDir already calculated above)
 	dirs := map[string]string{
 		"version": versionDir,
 		"vars":    filepath.Join(versionDir, "vars"),
