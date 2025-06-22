@@ -629,6 +629,13 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						continue
 					}
 
+					if serverCmd.Command == nil {
+						// Some server messages might have an empty oneof, which means there is no actual command to handle.
+						// Instead of logging a warning that looks like an unknown command, simply ignore such messages.
+						log.Debug("Received server command with empty payload, ignoring")
+						continue
+					}
+
 					// Handle different command types
 					switch cmd := serverCmd.Command.(type) {
 					case *pb.ServerCommand_HeartbeatResponseV1:
