@@ -124,9 +124,9 @@ func RegisterAgent(configPath string, orchestrator string) error {
 		fmt.Printf("Expires at: %s\n\n", resp.Data.ExpiresAt)
 	}
 	fmt.Println("To complete the registration:")
-	fmt.Println("1. Go to your WinterFlow.io dashboard")
+	fmt.Println("1. Go to your https://app.winterflow.io dashboard")
 	fmt.Println("2. Click on the 'Add Server' button")
-	fmt.Println("3. Enter the registration code above")
+	fmt.Println("3. Enter the registration code: ", code)
 	fmt.Println("4. Wait for the registration to complete")
 	fmt.Println("\nWaiting for registration confirmation...")
 
