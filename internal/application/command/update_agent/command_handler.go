@@ -31,7 +31,7 @@ func (h *UpdateAgentHandler) Handle(cmd UpdateAgentCommand) error {
 	}
 
 	// Skip the update only if the target version is not newer than the current version
-	if !agentversion.IsBiggerThan(targetVersion) {
+	if !agentversion.IsSmallerThan(targetVersion) {
 		log.Info("Agent already uses same or newer version", "current_version", agentversion.GetVersion(), "target_version", targetVersion)
 		return nil
 	}

@@ -36,6 +36,6 @@ func ParseNumericVersion(semVer string) int {
 	return result
 }
 
-func IsBiggerThan(semVer string) bool {
-	return ParseNumericVersion(semVer) > GetNumericVersion()
+func IsSmallerThan(semVer string) bool {
+	return GetNumericVersion() < ParseNumericVersion(semVer)
 }
