@@ -88,12 +88,10 @@ sudo rm -rf /var/log/winterflow
 sudo userdel -r winterflow
 ```
 
-### 5. Remove sudoers configuration
+### 5. Remove sudoers configuration (if added sudo)
 ```sh
 sudo rm -f /etc/sudoers.d/winterflow
 ```
-
-**Note:** The uninstallation will not remove the packages installed during setup (`curl` and `ansible`) as they may be used by other applications on your system.
 
 ## Directory Structure
 
@@ -103,4 +101,4 @@ The following directories and files are part of the WinterFlow Agent's directory
 * `/opt/winterflow/agent` - This directory contains the agent binary.
 * `/opt/winterflow/agent.config.json` - The configuration file for the agent.
 * `/opt/winterflow/apps` - The directory holds the Docker Compose files to run your apps.
-* `/opt/winterflow/apps_templates` - This directory holds your Docker Compose apps templates
+* `/opt/winterflow/apps_templates` - This directory holds your apps versions
