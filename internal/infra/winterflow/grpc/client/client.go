@@ -612,6 +612,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			deleteAppRequestCh := make(chan *pb.DeleteAppRequestV1, queueChannelSize)
 			controlAppRequestCh := make(chan *pb.ControlAppRequestV1, queueChannelSize)
 			getAppsStatusRequestCh := make(chan *pb.GetAppsStatusRequestV1, queueChannelSize)
+			renameAppRequestCh := make(chan *pb.RenameAppRequestV1, queueChannelSize)
 
 			// Start goroutine to receive responses
 			go func() {
@@ -810,6 +811,28 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							}
 						}
 
+					case *pb.ServerCommand_RenameAppRequestV1:
+						log.Info("Received rename app request", "messageId", cmd.RenameAppRequestV1.Base.MessageId)
+						// Forward the request to be handled by the main loop
+						select {
+						case renameAppRequestCh <- cmd.RenameAppRequestV1:
+						default:
+							log.Warn("Rename app request channel full, dropping request")
+							// Create and send error response immediately
+							baseResp := createBaseResponse(cmd.RenameAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							renameAppResp := &pb.RenameAppResponseV1{
+								Base: &baseResp,
+							}
+							agentMsg := &pb.AgentMessage{
+								Message: &pb.AgentMessage_RenameAppResponseV1{RenameAppResponseV1: renameAppResp},
+							}
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response", "error", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
+						}
+
 					default:
 						// Log details about the unknown command type
 						log.Warn("Received unknown command type", "type", fmt.Sprintf("%T", cmd))
@@ -952,6 +975,23 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						continue
 					}
 					log.Info("Get apps status response sent successfully")
+
+				case renameAppRequest := <-renameAppRequestCh:
+					agentMsg, err := HandleRenameAppRequest(c.commandBus, renameAppRequest, agentID)
+					if err != nil {
+						log.Error("Error renaming app response", "error", err)
+						continue
+					}
+					if err := stream.Send(agentMsg); err != nil {
+						log.Error("Error sending rename app response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							ticker.Stop()
+							continue outerLoop
+						}
+						continue
+					}
+					log.Info("Rename app response sent successfully")
 
 				case <-streamDone:
 					log.Warn("Stream receiver stopped, recreating stream")

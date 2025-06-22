@@ -139,3 +139,34 @@ func HandleUpdateAgentRequest(commandBus cqrs.CommandBus, updateAgentRequest *pb
 
 	return agentMsg, nil
 }
+
+// HandleRenameAppRequest handles the command dispatch and creates the appropriate response message
+func HandleRenameAppRequest(commandBus cqrs.CommandBus, renameAppRequest *pb.RenameAppRequestV1, agentID string) (*pb.AgentMessage, error) {
+	log.Debug("Processing rename app request", "app_id", renameAppRequest.AppId, "app_name", renameAppRequest.AppName)
+
+	// Create and dispatch the command
+	cmd := ProtoRenameAppRequestV1ToRenameAppCommand(renameAppRequest)
+
+	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	var responseMessage string = "App renamed successfully"
+
+	// Dispatch the command to the handler
+	if err := commandBus.Dispatch(cmd); err != nil {
+		log.Error("Error renaming app", "error", err)
+		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		responseMessage = fmt.Sprintf("Error renaming app: %v", err)
+	}
+
+	baseResp := createBaseResponse(renameAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
+	renameAppResp := &pb.RenameAppResponseV1{
+		Base: &baseResp,
+	}
+
+	agentMsg := &pb.AgentMessage{
+		Message: &pb.AgentMessage_RenameAppResponseV1{
+			RenameAppResponseV1: renameAppResp,
+		},
+	}
+
+	return agentMsg, nil
+}

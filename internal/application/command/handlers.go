@@ -3,6 +3,7 @@ package command
 import (
 	"winterflow-agent/internal/application/command/control_app"
 	"winterflow-agent/internal/application/command/delete_app"
+	"winterflow-agent/internal/application/command/rename_app"
 	"winterflow-agent/internal/application/command/save_app"
 	"winterflow-agent/internal/application/command/update_agent"
 	"winterflow-agent/internal/application/config"
@@ -26,6 +27,10 @@ func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appReposi
 
 	if err := b.Register(update_agent.NewUpdateAgentHandler(config)); err != nil {
 		return log.Errorf("failed to register update agent handler: %v", err)
+	}
+
+	if err := b.Register(rename_app.NewRenameAppHandler(appRepository, config.GetAppsTemplatesPath(), config.GetAppsCurrentVersionFolder())); err != nil {
+		return log.Errorf("failed to register rename app handler: %v", err)
 	}
 
 	return nil

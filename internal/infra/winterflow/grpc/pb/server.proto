@@ -147,6 +147,17 @@ message SaveAppResponseV1 {
   BaseResponse base = 1;
 }
 
+message RenameAppRequestV1 {
+  BaseMessage base = 1;
+  // UUID
+  string app_id = 2;
+  string app_name = 3;
+}
+
+message RenameAppResponseV1 {
+  BaseResponse base = 1;
+}
+
 message DeleteAppRequestV1 {
   BaseMessage base = 1;
   // UUID
@@ -188,9 +199,10 @@ message ServerCommand {
     UpdateAgentRequestV1 update_agent_request_v1 = 2;
     GetAppRequestV1 get_app_request_v1 = 3;
     SaveAppRequestV1 save_app_request_v1 = 4;
-    DeleteAppRequestV1 delete_app_request_v1 = 5;
-    ControlAppRequestV1 control_app_request_v1 = 6;
-    GetAppsStatusRequestV1 get_apps_status_request_v1 = 7;
+    RenameAppRequestV1 rename_app_request_v1 = 5;
+    DeleteAppRequestV1 delete_app_request_v1 = 6;
+    ControlAppRequestV1 control_app_request_v1 = 7;
+    GetAppsStatusRequestV1 get_apps_status_request_v1 = 8;
   }
 }
 
@@ -203,9 +215,10 @@ message AgentMessage {
     UpdateAgentResponseV1 update_agent_response_v1 = 2;
     GetAppResponseV1 get_app_response_v1 = 3;
     SaveAppResponseV1 save_app_response_v1 = 4;
-    DeleteAppResponseV1 delete_app_response_v1 = 5;
-    ControlAppResponseV1 control_app_response_v1 = 6;
-    GetAppsStatusResponseV1 get_apps_status_response_v1 = 7;
+    RenameAppResponseV1 rename_app_response_v1 = 5;
+    DeleteAppResponseV1 delete_app_response_v1 = 6;
+    ControlAppResponseV1 control_app_response_v1 = 7;
+    GetAppsStatusResponseV1 get_apps_status_response_v1 = 8;
   }
 }
 
