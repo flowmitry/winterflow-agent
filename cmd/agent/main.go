@@ -30,7 +30,7 @@ func main() {
 	showVersion := flag.Bool("version", false, "Show version information")
 	showHelp := flag.Bool("help", false, "Show help information")
 	configPath := flag.String("config", "agent.config.json", "Path to configuration file")
-	register := flag.Bool("register", false, "Register the agent with the server")
+	register := flag.Bool("register", false, "Register the agent with the server. Optionally specify orchestrator as positional argument (e.g., --register docker_compose)")
 	flag.Parse()
 
 	// Show version if requested
@@ -46,13 +46,19 @@ func main() {
 		fmt.Println("  --version  Show version information")
 		fmt.Println("  --help     Show help information")
 		fmt.Println("  --config   Path to configuration file (default: agent.config.json)")
-		fmt.Println("  --register Register the agent with the server")
+		fmt.Println("  --register Register the agent with the server. Optionally specify orchestrator as positional argument (e.g., --register docker_compose)")
 		os.Exit(0)
 	}
 
 	// Handle registration if requested
 	if *register {
-		if err := api.RegisterAgent(*configPath); err != nil {
+		// Determine orchestrator if provided as positional argument after flags
+		var orchestrator string
+		remainingArgs := flag.Args()
+		if len(remainingArgs) > 0 {
+			orchestrator = remainingArgs[0]
+		}
+		if err := api.RegisterAgent(*configPath, orchestrator); err != nil {
 			fmt.Printf("Registration failed: %v\n", err)
 		}
 		return

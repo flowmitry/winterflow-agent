@@ -2,7 +2,6 @@
 
 # Winterflow Agent Installer
 # -------------------------
-# This script installs the Winterflow Agent on Ubuntu 20.04+ or Debian 12+
 #
 # Quick Install:
 #   curl -fsSL https://get.winterflow.io/agent | sudo bash
@@ -11,12 +10,6 @@
 #   curl -fsSL https://get.winterflow.io/agent > winterflow-install.sh
 #   chmod +x winterflow-install.sh
 #   sudo ./winterflow-install.sh
-#
-# Force Install (skip OS validation):
-#   sudo ./winterflow-install.sh --force
-#
-# Options:
-#   --force    Skip OS validation (use with caution)
 #
 # Source Code: https://github.com/flowmitry/winterflow-agent
 # Website: https://winterflow.io
@@ -36,24 +29,6 @@ cleanup() {
 trap cleanup EXIT
 
 #######################
-# Parse Command Line Arguments
-#######################
-
-# Parse command line arguments
-FORCE_INSTALL=false
-for arg in "$@"; do
-    case $arg in
-        --force)
-            FORCE_INSTALL=true
-            shift
-            ;;
-        *)
-            # Unknown option
-            ;;
-    esac
-done
-
-#######################
 # Configuration Variables
 #######################
 
@@ -67,21 +42,40 @@ LOGS_DIR="/var/log/winterflow/"
 # URLs
 GITHUB_API="https://api.github.com/repos/flowmitry/winterflow-agent/releases"
 
-# Required packages
-REQUIRED_PACKAGES="curl ansible jq"
-
-# Supported OS distributions with flexible patterns:
-# "ubuntu" - all ubuntu versions
-# "ubuntu=22" - ubuntu 22
-# "ubuntu>22" - ubuntu 22 (inclusive) and higher
-# "ubuntu<22" - ubuntu 22 (inclusive) and lower
-SUPPORTED_OS_DISTRIBUTIONS=("debian>12" "ubuntu>22")
+# Required packages (fail if not installed)
+REQUIRED_PACKAGES="curl jq"
 
 # User settings
 USER="winterflow"
 
 # Temporary file for downloaded binary
 TEMP_AGENT_BINARY=""
+
+# ----------------------
+# Orchestrator Selection
+# ----------------------
+
+# Global variable that will hold user-selected orchestrator. Default is docker_compose
+ORCHESTRATOR="docker_compose"
+
+# Ask the user which orchestrator they want to use unless a non-empty config already exists.
+ask_orchestrator() {
+    if [ -f "${CONFIG_FILE}" ] && [ -s "${CONFIG_FILE}" ]; then
+        log "info" "Existing config detected - skipping orchestrator selection prompt"
+        return 0
+    fi
+
+    read -r -p "Choose orchestrator [docker_compose/docker_swarm] (default: docker_compose): " input_orch
+    case "$input_orch" in
+        docker_swarm)
+            ORCHESTRATOR="docker_swarm";;
+        ""|docker_compose)
+            ORCHESTRATOR="docker_compose";;
+        *)
+            log "warn" "Unknown orchestrator '$input_orch'. Using default 'docker_compose'.";;
+    esac
+    log "info" "Selected orchestrator: ${ORCHESTRATOR}"
+}
 
 #######################
 # Utility Functions
@@ -120,104 +114,15 @@ check_root() {
     fi
 }
 
-
-
-# Function to check if specific distribution is supported
-is_distribution_supported() {
-    local distro="$1"
-    local version="$2"
-    
-    # Extract major version number
-    local major_version=$(echo "$version" | awk -F. '{print $1}')
-    
-    for supported_pattern in "${SUPPORTED_OS_DISTRIBUTIONS[@]}"; do
-        # Check if pattern matches distro name without version constraint
-        if [ "$supported_pattern" = "$distro" ]; then
-            # Pattern like "debian" - all versions supported
-            return 0
-        fi
-        
-        # Extract distro name and constraint from pattern
-        local pattern_distro=""
-        local constraint=""
-        local constraint_version=""
-        
-        if [[ "$supported_pattern" == *"="* ]]; then
-            pattern_distro="${supported_pattern%=*}"
-            constraint="="
-            constraint_version="${supported_pattern#*=}"
-        elif [[ "$supported_pattern" == *">"* ]]; then
-            pattern_distro="${supported_pattern%>*}"
-            constraint=">"
-            constraint_version="${supported_pattern#*>}"
-        elif [[ "$supported_pattern" == *"<"* ]]; then
-            pattern_distro="${supported_pattern%<*}"
-            constraint="<"
-            constraint_version="${supported_pattern#*<}"
-        else
-            # No constraint, skip this pattern
-            continue
-        fi
-        
-        # Check if distro matches
-        if [ "$distro" = "$pattern_distro" ]; then
-            case "$constraint" in
-                "=")
-                    if [ "$major_version" -eq "$constraint_version" ]; then
-                        return 0
-                    fi
-                    ;;
-                ">")
-                    if [ "$major_version" -ge "$constraint_version" ]; then
-                        return 0
-                    fi
-                    ;;
-                "<")
-                    if [ "$major_version" -le "$constraint_version" ]; then
-                        return 0
-                    fi
-                    ;;
-            esac
-        fi
-    done
-    return 1
-}
-
 # Function to check OS version
 check_os_version() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        
-        local os_distro="$ID"
-        local os_version="$VERSION_ID"
-        
-        log "info" "Detected OS: $os_distro $os_version"
-        
-        # Skip OS validation if --force flag is used
-        if [ "$FORCE_INSTALL" = true ]; then
-            log "warn" "OS validation skipped due to --force flag"
-            log "warn" "Installation may not work correctly on unsupported systems"
-            return 0
-        fi
-        
-        # Check if distribution is supported
-        if is_distribution_supported "$os_distro" "$os_version"; then
-            log "info" "Distribution '$os_distro $os_version' is supported"
-            return 0
-        fi
-        
-        # Distribution not supported - fail
-        log "error" "Unsupported OS: $os_distro $os_version"
-        log "info" "Supported distributions:"
-        for pattern in "${SUPPORTED_OS_DISTRIBUTIONS[@]}"; do
-            log "info" "  - $pattern"
-        done
-        log "info" "Use --force to bypass OS validation (not recommended)"
-        exit 1
+        log "info" "Detected OS: $ID $VERSION_ID"
     else
-        log "error" "Cannot determine OS version"
-        exit 1
+        log "info" "OS release information not available - continuing"
     fi
+    return 0
 }
 
 # Function to get system architecture
@@ -572,13 +477,13 @@ run_agent_registration() {
     fi
     
     # Run the registration command as the winterflow user with proper working directory
-    if sudo -u "${USER}" -H --set-home bash -c "cd ${INSTALL_DIR} && ${AGENT_BINARY} --register"; then
+    if sudo -u "${USER}" -H --set-home bash -c "cd ${INSTALL_DIR} && ${AGENT_BINARY} --register ${ORCHESTRATOR}"; then
         echo ""
     else
         log "warn" "Agent registration failed or was interrupted"
         echo ""
         echo "Manual steps:"
-        echo "1. Run: sudo -u ${USER} ${AGENT_BINARY} --register\""
+        echo "1. Run: sudo -u ${USER} ${AGENT_BINARY} --register ${ORCHESTRATOR}"
         echo "2. Visit https://app.winterflow.io to complete agent registration"
         echo ""
         return 1
@@ -597,15 +502,38 @@ create_service_user() {
         useradd -m -s /bin/bash ${USER}
         log "info" "Created ${USER} user with home directory"
     fi
+}
 
-    # Add user to sudoers
-    if [ -d "/etc/sudoers.d" ]; then
-        echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER}
-        chmod 440 /etc/sudoers.d/${USER}
-        log "info" "Added ${USER} user to sudoers"
-    else
-        log "warn" "Could not add ${USER} user to sudoers: /etc/sudoers.d directory not found"
+# Function to verify required packages are installed
+check_required_packages() {
+    local missing=false
+
+    # Base requirements
+    for cmd in $REQUIRED_PACKAGES docker; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            log "error" "Required command '$cmd' is not installed."
+            missing=true
+        fi
+    done
+
+    # Orchestrator-specific requirements
+    if [ "$ORCHESTRATOR" = "docker_compose" ]; then
+        if command -v docker-compose >/dev/null 2>&1; then
+            : # ok
+        elif docker compose version >/dev/null 2>&1 2>/dev/null; then
+            : # docker compose plugin available
+        else
+            log "error" "Docker Compose is required but was not found (checked 'docker-compose' binary and 'docker compose' plugin)."
+            missing=true
+        fi
     fi
+
+    if [ "$missing" = true ]; then
+        log "error" "Please install the missing dependencies and run the installer again."
+        exit 1
+    fi
+
+    log "info" "All required software dependencies are installed."
 }
 
 # Main installation process
@@ -618,13 +546,11 @@ check_root
 log "info" "Checking OS version..."
 check_os_version
 
-# Update package repositories
-log "info" "Updating package repositories..."
-apt-get update
+# Ask for orchestrator early so we can verify related dependencies
+ask_orchestrator
 
-# Install required packages (needed for downloading binary)
-log "info" "Installing required packages..."
-apt-get install -y ${REQUIRED_PACKAGES}
+# Verify required packages are installed
+check_required_packages
 
 # Download agent binary early
 log "info" "Downloading Winterflow Agent binary..."

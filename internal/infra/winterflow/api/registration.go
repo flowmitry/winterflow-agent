@@ -3,8 +3,9 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/pkg/certs"
@@ -19,11 +20,21 @@ type RegistrationError struct {
 }
 
 // RegisterAgent handles the agent registration process
-func RegisterAgent(configPath string) error {
+func RegisterAgent(configPath string, orchestrator string) error {
 	// Load config to get server URL
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %v", err)
+	}
+
+	// If orchestrator specified, validate and persist it
+	if orchestrator != "" {
+		if err := cfg.SetOrchestrator(config.OrchestratorType(orchestrator)); err != nil {
+			return fmt.Errorf("invalid orchestrator type: %v", err)
+		}
+		if err := config.SaveConfig(cfg, configPath); err != nil {
+			return fmt.Errorf("failed to save orchestrator to config: %v", err)
+		}
 	}
 
 	// Check if agent is already registered
@@ -135,7 +146,7 @@ func RegisterAgent(configPath string) error {
 					// For 400 errors, start a new registration
 					fmt.Println("\nRegistration code has expired.")
 					fmt.Println("Starting a new registration process...")
-					return RegisterAgent(configPath)
+					return RegisterAgent(configPath, orchestrator)
 				}
 				// For other status codes, show a generic error
 				return fmt.Errorf("server error: HTTP %d - please try again later", apiErr.StatusCode)
@@ -169,7 +180,7 @@ func RegisterAgent(configPath string) error {
 
 			fmt.Println("\nRegistration code has expired or is invalid.")
 			fmt.Println("Starting a new registration process...")
-			return RegisterAgent(configPath)
+			return RegisterAgent(configPath, orchestrator)
 
 		case "pending":
 			// Wait before checking again
