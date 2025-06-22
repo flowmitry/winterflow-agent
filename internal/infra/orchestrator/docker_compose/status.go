@@ -26,7 +26,7 @@ func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (mod
 	// Check if the application directory exists. This helps us distinguish between
 	// a stopped application (directory exists but no containers) and an unknown one.
 	appDir := filepath.Join(r.config.GetAppsPath(), appName)
-	dirExists := fileExists(appDir)
+	appDirExists := dirExists(appDir)
 
 	// List containers that belong to the compose project.
 	filterArgs := filters.NewArgs()
@@ -60,7 +60,7 @@ func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (mod
 
 	// Derive overall status.
 	if len(containerApp.Containers) == 0 {
-		if dirExists {
+		if appDirExists {
 			containerApp.StatusCode = model.ContainerStatusStopped
 		} else {
 			containerApp.StatusCode = model.ContainerStatusUnknown

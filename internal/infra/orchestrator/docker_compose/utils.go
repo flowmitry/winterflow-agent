@@ -18,6 +18,15 @@ func fileExists(path string) bool {
 	return !info.IsDir()
 }
 
+// dirExists returns true if the provided path exists and **is** a directory.
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
+}
+
 // getAppName reads the app's config.json located in the current-version folder
 // and returns the `name` field. It falls back to appID if anything goes wrong.
 func (r *composeRepository) getAppName(appID string) (string, error) {

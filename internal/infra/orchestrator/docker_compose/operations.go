@@ -123,11 +123,16 @@ func (r *composeRepository) DeleteApp(appID string) error {
 
 // RenameApp renames the compose project directory and restarts containers under the new name.
 func (r *composeRepository) RenameApp(appID, appName string) error {
-	if appID == appName {
+	oldName, err := r.getAppName(appID)
+	if err != nil {
+		return fmt.Errorf("cannot rename app: %w", err)
+	}
+
+	if oldName == appName {
 		return nil
 	}
 
-	oldDir := filepath.Join(r.config.GetAppsPath(), appID)
+	oldDir := filepath.Join(r.config.GetAppsPath(), oldName)
 	newDir := filepath.Join(r.config.GetAppsPath(), appName)
 
 	if _, err := os.Stat(oldDir); os.IsNotExist(err) {
@@ -140,13 +145,15 @@ func (r *composeRepository) RenameApp(appID, appName string) error {
 	if err := r.composeDown(oldDir); err != nil {
 		return fmt.Errorf("failed to stop containers before rename: %w", err)
 	}
+
 	if err := os.Rename(oldDir, newDir); err != nil {
 		return fmt.Errorf("failed to rename app directory from %s to %s: %w", oldDir, newDir, err)
 	}
+
 	if err := r.composeUp(newDir); err != nil {
 		return fmt.Errorf("failed to start containers after rename: %w", err)
 	}
 
-	log.Info("[Rename] successfully renamed and restarted app", "old_dir", oldDir, "new_dir", newDir)
+	log.Info("[Rename] successfully renamed and restarted app", "app_id", appID, "old_name", oldName, "new_name", appName)
 	return nil
 }
