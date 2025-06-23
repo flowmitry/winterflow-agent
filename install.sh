@@ -494,13 +494,28 @@ run_agent_registration() {
 create_service_user() {
     log "info" "Creating ${USER} user and group..."
 
-    # Check if user already exists
+    # Ensure the 'docker' group exists (create if missing)
+    if getent group docker >/dev/null 2>&1; then
+        log "info" "Group 'docker' already exists"
+    else
+        groupadd docker
+        log "info" "Created 'docker' group"
+    fi
+
+    # Create the user if it does not exist, adding it to the 'docker' group at creation time
     if id "${USER}" &>/dev/null; then
         log "info" "User ${USER} already exists"
     else
-        # Create user with home directory
-        useradd -m -s /bin/bash ${USER}
-        log "info" "Created ${USER} user with home directory"
+        useradd -m -s /bin/bash -G docker ${USER}
+        log "info" "Created ${USER} user with home directory and added to 'docker' group"
+    fi
+
+    # Ensure the user is a member of the 'docker' group (covers case where user existed already)
+    if id -nG "${USER}" | grep -qw docker; then
+        log "info" "User ${USER} is already in 'docker' group"
+    else
+        usermod -aG docker ${USER}
+        log "info" "Added user ${USER} to 'docker' group"
     fi
 }
 
