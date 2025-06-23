@@ -518,10 +518,11 @@ check_required_packages() {
 
     # Orchestrator-specific requirements
     if [ "$ORCHESTRATOR" = "docker_compose" ]; then
-        docker compose version >/dev/null 2>&1 2>/dev/null; then
+        # Check for Docker Compose plugin (`docker compose`)
+        if docker compose version >/dev/null 2>&1; then
             : # docker compose plugin available
         else
-            log "error" "Docker Compose is required but was not found (checked 'docker-compose' binary and 'docker compose' plugin)."
+            log "error" "Docker Compose is required but was not found (checked 'docker compose' plugin)."
             missing=true
         fi
     fi
