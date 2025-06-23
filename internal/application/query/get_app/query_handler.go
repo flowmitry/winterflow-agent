@@ -6,30 +6,49 @@ import (
 	"os"
 	"path/filepath"
 	"winterflow-agent/internal/domain/model"
+	"winterflow-agent/internal/domain/service/app"
 	log "winterflow-agent/pkg/log"
 )
 
 // GetAppQueryHandler handles the GetAppQuery
 type GetAppQueryHandler struct {
-	AppsTemplatesPath  string
-	AppsCurrentVersion string
+	VersionService app.AppVersionServiceInterface
 }
 
 // Handle executes the GetAppQuery and returns the result
-func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.App, error) {
+func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.AppDetails, error) {
 	log.Printf("Processing get app request for app ID: %s", query.AppID)
 
 	appID := query.AppID
 
 	// 1. Determine version directory
-	versionDir := h.AppsCurrentVersion
+	var targetVersion uint32
 	if query.AppVersion > 0 {
-		versionDir = fmt.Sprintf("%d", query.AppVersion)
+		// A specific version was requested by the caller. Validate that it exists.
+		exists, err := h.VersionService.ValidateAppVersion(appID, query.AppVersion)
+		if err != nil {
+			return nil, fmt.Errorf("error validating app version: %w", err)
+		}
+		if !exists {
+			return nil, fmt.Errorf("version %d not found for app %s", query.AppVersion, appID)
+		}
+
+		targetVersion = query.AppVersion
+	} else {
+		// No version supplied – resolve to the latest available version using the service.
+		latest, err := h.VersionService.GetLatestAppVersion(appID)
+		if err != nil {
+			return nil, fmt.Errorf("error determining latest version for app %s: %w", appID, err)
+		}
+		if latest == 0 {
+			return nil, fmt.Errorf("no versions found for app %s", appID)
+		}
+		targetVersion = latest
 	}
 
-	templatesDir := filepath.Join(h.AppsTemplatesPath, appID, versionDir)
-	varsDir := filepath.Join(templatesDir, "vars")
-	filesDir := filepath.Join(templatesDir, "files")
+	templatesDir := h.VersionService.GetVersionDir(appID, targetVersion)
+	varsDir := h.VersionService.GetVarsDir(appID, targetVersion)
+	filesDir := h.VersionService.GetFilesDir(appID, targetVersion)
 
 	if _, err := os.Stat(templatesDir); os.IsNotExist(err) {
 		return nil, fmt.Errorf("app with ID %s not found", appID)
@@ -58,12 +77,22 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.App, error) {
 		return nil, err
 	}
 
-	// 5. Return App model
-	return &model.App{
-		ID:        appID,
-		Config:    appConfig,
-		Variables: varsMap,
-		Files:     filesMap,
+	// 5. Get all versions for the app
+	versions, err := h.VersionService.GetAppVersions(appID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 6. Return App model
+	return &model.AppDetails{
+		App: &model.App{
+			ID:        appID,
+			Config:    appConfig,
+			Variables: varsMap,
+			Files:     filesMap,
+		},
+		Version:  targetVersion,
+		Versions: versions,
 	}, nil
 }
 
@@ -133,9 +162,8 @@ func (h *GetAppQueryHandler) loadFiles(appConfig *model.AppConfig, filesDir stri
 }
 
 // NewGetAppQueryHandler creates a new GetAppQueryHandler
-func NewGetAppQueryHandler(appsTemplatesPath, appsCurrentVersion string) *GetAppQueryHandler {
+func NewGetAppQueryHandler(versionService app.AppVersionServiceInterface) *GetAppQueryHandler {
 	return &GetAppQueryHandler{
-		AppsTemplatesPath:  appsTemplatesPath,
-		AppsCurrentVersion: appsCurrentVersion,
+		VersionService: versionService,
 	}
 }

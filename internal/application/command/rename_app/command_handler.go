@@ -8,14 +8,15 @@ import (
 	"strings"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
+	"winterflow-agent/internal/domain/service/app"
 	log "winterflow-agent/pkg/log"
 )
 
 // RenameAppHandler handles the RenameAppCommand.
 type RenameAppHandler struct {
-	repository         repository.AppRepository
-	AppsTemplatesPath  string
-	AppsCurrentVersion string
+	repository        repository.AppRepository
+	AppsTemplatesPath string
+	VersionService    app.AppVersionServiceInterface
 }
 
 // Handle executes the RenameAppCommand.
@@ -41,8 +42,16 @@ func (h *RenameAppHandler) Handle(cmd RenameAppCommand) error {
 		return log.Errorf("application name '%s' is already in use by another app", newName)
 	}
 
-	// Path to config.json of the current version.
-	configPath := filepath.Join(h.AppsTemplatesPath, appID, h.AppsCurrentVersion, "config.json")
+	// Resolve the latest version directory via the version service.
+	latestVersion, err := h.VersionService.GetLatestAppVersion(appID)
+	if err != nil {
+		return log.Errorf("failed to determine latest version for app %s: %w", appID, err)
+	}
+	if latestVersion == 0 {
+		return log.Errorf("application %s does not have any versions yet", appID)
+	}
+
+	configPath := filepath.Join(h.VersionService.GetVersionDir(appID, latestVersion), "config.json")
 
 	// Read existing config.
 	cfgBytes, err := os.ReadFile(configPath)
@@ -97,7 +106,13 @@ func (h *RenameAppHandler) isNameUnique(name, currentAppID string) (bool, error)
 			continue
 		}
 
-		cfgPath := filepath.Join(h.AppsTemplatesPath, appID, h.AppsCurrentVersion, "config.json")
+		// Determine latest version for each application to read its current name.
+		latestVersion, err := h.VersionService.GetLatestAppVersion(appID)
+		if err != nil || latestVersion == 0 {
+			continue
+		}
+
+		cfgPath := filepath.Join(h.VersionService.GetVersionDir(appID, latestVersion), "config.json")
 		data, err := os.ReadFile(cfgPath)
 		if err != nil {
 			// Ignore missing or unreadable config files.
@@ -115,10 +130,10 @@ func (h *RenameAppHandler) isNameUnique(name, currentAppID string) (bool, error)
 }
 
 // NewRenameAppHandler creates a new RenameAppHandler.
-func NewRenameAppHandler(repository repository.AppRepository, appsTemplatesPath, appsCurrentVersion string) *RenameAppHandler {
+func NewRenameAppHandler(repository repository.AppRepository, appsTemplatesPath string, versionService app.AppVersionServiceInterface) *RenameAppHandler {
 	return &RenameAppHandler{
-		repository:         repository,
-		AppsTemplatesPath:  appsTemplatesPath,
-		AppsCurrentVersion: appsCurrentVersion,
+		repository:        repository,
+		AppsTemplatesPath: appsTemplatesPath,
+		VersionService:    versionService,
 	}
 }

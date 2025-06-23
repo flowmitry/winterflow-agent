@@ -23,6 +23,8 @@ func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1
 	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage string = "App retrieved successfully"
 	var app *pb.AppV1
+	var versions []uint32
+	var version = getAppRequest.AppVersion
 
 	// Dispatch the query to the handler
 	result, err := queryBus.Dispatch(query)
@@ -31,24 +33,28 @@ func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1
 		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 		responseMessage = fmt.Sprintf("Error retrieving app: %v", err)
 	} else {
-		// Type assertion to get the app data
-		var ok bool
-		domainApp, ok := result.(*model.App)
+		// Type assertion to get the app data along with versions
+		appDetails, ok := result.(*model.AppDetails)
 		if !ok {
 			log.Error("Error retrieving app: unexpected result type")
 			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 			responseMessage = "Error retrieving app: unexpected result type"
 		} else {
 			// Convert domain model to protobuf
-			app = AppToProtoAppV1(domainApp)
+			if appDetails.App != nil {
+				app = AppToProtoAppV1(appDetails.App)
+			}
+			version = appDetails.Version
+			versions = appDetails.Versions
 		}
 	}
 
 	baseResp := createBaseResponse(getAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	getAppResp := &pb.GetAppResponseV1{
-		Base:       &baseResp,
-		App:        app,
-		AppVersion: getAppRequest.AppVersion,
+		Base:              &baseResp,
+		App:               app,
+		AppVersion:        version,
+		AvailableVersions: versions,
 	}
 
 	agentMsg := &pb.AgentMessage{

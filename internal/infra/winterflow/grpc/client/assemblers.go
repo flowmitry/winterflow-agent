@@ -245,9 +245,8 @@ func ProtoControlAppRequestV1ToControlAppCommand(request *pb.ControlAppRequestV1
 	}
 
 	return control_app.ControlAppCommand{
-		AppID:      request.AppId,
-		AppVersion: request.AppVersion,
-		Action:     action,
+		AppID:  request.AppId,
+		Action: action,
 	}
 }
 

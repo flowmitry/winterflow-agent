@@ -13,14 +13,14 @@ type AppRepository interface {
 	// GetAppsStatus returns the status of all available applications
 	GetAppsStatus(ctx context.Context) (model.GetAppsStatusResult, error)
 
-	// DeployApp deploys an application with the specified ID and version
-	DeployApp(appID, appVersion string) error
+	// DeployApp deploys an application with the specified ID (deploys latest version)
+	DeployApp(appID string) error
 
 	// StopApp stops the application specified by the given app ID.
 	StopApp(appID string) error
 
-	// RestartApp restarts the specified application by its app ID and version.
-	RestartApp(appID, appVersion string) error
+	// RestartApp restarts the specified application by its app ID (latest version).
+	RestartApp(appID string) error
 
 	// UpdateApp updates the specified application by its app ID and version.
 	UpdateApp(appID string) error

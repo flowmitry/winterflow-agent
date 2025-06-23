@@ -6,14 +6,14 @@ import (
 	"path/filepath"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
+	"winterflow-agent/internal/domain/service/app"
 	log "winterflow-agent/pkg/log"
 )
 
 // ControlAppHandler handles the ControlAppCommand
 type ControlAppHandler struct {
-	repository         repository.AppRepository
-	AppsTemplatesPath  string
-	AppsCurrentVersion string
+	repository     repository.AppRepository
+	VersionService app.AppVersionServiceInterface
 }
 
 // Handle executes the ControlAppCommand
@@ -25,18 +25,33 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 		return log.Errorf("app ID is required for control app command")
 	}
 
-	// Get the app config
-	appConfig, err := getAppConfig(h.AppsTemplatesPath, cmd.AppID, h.AppsCurrentVersion)
-	if err != nil {
-		return log.Errorf("failed to get app config for app ID %s: %w", cmd.AppID, err)
+	// Determine the target version for the operation.
+	var targetVersion uint32
+	if cmd.AppVersion > 0 {
+		// Validate requested version exists.
+		exists, err := h.VersionService.ValidateAppVersion(cmd.AppID, cmd.AppVersion)
+		if err != nil {
+			return log.Errorf("failed to validate app version: %w", err)
+		}
+		if !exists {
+			return log.Errorf("version %d not found for app %s", cmd.AppVersion, cmd.AppID)
+		}
+		targetVersion = cmd.AppVersion
+	} else {
+		latest, err := h.VersionService.GetLatestAppVersion(cmd.AppID)
+		if err != nil {
+			return log.Errorf("failed to determine latest version for app %s: %w", cmd.AppID, err)
+		}
+		if latest == 0 {
+			return log.Errorf("no versions found for app %s", cmd.AppID)
+		}
+		targetVersion = latest
 	}
 
-	// Determine the app version to use
-	var appVersion string
-	if cmd.AppVersion > 0 {
-		appVersion = fmt.Sprintf("%d", cmd.AppVersion)
-	} else {
-		appVersion = h.AppsCurrentVersion
+	// Load app config for logging purposes.
+	appConfig, err := getAppConfig(h.VersionService, cmd.AppID, targetVersion)
+	if err != nil {
+		return log.Errorf("failed to load app config: %w", err)
 	}
 
 	// Determine the action to perform
@@ -45,13 +60,13 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	switch cmd.Action {
 	case AppActionStart:
 		playbook = "deploy_app"
-		actionErr = h.repository.DeployApp(cmd.AppID, appVersion)
+		actionErr = h.repository.DeployApp(cmd.AppID)
 	case AppActionStop:
 		playbook = "stop_app"
 		actionErr = h.repository.StopApp(cmd.AppID)
 	case AppActionRestart:
 		playbook = "restart_app"
-		actionErr = h.repository.RestartApp(cmd.AppID, appVersion)
+		actionErr = h.repository.RestartApp(cmd.AppID)
 	case AppActionUpdate:
 		playbook = "update_app"
 		actionErr = h.repository.UpdateApp(cmd.AppID)
@@ -68,16 +83,18 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 }
 
 // getAppConfig retrieves the app configuration for the given app ID
-func getAppConfig(appsTemplatesPath, appID, version string) (*model.AppConfig, error) {
-	// Check if the app exists
-	appDir := filepath.Join(appsTemplatesPath, appID, version)
-	if _, err := os.Stat(appDir); os.IsNotExist(err) {
-		return nil, fmt.Errorf("app with ID %s does not exist", appID)
+func getAppConfig(versionService app.AppVersionServiceInterface, appID string, version uint32) (*model.AppConfig, error) {
+	// Determine directory for the specified version.
+	versionDir := versionService.GetVersionDir(appID, version)
+
+	// Ensure it exists.
+	if _, err := os.Stat(versionDir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("app with ID %s and version %d does not exist", appID, version)
 	}
 
-	// Get the app config
-	configFile := filepath.Join(appDir, "config.json")
-	configBytes, err := os.ReadFile(configFile)
+	// Read config.json
+	configPath := filepath.Join(versionDir, "config.json")
+	configBytes, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading app config: %w", err)
 	}
@@ -91,10 +108,9 @@ func getAppConfig(appsTemplatesPath, appID, version string) (*model.AppConfig, e
 }
 
 // NewControlAppHandler creates a new ControlAppHandler
-func NewControlAppHandler(repository repository.AppRepository, appsTemplatesPath, appsCurrentVersion string) *ControlAppHandler {
+func NewControlAppHandler(repository repository.AppRepository, versionService app.AppVersionServiceInterface) *ControlAppHandler {
 	return &ControlAppHandler{
-		repository:         repository,
-		AppsTemplatesPath:  appsTemplatesPath,
-		AppsCurrentVersion: appsCurrentVersion,
+		repository:     repository,
+		VersionService: versionService,
 	}
 }

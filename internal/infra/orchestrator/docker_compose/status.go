@@ -17,7 +17,7 @@ import (
 
 // GetAppStatus returns detailed information for a single application identified by appID.
 func (r *composeRepository) GetAppStatus(ctx context.Context, appID string) (model.GetAppStatusResult, error) {
-	appName, err := r.getAppName(appID)
+	appName, err := r.getAppNameById(appID)
 	if err != nil {
 		return model.GetAppStatusResult{}, fmt.Errorf("cannot get app status: %w", err)
 	}

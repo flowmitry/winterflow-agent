@@ -71,10 +71,18 @@ message RegisterAgentResponseV1 {
 // Agent heartbeat message
 message AgentHeartbeatV1 {
   BaseMessage base = 1;
-  map<string, string> metrics = 2;
 }
 
-message HeartbeatResponseV1 {
+message AgentHeartbeatResponseV1 {
+  BaseResponse base = 1;
+}
+
+// Agent metrics message
+message AgentMetricsV1 {
+  BaseMessage base = 1;
+}
+
+message AgentMetricsResponseV1 {
   BaseResponse base = 1;
 }
 
@@ -127,6 +135,7 @@ message GetAppResponseV1 {
   BaseResponse base = 1;
   AppV1 app = 2;
   uint32 app_version = 3;
+  repeated uint32 available_versions = 4;
 }
 
 message UpdateAgentRequestV1 {
@@ -172,8 +181,7 @@ message ControlAppRequestV1 {
   BaseMessage base = 1;
   // UUID
   string app_id = 2;
-  uint32 app_version = 3;
-  AppAction action = 4;
+  AppAction action = 3;
 }
 
 message ControlAppResponseV1 {
@@ -192,33 +200,35 @@ message GetAppsStatusResponseV1 {
 // Command messages for bidirectional streaming
 message ServerCommand {
   oneof command {
-    // Responses for messages initialized by an agent
-    HeartbeatResponseV1 heartbeat_response_v1 = 1;
+    // Responses for messages initialized by an agent (1-999)
+    AgentHeartbeatResponseV1 heartbeat_response_v1 = 1;
+    AgentMetricsResponseV1 metrics_response_v1 = 2;
 
-    // Commands initialized by the server
-    UpdateAgentRequestV1 update_agent_request_v1 = 2;
-    GetAppRequestV1 get_app_request_v1 = 3;
-    SaveAppRequestV1 save_app_request_v1 = 4;
-    RenameAppRequestV1 rename_app_request_v1 = 5;
-    DeleteAppRequestV1 delete_app_request_v1 = 6;
-    ControlAppRequestV1 control_app_request_v1 = 7;
-    GetAppsStatusRequestV1 get_apps_status_request_v1 = 8;
+    // Commands initialized by the server (1000+)
+    UpdateAgentRequestV1 update_agent_request_v1 = 1001;
+    GetAppRequestV1 get_app_request_v1 = 1002;
+    SaveAppRequestV1 save_app_request_v1 = 1003;
+    RenameAppRequestV1 rename_app_request_v1 = 1004;
+    DeleteAppRequestV1 delete_app_request_v1 = 1005;
+    ControlAppRequestV1 control_app_request_v1 = 1006;
+    GetAppsStatusRequestV1 get_apps_status_request_v1 = 1007;
   }
 }
 
 message AgentMessage {
   oneof message {
-    // Messages initialized by an agent
+    // Messages initialized by an agent (1-999)
     AgentHeartbeatV1 heartbeat_v1 = 1;
+    AgentMetricsV1 metrics_v1 = 2;
 
-    // Responses for commands initialized by the server
-    UpdateAgentResponseV1 update_agent_response_v1 = 2;
-    GetAppResponseV1 get_app_response_v1 = 3;
-    SaveAppResponseV1 save_app_response_v1 = 4;
-    RenameAppResponseV1 rename_app_response_v1 = 5;
-    DeleteAppResponseV1 delete_app_response_v1 = 6;
-    ControlAppResponseV1 control_app_response_v1 = 7;
-    GetAppsStatusResponseV1 get_apps_status_response_v1 = 8;
+    // Responses for commands initialized by the server (1000+)
+    UpdateAgentResponseV1 update_agent_response_v1 = 1001;
+    GetAppResponseV1 get_app_response_v1 = 1002;
+    SaveAppResponseV1 save_app_response_v1 = 1003;
+    RenameAppResponseV1 rename_app_response_v1 = 1004;
+    DeleteAppResponseV1 delete_app_response_v1 = 1005;
+    ControlAppResponseV1 control_app_response_v1 = 1006;
+    GetAppsStatusResponseV1 get_apps_status_response_v1 = 1007;
   }
 }
 

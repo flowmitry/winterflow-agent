@@ -558,16 +558,8 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				AgentId:   agentID,
 			}
 
-			var metrics map[string]string
-			if c.config.IsFeatureEnabled(config.FeatureSendMetricsDisabled) {
-				metrics = make(map[string]string)
-			} else {
-				metrics = metricsProvider()
-			}
-
 			heartbeat := &pb.AgentHeartbeatV1{
-				Base:    baseMsg,
-				Metrics: metrics,
+				Base: baseMsg,
 			}
 
 			agentMsg := &pb.AgentMessage{
@@ -864,16 +856,8 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						AgentId:   agentID,
 					}
 
-					var metrics map[string]string
-					if sendMetricsDisabled, exists := features["send_metrics_disabled"]; exists && sendMetricsDisabled {
-						metrics = make(map[string]string)
-					} else {
-						metrics = metricsProvider()
-					}
-
 					heartbeat := &pb.AgentHeartbeatV1{
-						Base:    baseMsg,
-						Metrics: metrics,
+						Base: baseMsg,
 					}
 
 					agentMsg := &pb.AgentMessage{

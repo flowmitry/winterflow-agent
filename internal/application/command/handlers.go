@@ -8,20 +8,23 @@ import (
 	"winterflow-agent/internal/application/command/update_agent"
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/domain/repository"
+	"winterflow-agent/internal/domain/service/app"
 	"winterflow-agent/pkg/cqrs"
 	"winterflow-agent/pkg/log"
 )
 
 func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appRepository repository.AppRepository) error {
-	if err := b.Register(save_app.NewSaveAppHandler(config.GetAppsTemplatesPath(), config.GetAppsCurrentVersionFolder(), config.GetPrivateKeyPath())); err != nil {
+	versionService := app.NewAppVersionService(config)
+
+	if err := b.Register(save_app.NewSaveAppHandler(config.GetAppsTemplatesPath(), config.GetPrivateKeyPath(), versionService)); err != nil {
 		return log.Errorf("failed to register save app handler: %v", err)
 	}
 
-	if err := b.Register(delete_app.NewDeleteAppHandler(appRepository, config.GetAppsTemplatesPath(), config.GetAppsCurrentVersionFolder())); err != nil {
+	if err := b.Register(delete_app.NewDeleteAppHandler(appRepository, config.GetAppsTemplatesPath())); err != nil {
 		return log.Errorf("failed to register delete app handler: %v", err)
 	}
 
-	if err := b.Register(control_app.NewControlAppHandler(appRepository, config.GetAppsTemplatesPath(), config.GetAppsCurrentVersionFolder())); err != nil {
+	if err := b.Register(control_app.NewControlAppHandler(appRepository, versionService)); err != nil {
 		return log.Errorf("failed to register control app handler: %v", err)
 	}
 
@@ -29,7 +32,7 @@ func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appReposi
 		return log.Errorf("failed to register update agent handler: %v", err)
 	}
 
-	if err := b.Register(rename_app.NewRenameAppHandler(appRepository, config.GetAppsTemplatesPath(), config.GetAppsCurrentVersionFolder())); err != nil {
+	if err := b.Register(rename_app.NewRenameAppHandler(appRepository, config.GetAppsTemplatesPath(), versionService)); err != nil {
 		return log.Errorf("failed to register rename app handler: %v", err)
 	}
 
