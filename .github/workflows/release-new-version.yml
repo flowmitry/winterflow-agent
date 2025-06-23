@@ -12,6 +12,11 @@ on:
         required: true
         type: boolean
         default: false
+      release_message:
+        description: 'Release message (optional)'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: "winterflow-agent-release"
@@ -72,6 +77,7 @@ jobs:
             winterflow-agent-linux-* \
             winterflow-agent-darwin-* \
             --title "Release ${{ github.event.inputs.version }}" \
+            --notes "${{ github.event.inputs.release_message }}" \
             --draft=false \
             --prerelease=${{ github.event.inputs.prerelease }}
 
