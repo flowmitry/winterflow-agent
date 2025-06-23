@@ -30,7 +30,18 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 
 	// Prevent renaming: if the application already exists, always keep the original name stored on disk.
 	baseDir := filepath.Join(h.AppsTemplatesPath, app.ID)
+	// Ensure the base directory for the application exists. This is required so that subsequent
+	// operations (like reading a previous config or creating version directories) do not fail
+	// due to a missing parent path.
+	if err := os.MkdirAll(baseDir, 0o755); err != nil {
+		return fmt.Errorf("error creating base directory %s: %w", baseDir, err)
+	}
 	versionDir := filepath.Join(baseDir, h.AppsCurrentVersion)
+	// Ensure the version directory exists so that configuration and other files can be
+	// safely read/written even before the broader directory initialisation later on.
+	if err := os.MkdirAll(versionDir, 0o755); err != nil {
+		return fmt.Errorf("error creating version directory %s: %w", versionDir, err)
+	}
 
 	existingCfgPath := filepath.Join(versionDir, "config.json")
 	var prevFiles []model.AppFile

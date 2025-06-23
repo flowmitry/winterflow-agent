@@ -27,6 +27,16 @@ func dirExists(path string) bool {
 	return info.IsDir()
 }
 
+// ensureDir checks if the given directory exists and creates it (including
+// parent directories) if it does not. It returns an error only if the
+// directory does not exist and cannot be created.
+func ensureDir(path string) error {
+	if dirExists(path) {
+		return nil
+	}
+	return os.MkdirAll(path, 0o755) // Create with typical rwxr-xr-x permissions
+}
+
 // getAppName reads the app's config.json located in the current-version folder
 // and returns the `name` field. It falls back to appID if anything goes wrong.
 func (r *composeRepository) getAppName(appID string) (string, error) {

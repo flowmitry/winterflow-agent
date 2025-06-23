@@ -10,6 +10,10 @@ import (
 
 // DeployApp renders templates for the given version of an application and starts the containers.
 func (r *composeRepository) DeployApp(appID, appVersion string) error {
+	// Ensure the base applications directory exists before proceeding.
+	if err := ensureDir(r.config.GetAppsPath()); err != nil {
+		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
+	}
 	templateDir := filepath.Join(r.config.GetAppsTemplatesPath(), appID, appVersion)
 
 	appName, err := r.getAppName(appID)
@@ -58,6 +62,10 @@ func (r *composeRepository) DeployApp(appID, appVersion string) error {
 
 // StopApp stops all containers belonging to the specified application.
 func (r *composeRepository) StopApp(appID string) error {
+	// Ensure the base applications directory exists.
+	if err := ensureDir(r.config.GetAppsPath()); err != nil {
+		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
+	}
 	appName, err := r.getAppName(appID)
 	if err != nil {
 		return fmt.Errorf("cannot stop app: %w", err)
@@ -82,6 +90,9 @@ func (r *composeRepository) StopApp(appID string) error {
 
 // RestartApp restarts containers of the given application.
 func (r *composeRepository) RestartApp(appID, appVersion string) error {
+	if err := ensureDir(r.config.GetAppsPath()); err != nil {
+		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
+	}
 	// Path to template files for the requested version.
 	templateDir := filepath.Join(r.config.GetAppsTemplatesPath(), appID, appVersion)
 
@@ -131,6 +142,9 @@ func (r *composeRepository) RestartApp(appID, appVersion string) error {
 
 // UpdateApp pulls the latest images for the project and recreates containers.
 func (r *composeRepository) UpdateApp(appID string) error {
+	if err := ensureDir(r.config.GetAppsPath()); err != nil {
+		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
+	}
 	appName, err := r.getAppName(appID)
 	if err != nil {
 		return fmt.Errorf("cannot update app: %w", err)
@@ -156,6 +170,9 @@ func (r *composeRepository) UpdateApp(appID string) error {
 
 // DeleteApp stops containers (ignoring errors) – additional cleanup is handled elsewhere.
 func (r *composeRepository) DeleteApp(appID string) error {
+	if err := ensureDir(r.config.GetAppsPath()); err != nil {
+		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
+	}
 	_ = r.StopApp(appID)
 	log.Debug("[Delete] stopping app completed", "app_id", appID)
 	log.Info("[Delete] docker compose cleanup completed", "app_id", appID)
@@ -164,6 +181,9 @@ func (r *composeRepository) DeleteApp(appID string) error {
 
 // RenameApp renames the compose project directory and restarts containers under the new name.
 func (r *composeRepository) RenameApp(appID, appName string) error {
+	if err := ensureDir(r.config.GetAppsPath()); err != nil {
+		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
+	}
 	oldName, err := r.getAppName(appID)
 	if err != nil {
 		return fmt.Errorf("cannot rename app: %w", err)
