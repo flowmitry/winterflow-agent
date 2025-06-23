@@ -104,12 +104,13 @@ func (h *SaveAppHandler) writeConfig(versionDir string, cfg *model.AppConfig) er
 
 // syncTemplates keeps the templates directory in sync with cfg.Files and contentMap.
 func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig, contentMap model.FilesMap) error {
-	// Build sets for quick look-ups
+	// Build sets for quick look-ups and helper maps for encryption handling.
 	expected := make(map[string]model.AppFile) // filename -> AppFile
-	idToFilename := make(map[string]string)
+	idToFile := make(map[string]model.AppFile) // file ID -> full AppFile (for IsEncrypted flag)
+
 	for _, f := range cfg.Files {
 		expected[f.Filename] = f
-		idToFilename[f.ID] = f.Filename
+		idToFile[f.ID] = f
 	}
 
 	// Remove obsolete .j2 files inside /files directory
@@ -128,15 +129,50 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 		}
 	}
 
-	// Write/update templates provided in the request
+	// Write/update templates provided in the request respecting encryption flags.
 	for id, content := range contentMap {
-		filename, ok := idToFilename[id]
+		fileMeta, ok := idToFile[id]
 		if !ok {
-			log.Warn("No filename found for file ID %s, skipping", id)
+			log.Warn("No metadata found for file ID %s, skipping", id)
 			continue
 		}
 
+		filename := fileMeta.Filename
 		targetPath := filepath.Join(templatesDir, filename+".j2")
+
+		// Handle encrypted files.
+		if fileMeta.IsEncrypted {
+			plaintext := []byte{}
+
+			// If the placeholder is passed, we keep the existing file unchanged.
+			if string(content) == "<encrypted>" {
+				log.Debug("Placeholder received for encrypted file %s (ID: %s), keeping existing file", filename, id)
+				continue
+			}
+
+			// Attempt decryption using agent's private key, if available.
+			if h.PrivateKeyPath != "" {
+				dec, err := certs.DecryptWithPrivateKey(h.PrivateKeyPath, string(content))
+				if err != nil {
+					log.Warn("Failed to decrypt file %s: %v", filename, err)
+					// Fallback: store the original encrypted payload to disk to avoid data loss.
+					plaintext = content
+				} else {
+					plaintext = []byte(dec)
+				}
+			} else {
+				// No private key – store encrypted payload as-is.
+				plaintext = content
+			}
+
+			if err := os.WriteFile(targetPath, plaintext, 0o644); err != nil {
+				return fmt.Errorf("error writing template %s: %w", targetPath, err)
+			}
+			log.Debug("Wrote (decrypted) template: %s", targetPath)
+			continue
+		}
+
+		// Non-encrypted file – write content as-is.
 		if err := os.WriteFile(targetPath, content, 0o644); err != nil {
 			return fmt.Errorf("error writing template %s: %w", targetPath, err)
 		}
