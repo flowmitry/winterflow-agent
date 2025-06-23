@@ -1,10 +1,8 @@
-# WinterFlow Agent - in development
-
-@TODO
+# WinterFlow Agent
 
 ## Requirements
 
-- Recommended OS: Ubuntu 22+ or Debian 12+.
+- Recommended OS: Any modern Unix system.
 - System Resources: at least 1 vCPU and 2GB RAM for Docker.
 - Software: jq, curl, [docker](https://docs.docker.com/engine/install/), [docker compose (plugin)](https://docs.docker.com/compose/install/linux/)
 
@@ -24,6 +22,7 @@ at [https://app.winterflow.io](https://app.winterflow.io).
 ## Manual Agent installation
 
 You can manually download and execute the [./install.sh](./install.sh) script with `sudo`.
+
 
 ### Manual Agent Registration
 
@@ -98,5 +97,6 @@ The following directories and files are part of the WinterFlow Agent's directory
 * `/opt/winterflow` - The root directory of the WinterFlow Agent.
 * `/opt/winterflow/agent` - This directory contains the agent binary.
 * `/opt/winterflow/agent.config.json` - The configuration file for the agent.
+* `/opt/winterflow/.certs` - Your private/public keys.
+* `/opt/winterflow/apps_templates` - This directory holds your apps versions.
 * `/opt/winterflow/apps` - The directory holds the Docker Compose files to run your apps.
-* `/opt/winterflow/apps_templates` - This directory holds your apps versions
