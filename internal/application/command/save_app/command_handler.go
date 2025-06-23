@@ -3,6 +3,7 @@ package save_app
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,6 +33,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	versionDir := filepath.Join(baseDir, h.AppsCurrentVersion)
 
 	existingCfgPath := filepath.Join(versionDir, "config.json")
+	var prevFiles []model.AppFile
 	if data, err := os.ReadFile(existingCfgPath); err == nil {
 		if existingCfg, err := model.ParseAppConfig(data); err == nil {
 			// If the stored name differs from the incoming one, keep the old name.
@@ -41,6 +43,9 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 				log.Info("[SaveApp] Rename attempted from '%s' to '%s' for app ID %s – keeping the original name", incomingName, storedName, app.ID)
 				app.Config.Name = existingCfg.Name
 			}
+
+			// Preserve previous files metadata for rename detection
+			prevFiles = existingCfg.Files
 		}
 	}
 
@@ -77,7 +82,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	}
 
 	// 3. Sync template files to /files directory
-	if err := h.syncTemplates(dirs["files"], app.Config, app.Files); err != nil {
+	if err := h.syncTemplates(dirs["files"], app.Config, prevFiles, app.Files); err != nil {
 		return err
 	}
 
@@ -103,33 +108,118 @@ func (h *SaveAppHandler) writeConfig(versionDir string, cfg *model.AppConfig) er
 }
 
 // syncTemplates keeps the templates directory in sync with cfg.Files and contentMap.
-func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig, contentMap model.FilesMap) error {
-	// Build sets for quick look-ups and helper maps for encryption handling.
-	expected := make(map[string]model.AppFile) // filename -> AppFile
-	idToFile := make(map[string]model.AppFile) // file ID -> full AppFile (for IsEncrypted flag)
+func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig, prevFiles []model.AppFile, contentMap model.FilesMap) error {
+	// Build helper maps for quick look-ups.
+	expected := make(map[string]model.AppFile) // filename (as provided in cfg) -> AppFile
+	idToFile := make(map[string]model.AppFile) // file ID -> AppFile
+	prevIDToFile := make(map[string]model.AppFile)
 
 	for _, f := range cfg.Files {
 		expected[f.Filename] = f
 		idToFile[f.ID] = f
 	}
-
-	// Remove obsolete .j2 files inside /files directory
-	existing, err := filepath.Glob(filepath.Join(templatesDir, "*.j2"))
-	if err != nil {
-		return fmt.Errorf("error listing template files: %w", err)
+	for _, f := range prevFiles {
+		prevIDToFile[f.ID] = f
 	}
-	for _, path := range existing {
-		name := filepath.Base(path)
-		name = name[:len(name)-3] // strip .j2
-		if _, ok := expected[name]; !ok {
+
+	// ---------------------------------------------------------------------
+	// 0. Handle renames when file content is not provided (encrypted placeholder).
+	// ---------------------------------------------------------------------
+	for id, newMeta := range idToFile {
+		prevMeta, ok := prevIDToFile[id]
+		if !ok {
+			continue // new file or unknown – nothing to rename
+		}
+
+		if prevMeta.Filename == newMeta.Filename {
+			continue // same path – nothing to rename
+		}
+
+		// If the client sends placeholder for encrypted file, we need to move/copy
+		content, ok := contentMap[id]
+		if !ok || string(content) != "<encrypted>" {
+			// Either content provided or not encrypted – regular flow will handle
+			continue
+		}
+
+		// Compute old and new paths.
+		oldRel := filepath.FromSlash(prevMeta.Filename)
+		oldRel = strings.TrimLeft(oldRel, string(os.PathSeparator))
+		oldPath := filepath.Join(templatesDir, oldRel+".j2")
+
+		newRel := filepath.FromSlash(newMeta.Filename)
+		newRel = strings.TrimLeft(newRel, string(os.PathSeparator))
+		newPath := filepath.Join(templatesDir, newRel+".j2")
+
+		// Ensure target directory.
+		if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
+			return fmt.Errorf("error creating directories for %s: %w", newPath, err)
+		}
+
+		// Copy file bytes.
+		data, err := os.ReadFile(oldPath)
+		if err != nil {
+			log.Warn("Failed to read source file %s for rename: %v", oldPath, err)
+			continue
+		}
+
+		if err := os.WriteFile(newPath, data, 0o644); err != nil {
+			return fmt.Errorf("error writing renamed template %s: %w", newPath, err)
+		}
+		log.Debug("Copied template from %s to %s (rename)", oldPath, newPath)
+	}
+
+	// ---------------------------------------------------------------------
+	// 1. Delete obsolete templates (recursive walk).
+	// ---------------------------------------------------------------------
+	// Build a set with expected absolute paths (with .j2 suffix).
+	expectedPaths := make(map[string]struct{})
+	for filename := range expected {
+		// Ensure filename is always treated as a relative path (no leading separators)
+		rel := filepath.FromSlash(filename)
+		rel = strings.TrimLeft(rel, string(os.PathSeparator))
+		relPath := rel + ".j2"
+		expectedPaths[filepath.Clean(filepath.Join(templatesDir, relPath))] = struct{}{}
+	}
+
+	// Walk through existing files and remove any .j2 that is not expected.
+	if err := filepath.WalkDir(templatesDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(d.Name(), ".j2") {
+			return nil
+		}
+
+		if _, ok := expectedPaths[filepath.Clean(path)]; !ok {
 			if err := os.Remove(path); err != nil {
 				return fmt.Errorf("error removing obsolete template %s: %w", path, err)
 			}
 			log.Debug("Deleted obsolete template: %s", path)
+
+			// Attempt to clean up empty directories up the chain.
+			dir := filepath.Dir(path)
+			for dir != templatesDir {
+				entries, _ := os.ReadDir(dir)
+				if len(entries) == 0 {
+					_ = os.Remove(dir)
+					dir = filepath.Dir(dir)
+				} else {
+					break
+				}
+			}
 		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
-	// Write/update templates provided in the request respecting encryption flags.
+	// ---------------------------------------------------------------------
+	// 2. Write / update templates sent in the request.
+	// ---------------------------------------------------------------------
 	for id, content := range contentMap {
 		fileMeta, ok := idToFile[id]
 		if !ok {
@@ -137,32 +227,40 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			continue
 		}
 
-		filename := fileMeta.Filename
-		targetPath := filepath.Join(templatesDir, filename+".j2")
+		relFilename := filepath.FromSlash(fileMeta.Filename)
+		relFilename = strings.TrimLeft(relFilename, string(os.PathSeparator))
+		targetPath := filepath.Join(templatesDir, relFilename+".j2")
+
+		// Ensure the directory for the file exists.
+		if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
+			return fmt.Errorf("error creating directories for %s: %w", targetPath, err)
+		}
 
 		// Handle encrypted files.
 		if fileMeta.IsEncrypted {
-			plaintext := []byte{}
-
-			// If the placeholder is passed, we keep the existing file unchanged.
+			// Handle placeholder without breaking creation of brand-new encrypted files.
 			if string(content) == "<encrypted>" {
-				log.Debug("Placeholder received for encrypted file %s (ID: %s), keeping existing file", filename, id)
+				if _, err := os.Stat(targetPath); err == nil {
+					// File already exists – nothing to overwrite.
+					log.Debug("Placeholder received for encrypted file %s (ID: %s), keeping existing file", fileMeta.Filename, id)
+					continue
+				}
+
+				// New file with placeholder – create an empty stub so that path exists on disk.
+				if err := os.WriteFile(targetPath, []byte("<encrypted>"), 0o644); err != nil {
+					return fmt.Errorf("error writing placeholder template %s: %w", targetPath, err)
+				}
+				log.Debug("Created placeholder for new encrypted file: %s", targetPath)
 				continue
 			}
 
-			// Attempt decryption using agent's private key, if available.
+			plaintext := content
 			if h.PrivateKeyPath != "" {
-				dec, err := certs.DecryptWithPrivateKey(h.PrivateKeyPath, string(content))
-				if err != nil {
-					log.Warn("Failed to decrypt file %s: %v", filename, err)
-					// Fallback: store the original encrypted payload to disk to avoid data loss.
-					plaintext = content
-				} else {
+				if dec, err := certs.DecryptWithPrivateKey(h.PrivateKeyPath, string(content)); err == nil {
 					plaintext = []byte(dec)
+				} else {
+					log.Warn("Failed to decrypt file %s: %v", fileMeta.Filename, err)
 				}
-			} else {
-				// No private key – store encrypted payload as-is.
-				plaintext = content
 			}
 
 			if err := os.WriteFile(targetPath, plaintext, 0o644); err != nil {
@@ -172,7 +270,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			continue
 		}
 
-		// Non-encrypted file – write content as-is.
+		// Non-encrypted files – write content as-is.
 		if err := os.WriteFile(targetPath, content, 0o644); err != nil {
 			return fmt.Errorf("error writing template %s: %w", targetPath, err)
 		}
