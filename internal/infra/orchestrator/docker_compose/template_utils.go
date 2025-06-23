@@ -3,6 +3,7 @@ package docker_compose
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,41 +34,78 @@ func (r *composeRepository) loadTemplateVariables(templateDir string) (map[strin
 
 // renderTemplates processes all *.j2 files from templateDir/files into destDir performing a naïve variable substitution.
 func (r *composeRepository) renderTemplates(templateDir, destDir string, vars map[string]string) error {
-	pattern := filepath.Join(templateDir, "files", "*.j2")
-	files, err := filepath.Glob(pattern)
-	if err != nil {
-		return fmt.Errorf("failed to list template files: %w", err)
-	}
+	filesRoot := filepath.Join(templateDir, "files")
 
-	for _, src := range files {
-		contentBytes, err := os.ReadFile(src)
+	walkFn := func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+
+		// Determine the destination relative to filesRoot.
+		relPath, err := filepath.Rel(filesRoot, path)
 		if err != nil {
-			return fmt.Errorf("failed to read template %s: %w", src, err)
+			return fmt.Errorf("failed to calculate relative path: %w", err)
 		}
-		content := string(contentBytes)
 
-		// Very simple substitution – we don't need full Jinja support.
-		for name, value := range vars {
-			patterns := []string{
-				fmt.Sprintf("{{ %s }}", name),
-				fmt.Sprintf("{{%s }}", name),
-				fmt.Sprintf("{{ %s}}", name),
-				fmt.Sprintf("{{%s}}", name),
+		destPath := filepath.Join(destDir, relPath)
+
+		// Handle directories by ensuring they exist in the destination.
+		if d.IsDir() {
+			if err := os.MkdirAll(destPath, 0o755); err != nil {
+				return fmt.Errorf("failed to create directory %s: %w", destPath, err)
 			}
-			for _, p := range patterns {
-				content = strings.ReplaceAll(content, p, value)
+			return nil
+		}
+
+		// For files, process depending on extension.
+		if strings.HasSuffix(d.Name(), ".j2") {
+			// Render template file.
+			contentBytes, err := os.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("failed to read template %s: %w", path, err)
 			}
+			content := string(contentBytes)
+
+			// Naïve variable substitution – full Jinja support not required.
+			for name, value := range vars {
+				patterns := []string{
+					fmt.Sprintf("{{ %s }}", name),
+					fmt.Sprintf("{{%s }}", name),
+					fmt.Sprintf("{{ %s}}", name),
+					fmt.Sprintf("{{%s}}", name),
+				}
+				for _, p := range patterns {
+					content = strings.ReplaceAll(content, p, value)
+				}
+			}
+
+			// Remove any leftover delimiters.
+			content = strings.ReplaceAll(content, "{{", "")
+			content = strings.ReplaceAll(content, "}}", "")
+
+			// Drop the ".j2" extension for destination file.
+			destPath = strings.TrimSuffix(destPath, ".j2")
+
+			if err := os.WriteFile(destPath, []byte(content), 0o644); err != nil {
+				return fmt.Errorf("failed to write rendered template to %s: %w", destPath, err)
+			}
+			return nil
 		}
 
-		// Remove any leftover delimiters.
-		content = strings.ReplaceAll(content, "{{", "")
-		content = strings.ReplaceAll(content, "}}", "")
-
-		dstFilename := strings.TrimSuffix(filepath.Base(src), ".j2")
-		dstPath := filepath.Join(destDir, dstFilename)
-		if err := os.WriteFile(dstPath, []byte(content), 0o644); err != nil {
-			return fmt.Errorf("failed to write rendered template to %s: %w", dstPath, err)
+		// Non-template file – copy as-is.
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("failed to read source file %s: %w", path, err)
 		}
+		if err := os.WriteFile(destPath, data, 0o644); err != nil {
+			return fmt.Errorf("failed to copy file to %s: %w", destPath, err)
+		}
+		return nil
 	}
+
+	if err := filepath.WalkDir(filesRoot, walkFn); err != nil {
+		return fmt.Errorf("failed to process templates: %w", err)
+	}
+
 	return nil
 }

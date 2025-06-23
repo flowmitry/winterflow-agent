@@ -21,6 +21,20 @@ func (r *composeRepository) DeployApp(appID, appVersion string) error {
 	if _, err := os.Stat(templateDir); err != nil {
 		return fmt.Errorf("role directory %s does not exist: %w", templateDir, err)
 	}
+
+	// If the application is already deployed, stop running containers before deleting files.
+	if dirExists(outputDir) {
+		if err := r.composeDown(outputDir); err != nil {
+			return fmt.Errorf("failed to stop running containers before deployment: %w", err)
+		}
+	}
+
+	// Clean up any previously rendered templates to avoid leaving obsolete files.
+	if err := os.RemoveAll(outputDir); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to clean output directory %s: %w", outputDir, err)
+	}
+
+	// Recreate the (now empty) output directory.
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory %s: %w", outputDir, err)
 	}
@@ -67,24 +81,51 @@ func (r *composeRepository) StopApp(appID string) error {
 }
 
 // RestartApp restarts containers of the given application.
-func (r *composeRepository) RestartApp(appID, _ string) error {
+func (r *composeRepository) RestartApp(appID, appVersion string) error {
+	// Path to template files for the requested version.
+	templateDir := filepath.Join(r.config.GetAppsTemplatesPath(), appID, appVersion)
+
+	if _, err := os.Stat(templateDir); err != nil {
+		return fmt.Errorf("template directory %s does not exist: %w", templateDir, err)
+	}
+
+	// Determine the rendered output directory using the current (possibly unchanged) app name.
 	appName, err := r.getAppName(appID)
 	if err != nil {
 		return fmt.Errorf("cannot restart app: %w", err)
 	}
 	appDir := filepath.Join(r.config.GetAppsPath(), appName)
-	if _, err := os.Stat(appDir); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("app directory %s does not exist", appDir)
+
+	// Stop running containers (ignore missing directory case since we may be deploying for the first time).
+	if dirExists(appDir) {
+		if err := r.composeDown(appDir); err != nil {
+			return fmt.Errorf("failed to stop containers before restart: %w", err)
 		}
-		return fmt.Errorf("failed to stat app directory: %w", err)
 	}
 
-	if err := r.composeRestart(appDir); err != nil {
-		return fmt.Errorf("docker compose restart failed: %w", err)
+	// Ensure fresh files.
+	if err := os.RemoveAll(appDir); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to clean output directory %s: %w", appDir, err)
+	}
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		return fmt.Errorf("failed to recreate output directory %s: %w", appDir, err)
 	}
 
-	log.Info("[Restart] successfully restarted app", "app_id", appID)
+	// Load variables and render templates recursively.
+	vars, err := r.loadTemplateVariables(templateDir)
+	if err != nil {
+		return fmt.Errorf("failed to load template variables: %w", err)
+	}
+	if err := r.renderTemplates(templateDir, appDir, vars); err != nil {
+		return fmt.Errorf("failed to render templates: %w", err)
+	}
+
+	// Start containers with updated files.
+	if err := r.composeUp(appDir); err != nil {
+		return fmt.Errorf("docker compose up failed after restart: %w", err)
+	}
+
+	log.Info("[Restart] successfully restarted app with updated files", "app_id", appID, "version", appVersion)
 	return nil
 }
 
