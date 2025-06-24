@@ -7,7 +7,7 @@ import (
 	"winterflow-agent/internal/application/command/rename_app"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // Domain to Infrastructure transformations
@@ -245,9 +245,8 @@ func ProtoControlAppRequestV1ToControlAppCommand(request *pb.ControlAppRequestV1
 	}
 
 	return control_app.ControlAppCommand{
-		AppID:      request.AppId,
-		AppVersion: request.AppVersion,
-		Action:     action,
+		AppID:  request.AppId,
+		Action: action,
 	}
 }
 

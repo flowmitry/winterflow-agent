@@ -5,7 +5,7 @@ import (
 	"time"
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/pkg/files"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // ConfigWatcher watches a configuration file for changes

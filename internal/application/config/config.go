@@ -48,9 +48,11 @@ const (
 	defaultLogsPath = "/var/log/winterflow"
 
 	// Apps folders
-	appsFolder               = "apps"
-	appsTemplatesFolder      = "apps_templates"
-	appsCurrentVersionFolder = "00001"
+	appsFolder          = "apps"
+	appsTemplatesFolder = "apps_templates"
+
+	// Apps versions
+	appsKeepVersions = 3
 
 	// certificatesFolder is the default directory path for storing certificates.
 	certificatesFolder = ".certs"
@@ -72,8 +74,6 @@ type Config struct {
 	AgentID     string          `json:"agent_id"`
 	AgentStatus AgentStatus     `json:"agent_status"`
 	Features    map[string]bool `json:"features"`
-	// Email specifies the email address associated with the agent
-	Email string `json:"email,omitempty"`
 	// BasePath specifies the root directory used to store application-related files and configurations.
 	BasePath string `json:"base_path,omitempty"`
 	// LogsPath specifies the directory where log files are stored.
@@ -272,10 +272,6 @@ func (c *Config) GetAppsTemplatesPath() string {
 	return c.buildPath(appsTemplatesFolder)
 }
 
-func (c *Config) GetAppsCurrentVersionFolder() string {
-	return appsCurrentVersionFolder
-}
-
 func (c *Config) GetCertificatesPath() string {
 	return c.buildPath(c.GetCertificatesFolder())
 }
@@ -348,7 +344,7 @@ func (c *Config) GetGitHubReleasesURL() string {
 	return gitHubReleasesURL
 }
 
-// GetEmail returns the email address associated with the agent
-func (c *Config) GetEmail() string {
-	return c.Email
+// GetKeepAppVersions returns the number of application versions to keep.
+func (c *Config) GetKeepAppVersions() int {
+	return appsKeepVersions
 }

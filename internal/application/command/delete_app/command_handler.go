@@ -4,14 +4,13 @@ import (
 	"os"
 	"path/filepath"
 	"winterflow-agent/internal/domain/repository"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // DeleteAppHandler handles the DeleteAppCommand
 type DeleteAppHandler struct {
-	repository         repository.AppRepository
-	AppsTemplatesPath  string
-	AppsCurrentVersion string
+	repository        repository.AppRepository
+	AppsTemplatesPath string
 }
 
 // Handle executes the DeleteAppCommand
@@ -47,10 +46,9 @@ func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
 }
 
 // NewDeleteAppHandler creates a new DeleteAppHandler
-func NewDeleteAppHandler(repository repository.AppRepository, appsTemplatesPath, appsCurrentVersion string) *DeleteAppHandler {
+func NewDeleteAppHandler(repository repository.AppRepository, appsTemplatesPath string) *DeleteAppHandler {
 	return &DeleteAppHandler{
-		repository:         repository,
-		AppsTemplatesPath:  appsTemplatesPath,
-		AppsCurrentVersion: appsCurrentVersion,
+		repository:        repository,
+		AppsTemplatesPath: appsTemplatesPath,
 	}
 }

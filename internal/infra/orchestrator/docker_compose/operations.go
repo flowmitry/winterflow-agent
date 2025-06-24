@@ -4,19 +4,25 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	log "winterflow-agent/pkg/log"
+	appsvc "winterflow-agent/internal/domain/service/app"
+	"winterflow-agent/pkg/log"
 )
 
 // DeployApp renders templates for the given version of an application and starts the containers.
-func (r *composeRepository) DeployApp(appID, appVersion string) error {
+func (r *composeRepository) DeployApp(appID string) error {
 	// Ensure the base applications directory exists before proceeding.
 	if err := ensureDir(r.config.GetAppsPath()); err != nil {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
-	templateDir := filepath.Join(r.config.GetAppsTemplatesPath(), appID, appVersion)
 
-	appName, err := r.getAppName(appID)
+	versionService := appsvc.NewAppVersionService(r.config)
+	latest, err := versionService.GetLatestAppVersion(appID)
+	if err != nil {
+		return fmt.Errorf("failed to determine latest version for app %s: %w", appID, err)
+	}
+
+	templateDir := versionService.GetVersionDir(appID, latest)
+	appName, err := r.getAppName(templateDir)
 	if err != nil {
 		return fmt.Errorf("cannot deploy app: %w", err)
 	}
@@ -56,7 +62,7 @@ func (r *composeRepository) DeployApp(appID, appVersion string) error {
 		return fmt.Errorf("docker compose up failed: %w", err)
 	}
 
-	log.Info("[Deploy] successfully deployed app", "app_id", appID, "app_name", appName, "version", appVersion)
+	log.Info("[Deploy] successfully deployed app", "app_id", appID, "app_name", appName, "version", latest)
 	return nil
 }
 
@@ -66,7 +72,7 @@ func (r *composeRepository) StopApp(appID string) error {
 	if err := ensureDir(r.config.GetAppsPath()); err != nil {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
-	appName, err := r.getAppName(appID)
+	appName, err := r.getAppNameById(appID)
 	if err != nil {
 		return fmt.Errorf("cannot stop app: %w", err)
 	}
@@ -89,19 +95,23 @@ func (r *composeRepository) StopApp(appID string) error {
 }
 
 // RestartApp restarts containers of the given application.
-func (r *composeRepository) RestartApp(appID, appVersion string) error {
+func (r *composeRepository) RestartApp(appID string) error {
 	if err := ensureDir(r.config.GetAppsPath()); err != nil {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
-	// Path to template files for the requested version.
-	templateDir := filepath.Join(r.config.GetAppsTemplatesPath(), appID, appVersion)
+
+	versionService := appsvc.NewAppVersionService(r.config)
+	latest, err := versionService.GetLatestAppVersion(appID)
+	if err != nil {
+		return fmt.Errorf("failed to determine latest version for app %s: %w", appID, err)
+	}
+	templateDir := versionService.GetVersionDir(appID, latest)
 
 	if _, err := os.Stat(templateDir); err != nil {
 		return fmt.Errorf("template directory %s does not exist: %w", templateDir, err)
 	}
 
-	// Determine the rendered output directory using the current (possibly unchanged) app name.
-	appName, err := r.getAppName(appID)
+	appName, err := r.getAppName(templateDir)
 	if err != nil {
 		return fmt.Errorf("cannot restart app: %w", err)
 	}
@@ -136,7 +146,7 @@ func (r *composeRepository) RestartApp(appID, appVersion string) error {
 		return fmt.Errorf("docker compose up failed after restart: %w", err)
 	}
 
-	log.Info("[Restart] successfully restarted app with updated files", "app_id", appID, "version", appVersion)
+	log.Info("[Restart] successfully restarted app with updated files", "app_id", appID, "version", latest)
 	return nil
 }
 
@@ -145,7 +155,7 @@ func (r *composeRepository) UpdateApp(appID string) error {
 	if err := ensureDir(r.config.GetAppsPath()); err != nil {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
-	appName, err := r.getAppName(appID)
+	appName, err := r.getAppNameById(appID)
 	if err != nil {
 		return fmt.Errorf("cannot update app: %w", err)
 	}
@@ -184,7 +194,7 @@ func (r *composeRepository) RenameApp(appID, appName string) error {
 	if err := ensureDir(r.config.GetAppsPath()); err != nil {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
-	oldName, err := r.getAppName(appID)
+	oldName, err := r.getAppNameById(appID)
 	if err != nil {
 		return fmt.Errorf("cannot rename app: %w", err)
 	}

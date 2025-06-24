@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // composeUp performs `docker compose up -d` in the provided directory.

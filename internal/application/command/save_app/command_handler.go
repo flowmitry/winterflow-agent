@@ -8,15 +8,16 @@ import (
 	"path/filepath"
 	"strings"
 	"winterflow-agent/internal/domain/model"
+	"winterflow-agent/internal/domain/service/app"
 	"winterflow-agent/pkg/certs"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // SaveAppHandler handles the SaveAppCommand
 type SaveAppHandler struct {
-	AppsTemplatesPath  string
-	AppsCurrentVersion string
-	PrivateKeyPath     string
+	AppsTemplatesPath string
+	PrivateKeyPath    string
+	versionService    app.AppVersionServiceInterface
 }
 
 // Handle executes the SaveAppCommand
@@ -30,18 +31,33 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 
 	// Prevent renaming: if the application already exists, always keep the original name stored on disk.
 	baseDir := filepath.Join(h.AppsTemplatesPath, app.ID)
+
 	// Ensure the base directory for the application exists. This is required so that subsequent
 	// operations (like reading a previous config or creating version directories) do not fail
 	// due to a missing parent path.
 	if err := os.MkdirAll(baseDir, 0o755); err != nil {
 		return fmt.Errorf("error creating base directory %s: %w", baseDir, err)
 	}
-	versionDir := filepath.Join(baseDir, h.AppsCurrentVersion)
-	// Ensure the version directory exists so that configuration and other files can be
-	// safely read/written even before the broader directory initialisation later on.
-	if err := os.MkdirAll(versionDir, 0o755); err != nil {
-		return fmt.Errorf("error creating version directory %s: %w", versionDir, err)
+
+	// -------------------------------------------------------------------
+	// Version handling – always create a fresh version before applying the
+	// incoming changes. If a version service is configured, we rely on it to
+	// duplicate the latest version (thereby preserving the existing state).
+	// If it is not available we fall back to the configured current version
+	// folder (legacy behaviour).
+	// -------------------------------------------------------------------
+	if h.versionService == nil {
+		return fmt.Errorf("version service is not configured for SaveAppHandler")
 	}
+
+	newVersion, err := h.versionService.CreateVersion(app.ID)
+	if err != nil {
+		return fmt.Errorf("failed to create new version for app %s: %w", app.ID, err)
+	}
+
+	// Use the service helpers to construct version specific paths
+	versionDir := h.versionService.GetVersionDir(app.ID, newVersion)
+	log.Debug("Created new version %d for app %s", newVersion, app.ID)
 
 	existingCfgPath := filepath.Join(versionDir, "config.json")
 	var prevFiles []model.AppFile
@@ -76,8 +92,8 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	// Resolve important directories once (baseDir & versionDir already calculated above)
 	dirs := map[string]string{
 		"version": versionDir,
-		"vars":    filepath.Join(versionDir, "vars"),
-		"files":   filepath.Join(versionDir, "files"),
+		"vars":    h.versionService.GetVarsDir(app.ID, newVersion),
+		"files":   h.versionService.GetFilesDir(app.ID, newVersion),
 	}
 
 	// 1. Ensure directory structure exists
@@ -100,6 +116,14 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	// 4. Write vars JSON file (secrets are stored together with regular variables)
 	if err := h.writeVars(dirs["vars"], app.Config, app.Variables); err != nil {
 		return err
+	}
+
+	// 5. Clean up old versions if we have a version service
+	if err := h.versionService.DeleteOldVersions(app.ID); err != nil {
+		log.Warn("Failed to clean up old versions for app %s: %v", app.ID, err)
+		// Don't fail the save operation if cleanup fails
+	} else {
+		log.Debug("Successfully cleaned up old versions for app %s", app.ID)
 	}
 
 	return nil
@@ -372,7 +396,18 @@ func (h *SaveAppHandler) isNameUnique(name string, currentAppID string) (bool, e
 			continue
 		}
 
-		cfgPath := filepath.Join(h.AppsTemplatesPath, appID, h.AppsCurrentVersion, "config.json")
+		// Resolve the latest version for the application so we always check the most up-to-date config.
+		latestVersion, err := h.versionService.GetLatestAppVersion(appID)
+		if err != nil {
+			// If we cannot determine the latest version, skip this application – not critical.
+			continue
+		}
+		if latestVersion == 0 {
+			// Application does not have any versions yet (should not normally happen).
+			continue
+		}
+
+		cfgPath := filepath.Join(h.versionService.GetVersionDir(appID, latestVersion), "config.json")
 		data, err := os.ReadFile(cfgPath)
 		if err != nil {
 			continue // ignore missing configs or read errors – not critical for uniqueness check
@@ -399,10 +434,10 @@ type SaveAppResult struct {
 }
 
 // NewSaveAppHandler creates a new SaveAppHandler
-func NewSaveAppHandler(appsTemplatesPath, appsCurrentVersion, privateKeyPath string) *SaveAppHandler {
+func NewSaveAppHandler(appsTemplatesPath, privateKeyPath string, versionService app.AppVersionServiceInterface) *SaveAppHandler {
 	return &SaveAppHandler{
-		AppsTemplatesPath:  appsTemplatesPath,
-		AppsCurrentVersion: appsCurrentVersion,
-		PrivateKeyPath:     privateKeyPath,
+		AppsTemplatesPath: appsTemplatesPath,
+		PrivateKeyPath:    privateKeyPath,
+		versionService:    versionService,
 	}
 }

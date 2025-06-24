@@ -14,7 +14,8 @@ const (
 	DefaultReconnectInterval        = 5 * time.Second
 	DefaultMaximumReconnectInterval = 320 * time.Second
 	DefaultConnectionTimeout        = 30 * time.Second
-	HeartbeatInterval               = 5 * time.Second // unified heartbeat cadence
+	HeartbeatInterval               = 10 * time.Second // unified heartbeat cadence
+	MetricsInterval                 = 60 * time.Second // interval for sending metrics
 )
 
 // ErrUnrecoverable is returned by RegisterAgent when the server indicates that

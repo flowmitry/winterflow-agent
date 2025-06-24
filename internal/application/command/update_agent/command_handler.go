@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"winterflow-agent/internal/application/config"
 	agentversion "winterflow-agent/internal/application/version"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // UpdateAgentHandler handles the UpdateAgentCommand
