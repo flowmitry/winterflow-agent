@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // GetAppsStatusQueryHandler handles the GetAppsStatusQuery

@@ -7,7 +7,7 @@ import (
 	"winterflow-agent/internal/application/command/rename_app"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // Domain to Infrastructure transformations

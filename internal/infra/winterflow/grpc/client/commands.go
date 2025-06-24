@@ -7,7 +7,7 @@ import (
 	"winterflow-agent/internal/application/command/update_agent"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	"winterflow-agent/pkg/cqrs"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // HandleSaveAppRequest handles the command dispatch and creates the appropriate response message
@@ -19,8 +19,8 @@ func HandleSaveAppRequest(commandBus cqrs.CommandBus, saveAppRequest *pb.SaveApp
 		App: app,
 	}
 
-	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
-	var responseMessage string = "App saved successfully"
+	var responseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	var responseMessage = "App saved successfully"
 
 	// Dispatch the command to the handler
 	if err := commandBus.Dispatch(cmd); err != nil {
@@ -52,8 +52,8 @@ func HandleDeleteAppRequest(commandBus cqrs.CommandBus, deleteAppRequest *pb.Del
 		AppID: deleteAppRequest.AppId,
 	}
 
-	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
-	var responseMessage string = "App deleted successfully"
+	var responseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	var responseMessage = "App deleted successfully"
 
 	// Dispatch the command to the handler
 	if err := commandBus.Dispatch(cmd); err != nil {
@@ -83,8 +83,8 @@ func HandleControlAppRequest(commandBus cqrs.CommandBus, controlAppRequest *pb.C
 	// Create and dispatch the command
 	cmd := ProtoControlAppRequestV1ToControlAppCommand(controlAppRequest)
 
-	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
-	var responseMessage string = "App control action executed successfully"
+	var responseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	var responseMessage = "App control action executed successfully"
 
 	// Dispatch the command to the handler
 	if err := commandBus.Dispatch(cmd); err != nil {
@@ -116,8 +116,8 @@ func HandleUpdateAgentRequest(commandBus cqrs.CommandBus, updateAgentRequest *pb
 		Version: updateAgentRequest.Version,
 	}
 
-	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
-	var responseMessage string = "Agent update initiated successfully"
+	var responseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	var responseMessage = "Agent update initiated successfully"
 
 	// Dispatch the command to the handler
 	if err := commandBus.Dispatch(cmd); err != nil {
@@ -147,8 +147,8 @@ func HandleRenameAppRequest(commandBus cqrs.CommandBus, renameAppRequest *pb.Ren
 	// Create and dispatch the command
 	cmd := ProtoRenameAppRequestV1ToRenameAppCommand(renameAppRequest)
 
-	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
-	var responseMessage string = "App renamed successfully"
+	var responseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	var responseMessage = "App renamed successfully"
 
 	// Dispatch the command to the handler
 	if err := commandBus.Dispatch(cmd); err != nil {

@@ -5,7 +5,7 @@ import (
     "os"
     "path/filepath"
     appsvc "winterflow-agent/internal/domain/service/app"
-    log "winterflow-agent/pkg/log"
+    "winterflow-agent/pkg/log"
 )
 
 // DeployApp renders templates for the given version of an application and starts the containers.

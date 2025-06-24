@@ -7,7 +7,7 @@ import (
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	"winterflow-agent/pkg/cqrs"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // HandleGetAppQuery handles the query dispatch and creates the appropriate response message
@@ -20,8 +20,8 @@ func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1
 		AppVersion: getAppRequest.AppVersion,
 	}
 
-	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
-	var responseMessage string = "App retrieved successfully"
+	var responseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	var responseMessage = "App retrieved successfully"
 	var app *pb.AppV1
 	var versions []uint32
 	var version = getAppRequest.AppVersion
@@ -73,8 +73,8 @@ func HandleGetAppsStatusQuery(queryBus cqrs.QueryBus, getAppsStatusRequest *pb.G
 	// Create the query (no properties needed)
 	query := get_apps_status.GetAppsStatusQuery{}
 
-	var responseCode pb.ResponseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
-	var responseMessage string = "Apps statuses retrieved successfully"
+	var responseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	var responseMessage = "Apps statuses retrieved successfully"
 	var appStatuses []*pb.AppStatusV1
 
 	// Dispatch the query to the handler

@@ -10,7 +10,7 @@ import (
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/service/app"
 	"winterflow-agent/pkg/certs"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // SaveAppHandler handles the SaveAppCommand

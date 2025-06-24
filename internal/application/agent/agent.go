@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 	"winterflow-agent/internal/domain/repository"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/infra/winterflow/grpc/client"

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/service/app"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // GetAppQueryHandler handles the GetAppQuery

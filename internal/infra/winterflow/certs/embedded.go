@@ -4,7 +4,7 @@ import (
 	"embed"
 	"io/fs"
 
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/pkg/embedded"

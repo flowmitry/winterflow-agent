@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"winterflow-agent/internal/domain/repository"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // DeleteAppHandler handles the DeleteAppCommand
