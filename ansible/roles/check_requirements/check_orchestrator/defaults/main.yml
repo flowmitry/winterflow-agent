@@ -1,9 +1,0 @@
----
-# List of supported orchestrators
-supported_orchestrator:
-  - "docker_compose"
-
-# Variable descriptions for documentation
-supported_orchestrator_description: >
-  WinterFlow playbooks supports the following orchestrators:
-  - docker_compose
