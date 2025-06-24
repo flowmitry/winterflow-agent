@@ -52,7 +52,7 @@ const (
 	appsTemplatesFolder = "apps_templates"
 
 	// Apps versions
-	appsKeepVersions = 10
+	appsKeepVersions = 3
 
 	// certificatesFolder is the default directory path for storing certificates.
 	certificatesFolder = ".certs"

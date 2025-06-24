@@ -119,13 +119,11 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	}
 
 	// 5. Clean up old versions if we have a version service
-	if h.versionService != nil {
-		if err := h.versionService.DeleteOldVersions(app.ID); err != nil {
-			log.Warn("Failed to clean up old versions for app %s: %v", app.ID, err)
-			// Don't fail the save operation if cleanup fails
-		} else {
-			log.Debug("Successfully cleaned up old versions for app %s", app.ID)
-		}
+	if err := h.versionService.DeleteOldVersions(app.ID); err != nil {
+		log.Warn("Failed to clean up old versions for app %s: %v", app.ID, err)
+		// Don't fail the save operation if cleanup fails
+	} else {
+		log.Debug("Successfully cleaned up old versions for app %s", app.ID)
 	}
 
 	return nil
