@@ -658,6 +658,34 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							log.Error("Heartbeat failed", "code", response.ResponseCode, "message", response.Message)
 						}
 
+					case *pb.ServerCommand_MetricsResponseV1:
+						response := cmd.MetricsResponseV1.Base
+
+						// Handle response codes
+						switch response.ResponseCode {
+						case pb.ResponseCode_RESPONSE_CODE_AGENT_NOT_FOUND:
+							log.Warn("Agent not found, triggering re-registration")
+							select {
+							case reregisterCh <- struct{}{}:
+							default:
+							}
+							return
+
+						case pb.ResponseCode_RESPONSE_CODE_AGENT_ALREADY_CONNECTED:
+							log.Warn("Received response code, triggering re-registration", "code", response.ResponseCode)
+							select {
+							case reregisterCh <- struct{}{}:
+							default:
+							}
+							return
+
+						case pb.ResponseCode_RESPONSE_CODE_SUCCESS:
+							log.Debug("Metrics response received", "message", response.Message)
+
+						default:
+							log.Error("Metrics failed", "code", response.ResponseCode, "message", response.Message)
+						}
+
 					case *pb.ServerCommand_UpdateAgentRequestV1:
 						log.Info("Received update agent request", "messageId", cmd.UpdateAgentRequestV1.Base.MessageId)
 						// Handle the update agent request directly since it will exit the process
@@ -842,6 +870,9 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			// Start periodic heartbeat sender
 			ticker := time.NewTicker(HeartbeatInterval)
 
+			// Start periodic metrics sender
+			metricsTicker := time.NewTicker(MetricsInterval)
+
 			for {
 				select {
 				case <-ticker.C:
@@ -871,11 +902,46 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
 							ticker.Stop()
+							metricsTicker.Stop()
 							continue outerLoop
 						}
 						continue
 					}
 					log.Debug("Periodic heartbeat sent successfully")
+
+				case <-metricsTicker.C:
+					if !c.IsRegistered() {
+						log.Warn("Agent is not registered, stopping metrics sender")
+						return
+					}
+
+					baseMsg := &pb.BaseMessage{
+						MessageId: GenerateUUID(),
+						Timestamp: TimestampNow(),
+						AgentId:   agentID,
+					}
+
+					metrics := &pb.AgentMetricsV1{
+						Base: baseMsg,
+					}
+
+					agentMsg := &pb.AgentMessage{
+						Message: &pb.AgentMessage_MetricsV1{
+							MetricsV1: metrics,
+						},
+					}
+
+					if err := stream.Send(agentMsg); err != nil {
+						log.Error("Error sending metrics", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							ticker.Stop()
+							metricsTicker.Stop()
+							continue outerLoop
+						}
+						continue
+					}
+					log.Debug("Periodic metrics sent successfully")
 
 				case appRequest := <-appRequestCh:
 					agentMsg, err := HandleGetAppQuery(c.queryBus, appRequest, agentID)
@@ -889,6 +955,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
 							ticker.Stop()
+							metricsTicker.Stop()
 							continue outerLoop
 						}
 						continue
@@ -907,6 +974,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
 							ticker.Stop()
+							metricsTicker.Stop()
 							continue outerLoop
 						}
 						continue
@@ -925,6 +993,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
 							ticker.Stop()
+							metricsTicker.Stop()
 							continue outerLoop
 						}
 						continue
@@ -943,6 +1012,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
 							ticker.Stop()
+							metricsTicker.Stop()
 							continue outerLoop
 						}
 						continue
@@ -961,6 +1031,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
 							ticker.Stop()
+							metricsTicker.Stop()
 							continue outerLoop
 						}
 						continue
@@ -978,6 +1049,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Warn("Connection unavailable or stream closed, recreating stream")
 							ticker.Stop()
+							metricsTicker.Stop()
 							continue outerLoop
 						}
 						continue
@@ -987,6 +1059,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				case <-streamDone:
 					log.Warn("Stream receiver stopped, recreating stream")
 					ticker.Stop()
+					metricsTicker.Stop()
 					continue outerLoop
 
 				case <-reregisterCh:
@@ -996,6 +1069,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					if err != nil {
 						log.Error("Failed to re-register agent", "error", err)
 						ticker.Stop()
+						metricsTicker.Stop()
 
 						// Use a timer so we can interrupt the wait
 						timer := time.NewTimer(c.getNextReconnectInterval())
@@ -1012,17 +1086,20 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					}
 					log.Info("Successfully re-registered agent")
 					ticker.Stop()
+					metricsTicker.Stop()
 					continue outerLoop
 
 				case err := <-fatalErrorCh:
 					log.Error("Fatal error in heartbeat stream", "error", err)
 					stream.CloseSend()
 					ticker.Stop()
+					metricsTicker.Stop()
 					return
 
 				case <-c.ctx.Done():
 					stream.CloseSend()
 					ticker.Stop()
+					metricsTicker.Stop()
 					return
 				}
 			}
