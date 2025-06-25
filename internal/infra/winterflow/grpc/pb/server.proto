@@ -197,6 +197,35 @@ message GetAppsStatusResponseV1 {
   repeated AppStatusV1 apps = 2;
 }
 
+message GetRegistriesRequestV1 {
+  BaseMessage base = 1;
+}
+
+message GetRegistriesResponseV1 {
+  BaseResponse base = 1;
+  repeated string name = 2;
+}
+
+message CreateRegistryRequestV1 {
+  BaseMessage base = 1;
+  string name = 2;
+  string username = 3;
+  string password = 4;
+}
+
+message CreateRegistryResponseV1 {
+  BaseResponse base = 1;
+}
+
+message DeleteRegistryRequestV1 {
+  BaseMessage base = 1;
+  string name = 2;
+}
+
+message DeleteRegistryResponseV1 {
+  BaseResponse base = 1;
+}
+
 // Command messages for bidirectional streaming
 message ServerCommand {
   oneof command {
@@ -212,6 +241,10 @@ message ServerCommand {
     DeleteAppRequestV1 delete_app_request_v1 = 1005;
     ControlAppRequestV1 control_app_request_v1 = 1006;
     GetAppsStatusRequestV1 get_apps_status_request_v1 = 1007;
+
+    GetRegistriesRequestV1 get_registries_request_v1 = 1008;
+    CreateRegistryRequestV1 create_registry_request_v1 = 1009;
+    DeleteRegistryRequestV1 delete_registry_request_v1 = 10010;
   }
 }
 
@@ -229,6 +262,10 @@ message AgentMessage {
     DeleteAppResponseV1 delete_app_response_v1 = 1005;
     ControlAppResponseV1 control_app_response_v1 = 1006;
     GetAppsStatusResponseV1 get_apps_status_response_v1 = 1007;
+
+    GetRegistriesResponseV1 get_registries_response_v1 = 1008;
+    CreateRegistryResponseV1 create_registry_response_v1 = 1009;
+    DeleteRegistryResponseV1 delete_registry_response_v1 = 10010;
   }
 }
 

@@ -17,8 +17,6 @@ type CapabilityFactory struct {
 func NewCapabilityFactory() *CapabilityFactory {
 	// Create a list of all potential capabilities
 	potentialCapabilities := []capabilities.Capability{
-		capabilities.NewAnsibleCapability(),
-		capabilities.NewPythonCapability(),
 		capabilities.NewDockerCapability(),
 		capabilities.NewDockerComposeCapability(),
 		capabilities.NewDockerSwarmCapability(),

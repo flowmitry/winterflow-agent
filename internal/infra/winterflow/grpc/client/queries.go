@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"winterflow-agent/internal/application/query/get_app"
 	"winterflow-agent/internal/application/query/get_apps_status"
+	"winterflow-agent/internal/application/query/get_registries"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	"winterflow-agent/pkg/cqrs"
@@ -106,6 +107,45 @@ func HandleGetAppsStatusQuery(queryBus cqrs.QueryBus, getAppsStatusRequest *pb.G
 		Message: &pb.AgentMessage_GetAppsStatusResponseV1{
 			GetAppsStatusResponseV1: getAppsStatusResp,
 		},
+	}
+
+	return agentMsg, nil
+}
+
+// HandleGetRegistriesQuery handles the query dispatch and creates the appropriate response message
+func HandleGetRegistriesQuery(queryBus cqrs.QueryBus, getRegistriesRequest *pb.GetRegistriesRequestV1, agentID string) (*pb.AgentMessage, error) {
+	log.Debug("Processing get registries request")
+
+	query := get_registries.GetRegistriesQuery{}
+
+	responseCode := pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	responseMessage := "Registries retrieved successfully"
+	var registryNames []string
+
+	result, err := queryBus.Dispatch(query)
+	if err != nil {
+		log.Error("Error retrieving registries", "error", err)
+		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		responseMessage = fmt.Sprintf("Error retrieving registries: %v", err)
+	} else {
+		domainResult, ok := result.(*model.GetRegistriesResult)
+		if !ok {
+			log.Error("Error retrieving registries: unexpected result type")
+			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+			responseMessage = "Error retrieving registries: unexpected result type"
+		} else {
+			registryNames = RegistriesToProtoNames(domainResult.Registries)
+		}
+	}
+
+	baseResp := createBaseResponse(getRegistriesRequest.Base.MessageId, agentID, responseCode, responseMessage)
+	resp := &pb.GetRegistriesResponseV1{
+		Base: &baseResp,
+		Name: registryNames,
+	}
+
+	agentMsg := &pb.AgentMessage{
+		Message: &pb.AgentMessage_GetRegistriesResponseV1{GetRegistriesResponseV1: resp},
 	}
 
 	return agentMsg, nil

@@ -3,7 +3,9 @@ package client
 import (
 	"encoding/json"
 	"winterflow-agent/internal/application/command/control_app"
+	"winterflow-agent/internal/application/command/create_registry"
 	"winterflow-agent/internal/application/command/delete_app"
+	"winterflow-agent/internal/application/command/delete_registry"
 	"winterflow-agent/internal/application/command/rename_app"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
@@ -258,5 +260,43 @@ func ProtoRenameAppRequestV1ToRenameAppCommand(request *pb.RenameAppRequestV1) r
 	return rename_app.RenameAppCommand{
 		AppID:   request.AppId,
 		AppName: request.AppName,
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Registry helpers
+// ---------------------------------------------------------------------------
+
+// RegistriesToProtoNames converts a slice of domain Registry models to a slice of strings
+// expected by GetRegistriesResponseV1.
+func RegistriesToProtoNames(registries []model.Registry) []string {
+	names := make([]string, 0, len(registries))
+	for _, r := range registries {
+		names = append(names, r.Address)
+	}
+	return names
+}
+
+// ProtoCreateRegistryRequestV1ToCreateRegistryCommand converts protobuf CreateRegistryRequestV1
+// into a CreateRegistryCommand.
+func ProtoCreateRegistryRequestV1ToCreateRegistryCommand(request *pb.CreateRegistryRequestV1) create_registry.CreateRegistryCommand {
+	if request == nil {
+		return create_registry.CreateRegistryCommand{}
+	}
+	return create_registry.CreateRegistryCommand{
+		Address:  request.Name,
+		Username: request.Username,
+		Password: request.Password,
+	}
+}
+
+// ProtoDeleteRegistryRequestV1ToDeleteRegistryCommand converts protobuf DeleteRegistryRequestV1
+// into a DeleteRegistryCommand.
+func ProtoDeleteRegistryRequestV1ToDeleteRegistryCommand(request *pb.DeleteRegistryRequestV1) delete_registry.DeleteRegistryCommand {
+	if request == nil {
+		return delete_registry.DeleteRegistryCommand{}
+	}
+	return delete_registry.DeleteRegistryCommand{
+		Address: request.Name,
 	}
 }

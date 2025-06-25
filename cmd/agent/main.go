@@ -123,10 +123,11 @@ func startAgent(ctx context.Context, cancel context.CancelFunc, configPath strin
 	fmt.Printf("\nWinterFlow.io Agent initialized with Log Level \"%s\"\n", cfg.LogLevel)
 
 	appRepository := application.NewAppRepository(cfg)
+	registryRepository := application.NewRegistryRepository()
 
 	// Create and initialize agent
 	log.Debug("Creating agent")
-	a, err := agent.NewAgent(cfg, appRepository)
+	a, err := agent.NewAgent(cfg, appRepository, registryRepository)
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
 	}

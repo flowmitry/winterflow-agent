@@ -2,7 +2,9 @@ package command
 
 import (
 	"winterflow-agent/internal/application/command/control_app"
+	"winterflow-agent/internal/application/command/create_registry"
 	"winterflow-agent/internal/application/command/delete_app"
+	"winterflow-agent/internal/application/command/delete_registry"
 	"winterflow-agent/internal/application/command/rename_app"
 	"winterflow-agent/internal/application/command/save_app"
 	"winterflow-agent/internal/application/command/update_agent"
@@ -13,7 +15,7 @@ import (
 	"winterflow-agent/pkg/log"
 )
 
-func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appRepository repository.AppRepository) error {
+func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appRepository repository.AppRepository, registryRepository repository.DockerRegistryRepository) error {
 	versionService := app.NewAppVersionService(config)
 
 	if err := b.Register(save_app.NewSaveAppHandler(config.GetAppsTemplatesPath(), config.GetPrivateKeyPath(), versionService)); err != nil {
@@ -34,6 +36,14 @@ func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appReposi
 
 	if err := b.Register(rename_app.NewRenameAppHandler(appRepository, config.GetAppsTemplatesPath(), versionService)); err != nil {
 		return log.Errorf("failed to register rename app handler: %v", err)
+	}
+
+	if err := b.Register(create_registry.NewCreateRegistryHandler(registryRepository, config)); err != nil {
+		return log.Errorf("failed to register create registry handler: %v", err)
+	}
+
+	if err := b.Register(delete_registry.NewDeleteRegistryHandler(registryRepository, config)); err != nil {
+		return log.Errorf("failed to register delete registry handler: %v", err)
 	}
 
 	return nil

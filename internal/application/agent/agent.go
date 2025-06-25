@@ -21,8 +21,8 @@ type Agent struct {
 }
 
 // NewAgent creates a new agent instance
-func NewAgent(config *config.Config, appRepository repository.AppRepository) (*Agent, error) {
-	c, err := client.NewClient(config, appRepository)
+func NewAgent(config *config.Config, appRepository repository.AppRepository, registryRepository repository.DockerRegistryRepository) (*Agent, error) {
+	c, err := client.NewClient(config, appRepository, registryRepository)
 	if err != nil {
 		return nil, log.Errorf("New GRPC client failed", err)
 	}

@@ -2,8 +2,6 @@ package capabilities
 
 // Capability names
 const (
-	CapabilityAnsible       = "ansible"
-	CapabilityPython        = "python"
 	CapabilityDocker        = "docker"
 	CapabilityDockerCompose = "docker_compose"
 	CapabilityDockerSwarm   = "docker_swarm"

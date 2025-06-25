@@ -2,7 +2,9 @@ package client
 
 import (
 	"fmt"
+	"winterflow-agent/internal/application/command/create_registry"
 	"winterflow-agent/internal/application/command/delete_app"
+	"winterflow-agent/internal/application/command/delete_registry"
 	"winterflow-agent/internal/application/command/save_app"
 	"winterflow-agent/internal/application/command/update_agent"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
@@ -166,6 +168,60 @@ func HandleRenameAppRequest(commandBus cqrs.CommandBus, renameAppRequest *pb.Ren
 		Message: &pb.AgentMessage_RenameAppResponseV1{
 			RenameAppResponseV1: renameAppResp,
 		},
+	}
+
+	return agentMsg, nil
+}
+
+// HandleCreateRegistryRequest handles the command dispatch and creates the appropriate response message
+func HandleCreateRegistryRequest(commandBus cqrs.CommandBus, createRegistryRequest *pb.CreateRegistryRequestV1, agentID string) (*pb.AgentMessage, error) {
+	log.Debug("Processing create registry request", "name", createRegistryRequest.Name)
+
+	cmd := create_registry.CreateRegistryCommand{
+		Address:  createRegistryRequest.Name,
+		Username: createRegistryRequest.Username,
+		Password: createRegistryRequest.Password,
+	}
+
+	responseCode := pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	responseMessage := "Registry created successfully"
+
+	if err := commandBus.Dispatch(cmd); err != nil {
+		log.Error("Error creating registry", "error", err)
+		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		responseMessage = fmt.Sprintf("Error creating registry: %v", err)
+	}
+
+	baseResp := createBaseResponse(createRegistryRequest.Base.MessageId, agentID, responseCode, responseMessage)
+	resp := &pb.CreateRegistryResponseV1{Base: &baseResp}
+
+	agentMsg := &pb.AgentMessage{
+		Message: &pb.AgentMessage_CreateRegistryResponseV1{CreateRegistryResponseV1: resp},
+	}
+
+	return agentMsg, nil
+}
+
+// HandleDeleteRegistryRequest handles the command dispatch and creates the appropriate response message
+func HandleDeleteRegistryRequest(commandBus cqrs.CommandBus, deleteRegistryRequest *pb.DeleteRegistryRequestV1, agentID string) (*pb.AgentMessage, error) {
+	log.Debug("Processing delete registry request", "name", deleteRegistryRequest.Name)
+
+	cmd := delete_registry.DeleteRegistryCommand{Address: deleteRegistryRequest.Name}
+
+	responseCode := pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	responseMessage := "Registry deleted successfully"
+
+	if err := commandBus.Dispatch(cmd); err != nil {
+		log.Error("Error deleting registry", "error", err)
+		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		responseMessage = fmt.Sprintf("Error deleting registry: %v", err)
+	}
+
+	baseResp := createBaseResponse(deleteRegistryRequest.Base.MessageId, agentID, responseCode, responseMessage)
+	resp := &pb.DeleteRegistryResponseV1{Base: &baseResp}
+
+	agentMsg := &pb.AgentMessage{
+		Message: &pb.AgentMessage_DeleteRegistryResponseV1{DeleteRegistryResponseV1: resp},
 	}
 
 	return agentMsg, nil
