@@ -1,0 +1,16 @@
+---
+description: 
+globs: server.proto
+alwaysApply: false
+---
+## Extending with New Commands
+
+When you add **any** new command message to [`server.proto`](mdc:internal/infra/winterflow/grpc/pb/server.proto):
+
+1. Regenerate the Go protobuf files (`make grpc`).
+2. Add a **receiver case** in the stream-receiver switch in [`client.go`](mdc:internal/infra/winterflow/grpc/client/client.go) that enqueues the command into its own buffered channel (and provides an immediate TOO_MANY_REQUESTS fallback, mirroring existing logic).
+3. Declare the new **channel variable(s)** alongside the others at the top of `StartAgentStream`.
+4. Add a **select-loop case** that dequeues the command, calls the appropriate `Handle...Request` or `Handle...Query`, and sends the response with the standard reconnection/error logic.
+5. Implement the new handler in [`commands.go`](mdc:internal/infra/winterflow/grpc/client/commands.go) or [`queries.go`](mdc:internal/infra/winterflow/grpc/client/queries.go) as appropriate.
+
+Following these five steps keeps the agent in sync with the evolving `server.proto` contract and prevents "unknown command type" warnings at runtime.

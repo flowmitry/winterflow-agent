@@ -284,7 +284,7 @@ func ProtoCreateRegistryRequestV1ToCreateRegistryCommand(request *pb.CreateRegis
 		return create_registry.CreateRegistryCommand{}
 	}
 	return create_registry.CreateRegistryCommand{
-		Address:  request.Name,
+		Address:  request.Address,
 		Username: request.Username,
 		Password: request.Password,
 	}
@@ -297,6 +297,6 @@ func ProtoDeleteRegistryRequestV1ToDeleteRegistryCommand(request *pb.DeleteRegis
 		return delete_registry.DeleteRegistryCommand{}
 	}
 	return delete_registry.DeleteRegistryCommand{
-		Address: request.Name,
+		Address: request.Address,
 	}
 }

@@ -175,10 +175,10 @@ func HandleRenameAppRequest(commandBus cqrs.CommandBus, renameAppRequest *pb.Ren
 
 // HandleCreateRegistryRequest handles the command dispatch and creates the appropriate response message
 func HandleCreateRegistryRequest(commandBus cqrs.CommandBus, createRegistryRequest *pb.CreateRegistryRequestV1, agentID string) (*pb.AgentMessage, error) {
-	log.Debug("Processing create registry request", "name", createRegistryRequest.Name)
+	log.Debug("Processing create registry request", "name", createRegistryRequest.Address)
 
 	cmd := create_registry.CreateRegistryCommand{
-		Address:  createRegistryRequest.Name,
+		Address:  createRegistryRequest.Address,
 		Username: createRegistryRequest.Username,
 		Password: createRegistryRequest.Password,
 	}
@@ -204,9 +204,9 @@ func HandleCreateRegistryRequest(commandBus cqrs.CommandBus, createRegistryReque
 
 // HandleDeleteRegistryRequest handles the command dispatch and creates the appropriate response message
 func HandleDeleteRegistryRequest(commandBus cqrs.CommandBus, deleteRegistryRequest *pb.DeleteRegistryRequestV1, agentID string) (*pb.AgentMessage, error) {
-	log.Debug("Processing delete registry request", "name", deleteRegistryRequest.Name)
+	log.Debug("Processing delete registry request", "name", deleteRegistryRequest.Address)
 
-	cmd := delete_registry.DeleteRegistryCommand{Address: deleteRegistryRequest.Name}
+	cmd := delete_registry.DeleteRegistryCommand{Address: deleteRegistryRequest.Address}
 
 	responseCode := pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	responseMessage := "Registry deleted successfully"

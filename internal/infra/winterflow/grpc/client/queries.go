@@ -120,7 +120,7 @@ func HandleGetRegistriesQuery(queryBus cqrs.QueryBus, getRegistriesRequest *pb.G
 
 	responseCode := pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	responseMessage := "Registries retrieved successfully"
-	var registryNames []string
+	var registryAddresses []string
 
 	result, err := queryBus.Dispatch(query)
 	if err != nil {
@@ -134,14 +134,14 @@ func HandleGetRegistriesQuery(queryBus cqrs.QueryBus, getRegistriesRequest *pb.G
 			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 			responseMessage = "Error retrieving registries: unexpected result type"
 		} else {
-			registryNames = RegistriesToProtoNames(domainResult.Registries)
+			registryAddresses = RegistriesToProtoNames(domainResult.Registries)
 		}
 	}
 
 	baseResp := createBaseResponse(getRegistriesRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	resp := &pb.GetRegistriesResponseV1{
-		Base: &baseResp,
-		Name: registryNames,
+		Base:    &baseResp,
+		Address: registryAddresses,
 	}
 
 	agentMsg := &pb.AgentMessage{

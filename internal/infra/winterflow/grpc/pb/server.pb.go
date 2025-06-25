@@ -1752,7 +1752,7 @@ func (x *GetRegistriesRequestV1) GetBase() *BaseMessage {
 type GetRegistriesResponseV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
-	Name          []string               `protobuf:"bytes,2,rep,name=name,proto3" json:"name,omitempty"`
+	Address       []string               `protobuf:"bytes,2,rep,name=address,proto3" json:"address,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1794,9 +1794,9 @@ func (x *GetRegistriesResponseV1) GetBase() *BaseResponse {
 	return nil
 }
 
-func (x *GetRegistriesResponseV1) GetName() []string {
+func (x *GetRegistriesResponseV1) GetAddress() []string {
 	if x != nil {
-		return x.Name
+		return x.Address
 	}
 	return nil
 }
@@ -1804,7 +1804,7 @@ func (x *GetRegistriesResponseV1) GetName() []string {
 type CreateRegistryRequestV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Address       string                 `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
 	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
 	Password      string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1848,9 +1848,9 @@ func (x *CreateRegistryRequestV1) GetBase() *BaseMessage {
 	return nil
 }
 
-func (x *CreateRegistryRequestV1) GetName() string {
+func (x *CreateRegistryRequestV1) GetAddress() string {
 	if x != nil {
-		return x.Name
+		return x.Address
 	}
 	return ""
 }
@@ -1916,7 +1916,7 @@ func (x *CreateRegistryResponseV1) GetBase() *BaseResponse {
 type DeleteRegistryRequestV1 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Address       string                 `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1958,9 +1958,9 @@ func (x *DeleteRegistryRequestV1) GetBase() *BaseMessage {
 	return nil
 }
 
-func (x *DeleteRegistryRequestV1) GetName() string {
+func (x *DeleteRegistryRequestV1) GetAddress() string {
 	if x != nil {
-		return x.Name
+		return x.Address
 	}
 	return ""
 }
@@ -2227,7 +2227,7 @@ type ServerCommand_CreateRegistryRequestV1 struct {
 }
 
 type ServerCommand_DeleteRegistryRequestV1 struct {
-	DeleteRegistryRequestV1 *DeleteRegistryRequestV1 `protobuf:"bytes,10010,opt,name=delete_registry_request_v1,json=deleteRegistryRequestV1,proto3,oneof"`
+	DeleteRegistryRequestV1 *DeleteRegistryRequestV1 `protobuf:"bytes,1010,opt,name=delete_registry_request_v1,json=deleteRegistryRequestV1,proto3,oneof"`
 }
 
 func (*ServerCommand_HeartbeatResponseV1) isServerCommand_Command() {}
@@ -2471,7 +2471,7 @@ type AgentMessage_CreateRegistryResponseV1 struct {
 }
 
 type AgentMessage_DeleteRegistryResponseV1 struct {
-	DeleteRegistryResponseV1 *DeleteRegistryResponseV1 `protobuf:"bytes,10010,opt,name=delete_registry_response_v1,json=deleteRegistryResponseV1,proto3,oneof"`
+	DeleteRegistryResponseV1 *DeleteRegistryResponseV1 `protobuf:"bytes,1010,opt,name=delete_registry_response_v1,json=deleteRegistryResponseV1,proto3,oneof"`
 }
 
 func (*AgentMessage_HeartbeatV1) isAgentMessage_Message() {}
@@ -2604,20 +2604,20 @@ const file_internal_infra_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12#\n" +
 	"\x04apps\x18\x02 \x03(\v2\x0f.pb.AppStatusV1R\x04apps\"=\n" +
 	"\x16GetRegistriesRequestV1\x12#\n" +
-	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\"S\n" +
+	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\"Y\n" +
 	"\x17GetRegistriesResponseV1\x12$\n" +
-	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x12\n" +
-	"\x04name\x18\x02 \x03(\tR\x04name\"\x8a\x01\n" +
+	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x18\n" +
+	"\aaddress\x18\x02 \x03(\tR\aaddress\"\x90\x01\n" +
 	"\x17CreateRegistryRequestV1\x12#\n" +
-	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
+	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x18\n" +
+	"\aaddress\x18\x02 \x01(\tR\aaddress\x12\x1a\n" +
 	"\busername\x18\x03 \x01(\tR\busername\x12\x1a\n" +
 	"\bpassword\x18\x04 \x01(\tR\bpassword\"@\n" +
 	"\x18CreateRegistryResponseV1\x12$\n" +
-	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"R\n" +
+	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"X\n" +
 	"\x17DeleteRegistryRequestV1\x12#\n" +
-	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"@\n" +
+	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x18\n" +
+	"\aaddress\x18\x02 \x01(\tR\aaddress\"@\n" +
 	"\x18DeleteRegistryResponseV1\x12$\n" +
 	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\"\xf9\a\n" +
 	"\rServerCommand\x12R\n" +
@@ -2632,7 +2632,7 @@ const file_internal_infra_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x1aget_apps_status_request_v1\x18\xef\a \x01(\v2\x1a.pb.GetAppsStatusRequestV1H\x00R\x16getAppsStatusRequestV1\x12X\n" +
 	"\x19get_registries_request_v1\x18\xf0\a \x01(\v2\x1a.pb.GetRegistriesRequestV1H\x00R\x16getRegistriesRequestV1\x12[\n" +
 	"\x1acreate_registry_request_v1\x18\xf1\a \x01(\v2\x1b.pb.CreateRegistryRequestV1H\x00R\x17createRegistryRequestV1\x12[\n" +
-	"\x1adelete_registry_request_v1\x18\x9aN \x01(\v2\x1b.pb.DeleteRegistryRequestV1H\x00R\x17deleteRegistryRequestV1B\t\n" +
+	"\x1adelete_registry_request_v1\x18\xf2\a \x01(\v2\x1b.pb.DeleteRegistryRequestV1H\x00R\x17deleteRegistryRequestV1B\t\n" +
 	"\acommand\"\xe4\a\n" +
 	"\fAgentMessage\x129\n" +
 	"\fheartbeat_v1\x18\x01 \x01(\v2\x14.pb.AgentHeartbeatV1H\x00R\vheartbeatV1\x123\n" +
@@ -2647,7 +2647,7 @@ const file_internal_infra_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x1bget_apps_status_response_v1\x18\xef\a \x01(\v2\x1b.pb.GetAppsStatusResponseV1H\x00R\x17getAppsStatusResponseV1\x12[\n" +
 	"\x1aget_registries_response_v1\x18\xf0\a \x01(\v2\x1b.pb.GetRegistriesResponseV1H\x00R\x17getRegistriesResponseV1\x12^\n" +
 	"\x1bcreate_registry_response_v1\x18\xf1\a \x01(\v2\x1c.pb.CreateRegistryResponseV1H\x00R\x18createRegistryResponseV1\x12^\n" +
-	"\x1bdelete_registry_response_v1\x18\x9aN \x01(\v2\x1c.pb.DeleteRegistryResponseV1H\x00R\x18deleteRegistryResponseV1B\t\n" +
+	"\x1bdelete_registry_response_v1\x18\xf2\a \x01(\v2\x1c.pb.DeleteRegistryResponseV1H\x00R\x18deleteRegistryResponseV1B\t\n" +
 	"\amessage*\x9e\x02\n" +
 	"\fResponseCode\x12\x1d\n" +
 	"\x19RESPONSE_CODE_UNSPECIFIED\x10\x00\x12\x19\n" +

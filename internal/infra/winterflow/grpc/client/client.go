@@ -605,6 +605,9 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			controlAppRequestCh := make(chan *pb.ControlAppRequestV1, queueChannelSize)
 			getAppsStatusRequestCh := make(chan *pb.GetAppsStatusRequestV1, queueChannelSize)
 			renameAppRequestCh := make(chan *pb.RenameAppRequestV1, queueChannelSize)
+			getRegistriesRequestCh := make(chan *pb.GetRegistriesRequestV1, queueChannelSize)
+			createRegistryRequestCh := make(chan *pb.CreateRegistryRequestV1, queueChannelSize)
+			deleteRegistryRequestCh := make(chan *pb.DeleteRegistryRequestV1, queueChannelSize)
 
 			// Start goroutine to receive responses
 			go func() {
@@ -860,6 +863,71 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							}
 						}
 
+					case *pb.ServerCommand_GetRegistriesRequestV1:
+						log.Info("Received get registries request", "messageId", cmd.GetRegistriesRequestV1.Base.MessageId)
+						// Forward the request to be handled by the main loop
+						select {
+						case getRegistriesRequestCh <- cmd.GetRegistriesRequestV1:
+						default:
+							log.Warn("Get registries request channel full, dropping request")
+							// Create and send error response immediately
+							baseResp := createBaseResponse(cmd.GetRegistriesRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							registriesResp := &pb.GetRegistriesResponseV1{
+								Base:    &baseResp,
+								Address: nil,
+							}
+
+							agentMsg := &pb.AgentMessage{
+								Message: &pb.AgentMessage_GetRegistriesResponseV1{GetRegistriesResponseV1: registriesResp},
+							}
+
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response", "error", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
+						}
+
+					case *pb.ServerCommand_CreateRegistryRequestV1:
+						log.Info("Received create registry request", "messageId", cmd.CreateRegistryRequestV1.Base.MessageId)
+						// Forward to main loop
+						select {
+						case createRegistryRequestCh <- cmd.CreateRegistryRequestV1:
+						default:
+							log.Warn("Create registry request channel full, dropping request")
+							baseResp := createBaseResponse(cmd.CreateRegistryRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							resp := &pb.CreateRegistryResponseV1{Base: &baseResp}
+
+							agentMsg := &pb.AgentMessage{
+								Message: &pb.AgentMessage_CreateRegistryResponseV1{CreateRegistryResponseV1: resp},
+							}
+
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response", "error", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
+						}
+
+					case *pb.ServerCommand_DeleteRegistryRequestV1:
+						log.Info("Received delete registry request", "messageId", cmd.DeleteRegistryRequestV1.Base.MessageId)
+						// Forward to main loop
+						select {
+						case deleteRegistryRequestCh <- cmd.DeleteRegistryRequestV1:
+						default:
+							log.Warn("Delete registry request channel full, dropping request")
+							baseResp := createBaseResponse(cmd.DeleteRegistryRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							resp := &pb.DeleteRegistryResponseV1{Base: &baseResp}
+							agentMsg := &pb.AgentMessage{
+								Message: &pb.AgentMessage_DeleteRegistryResponseV1{DeleteRegistryResponseV1: resp},
+							}
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response", "error", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
+						}
+
 					default:
 						// Log details about the unknown command type
 						log.Warn("Received unknown command type", "type", fmt.Sprintf("%T", cmd))
@@ -1055,6 +1123,62 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						continue
 					}
 					log.Info("Rename app response sent successfully")
+
+				case createRegistryRequest := <-createRegistryRequestCh:
+					agentMsg, err := HandleCreateRegistryRequest(c.commandBus, createRegistryRequest, agentID)
+					if err != nil {
+						log.Error("Error creating registry response", "error", err)
+						continue
+					}
+
+					if err := stream.Send(agentMsg); err != nil {
+						log.Error("Error sending create registry response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							ticker.Stop()
+							metricsTicker.Stop()
+							continue outerLoop
+						}
+						continue
+					}
+					log.Info("Create registry response sent successfully")
+
+				case deleteRegistryRequest := <-deleteRegistryRequestCh:
+					agentMsg, err := HandleDeleteRegistryRequest(c.commandBus, deleteRegistryRequest, agentID)
+					if err != nil {
+						log.Error("Error deleting registry response", "error", err)
+						continue
+					}
+					if err := stream.Send(agentMsg); err != nil {
+						log.Error("Error sending delete registry response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							ticker.Stop()
+							metricsTicker.Stop()
+							continue outerLoop
+						}
+						continue
+					}
+					log.Info("Delete registry response sent successfully")
+
+				case getRegistriesRequest := <-getRegistriesRequestCh:
+					agentMsg, err := HandleGetRegistriesQuery(c.queryBus, getRegistriesRequest, agentID)
+					if err != nil {
+						log.Error("Error retrieving registries response", "error", err)
+						continue
+					}
+
+					if err := stream.Send(agentMsg); err != nil {
+						log.Error("Error sending get registries response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							ticker.Stop()
+							metricsTicker.Stop()
+							continue outerLoop
+						}
+						continue
+					}
+					log.Info("Get registries response sent successfully")
 
 				case <-streamDone:
 					log.Warn("Stream receiver stopped, recreating stream")
