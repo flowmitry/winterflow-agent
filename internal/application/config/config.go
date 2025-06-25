@@ -33,7 +33,6 @@ var (
 	grpcServerAddress string
 	apiBaseURL        string
 	basePath          string
-	logsPath          string
 	orchestrator      OrchestratorType
 )
 
@@ -44,8 +43,6 @@ const (
 	defaultAPIBaseURL = "https://app.winterflow.io"
 	// defaultBasePath defines the default file system path used by the application for storing and accessing resources.
 	defaultBasePath = "/opt/winterflow"
-	// defaultLogsPath is the default directory path where application log files are stored.
-	defaultLogsPath = "/var/log/winterflow"
 
 	// Apps folders
 	appsFolder          = "apps"
@@ -76,8 +73,6 @@ type Config struct {
 	Features    map[string]bool `json:"features"`
 	// BasePath specifies the root directory used to store application-related files and configurations.
 	BasePath string `json:"base_path,omitempty"`
-	// LogsPath specifies the directory where log files are stored.
-	LogsPath string `json:"logs_path,omitempty"`
 	// LogLevel specifies the minimum log level to output (debug, info, warn, error).
 	LogLevel string `json:"log_level,omitempty"`
 	// Orchestrator specifies the orchestration platform or tool used for managing deployments and configurations.
@@ -94,9 +89,6 @@ func prepareConfig(cfg *Config) {
 	}
 	if cfg.BasePath == "" {
 		cfg.BasePath = defaultBasePath
-	}
-	if cfg.LogsPath == "" {
-		cfg.LogsPath = defaultLogsPath
 	}
 	if cfg.LogLevel == "" {
 		cfg.LogLevel = "info"
@@ -143,12 +135,6 @@ func NewConfig() *Config {
 		config.BasePath = basePath
 	} else {
 		config.BasePath = defaultBasePath
-	}
-
-	if logsPath != "" {
-		config.LogsPath = logsPath
-	} else {
-		config.LogsPath = defaultLogsPath
 	}
 
 	if orchestrator != "" {
@@ -258,10 +244,6 @@ func (c *Config) GetAPIBaseURL() string {
 		return defaultAPIBaseURL
 	}
 	return apiBaseURL
-}
-
-func (c *Config) GetLogsPath() string {
-	return c.LogsPath
 }
 
 func (c *Config) GetAppsPath() string {
