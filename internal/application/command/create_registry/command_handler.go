@@ -19,7 +19,7 @@ type CreateRegistryHandler struct {
 // Handle executes the CreateRegistryCommand.
 func (h *CreateRegistryHandler) Handle(cmd CreateRegistryCommand) error {
 	// Check if registries feature is disabled
-	if h.config != nil && h.config.IsFeatureEnabled(config.FeatureRegistriesDisabled) {
+	if h.config != nil && h.config.IsFeatureEnabled(config.FeatureDockerRegistries) {
 		return log.Errorf("registries operations are disabled by configuration")
 	}
 
