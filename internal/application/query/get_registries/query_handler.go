@@ -17,7 +17,7 @@ type GetRegistriesQueryHandler struct {
 // Handle executes the GetRegistriesQuery and returns the list of registries.
 func (h *GetRegistriesQueryHandler) Handle(query GetRegistriesQuery) (*model.GetRegistriesResult, error) {
 	// Check if registries feature is disabled
-	if h.config != nil && h.config.IsFeatureEnabled(config.FeatureDockerRegistries) {
+	if h.config != nil && !h.config.IsFeatureEnabled(config.FeatureDockerRegistries) {
 		return nil, log.Errorf("registries operations are disabled by configuration")
 	}
 

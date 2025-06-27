@@ -17,7 +17,7 @@ type DeleteRegistryHandler struct {
 // Handle executes the DeleteRegistryCommand.
 func (h *DeleteRegistryHandler) Handle(cmd DeleteRegistryCommand) error {
 	// Check if registries feature is disabled
-	if h.config != nil && h.config.IsFeatureEnabled(config.FeatureDockerRegistries) {
+	if h.config != nil && !h.config.IsFeatureEnabled(config.FeatureDockerRegistries) {
 		return log.Errorf("registries operations are disabled by configuration")
 	}
 
