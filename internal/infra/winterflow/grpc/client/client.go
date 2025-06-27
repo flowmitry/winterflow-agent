@@ -631,6 +631,13 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						continue
 					}
 
+					// Validate the agent_id in BaseMessage (if present) before processing the command.
+					// If the validation fails, an unauthorized response will be sent automatically and
+					// the command will be ignored.
+					if !ValidateAndRespondAgentID(stream, serverCmd.Command, agentID) {
+						continue
+					}
+
 					// Handle different command types
 					switch cmd := serverCmd.Command.(type) {
 					case *pb.ServerCommand_HeartbeatResponseV1:
