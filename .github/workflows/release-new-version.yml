@@ -4,9 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release Version (e.g., v1.2.3)'
-        required: true
+        description: 'Release Version (e.g., v1.2.3). Leave blank to auto-increment patch from latest release'
+        required: false
         type: string
+        default: ''
       prerelease:
         description: 'Is this a prerelease?'
         required: true
@@ -33,6 +34,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Determine release version
+        id: release_version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
+          else
+            # Fetch the latest release tag (if any) and bump the patch version
+            LATEST_TAG=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
+            if [ -z "$LATEST_TAG" ]; then
+              VERSION="v0.0.1"
+            else
+              SEMVER=${LATEST_TAG#v}
+              IFS='.' read -r MAJOR MINOR PATCH <<< "$SEMVER"
+              PATCH=$((PATCH+1))
+              VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+            fi
+          fi
+          echo "Determined version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Get Go version from go.mod
         id: goversion
         run: |
@@ -47,7 +71,7 @@ jobs:
 
       - name: Build binaries
         env:
-          VERSION: ${{ github.event.inputs.version }}
+          VERSION: ${{ steps.release_version.outputs.version }}
           CGO_ENABLED: 0
         run: |
           # Remove 'v' prefix for semantic version used in build flags
@@ -73,10 +97,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ github.event.inputs.version }}" \
+          gh release create "${{ steps.release_version.outputs.version }}" \
             winterflow-agent-linux-* \
             winterflow-agent-darwin-* \
-            --title "Release ${{ github.event.inputs.version }}" \
+            --title "Release ${{ steps.release_version.outputs.version }}" \
             --notes "${{ github.event.inputs.release_message }}" \
             --draft=false \
             --prerelease=${{ github.event.inputs.prerelease }}
@@ -87,14 +111,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Get release information
-          RELEASE_INFO=$(gh release view "${{ github.event.inputs.version }}" --json url,body,isPrerelease)
+          RELEASE_INFO=$(gh release view "${{ steps.release_version.outputs.version }}" --json url,body,isPrerelease)
           RELEASE_URL=$(echo "$RELEASE_INFO" | jq -r '.url')
           RELEASE_BODY=$(echo "$RELEASE_INFO" | jq -r '.body // ""' | head -n1 | sed 's/"/\\"/g' | sed 's/\r//g')
           IS_PRERELEASE=$(echo "$RELEASE_INFO" | jq -r '.isPrerelease')
           
           # Create JSON payload
           PAYLOAD=$(jq -n \
-            --arg version "${{ github.event.inputs.version }}" \
+            --arg version "${{ steps.release_version.outputs.version }}" \
             --arg url "$RELEASE_URL" \
             --argjson is_beta "$IS_PRERELEASE" \
             --arg message "$RELEASE_BODY" \
