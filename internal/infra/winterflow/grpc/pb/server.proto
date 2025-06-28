@@ -32,11 +32,7 @@ enum AppAction {
   START = 1;
   RESTART = 2;
   UPDATE = 3;
-}
-
-enum AppType {
-  DOCKER_COMPOSE = 0;
-  DOCKER_SWARM = 1;
+  REDEPLOY = 4;
 }
 
 message BaseMessage {

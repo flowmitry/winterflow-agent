@@ -70,6 +70,13 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	case AppActionUpdate:
 		playbook = "update_app"
 		actionErr = h.repository.UpdateApp(cmd.AppID)
+	case AppActionRedeploy:
+		playbook = "redeploy_app"
+		actionErr = h.repository.StopApp(cmd.AppID)
+		if actionErr != nil {
+			return log.Errorf("command failed with error: %v", actionErr)
+		}
+		actionErr = h.repository.DeployApp(cmd.AppID)
 	default:
 		return log.Errorf("unsupported action: %d", cmd.Action)
 	}

@@ -242,6 +242,8 @@ func ProtoControlAppRequestV1ToControlAppCommand(request *pb.ControlAppRequestV1
 		action = control_app.AppActionRestart
 	case pb.AppAction_UPDATE:
 		action = control_app.AppActionUpdate
+	case pb.AppAction_REDEPLOY:
+		action = control_app.AppActionRedeploy
 	default:
 		action = control_app.AppActionStop
 	}

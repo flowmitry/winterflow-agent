@@ -12,6 +12,8 @@ const (
 	AppActionRestart
 	// AppActionUpdate updates the application
 	AppActionUpdate
+	// AppActionRedeploy redeploys the application by stopping and starting it with potentially updated configurations.
+	AppActionRedeploy
 )
 
 // ControlAppCommand represents a command to control the state of an application
