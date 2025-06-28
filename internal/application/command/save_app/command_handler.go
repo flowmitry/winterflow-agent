@@ -13,6 +13,13 @@ import (
 	"winterflow-agent/pkg/log"
 )
 
+// Default filesystem permissions. Adjust here if deployment requirements change.
+const (
+	dirPerm           = 0o755 // default directory permission
+	filePerm          = 0o644 // default file permission (non-sensitive)
+	sensitiveFilePerm = 0o600 // permission for files that may contain secrets
+)
+
 // SaveAppHandler handles the SaveAppCommand
 type SaveAppHandler struct {
 	AppsTemplatesPath string
@@ -29,23 +36,19 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 
 	log.Printf("Processing save app request for app ID: %s", app.ID)
 
-	// Prevent renaming: if the application already exists, always keep the original name stored on disk.
-	baseDir := filepath.Join(h.AppsTemplatesPath, app.ID)
-
 	// Ensure the base directory for the application exists. This is required so that subsequent
 	// operations (like reading a previous config or creating version directories) do not fail
 	// due to a missing parent path.
-	if err := os.MkdirAll(baseDir, 0o755); err != nil {
-		return fmt.Errorf("error creating base directory %s: %w", baseDir, err)
+	baseDir := filepath.Join(h.AppsTemplatesPath, app.ID)
+	isAppExists := false
+	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(baseDir, dirPerm); err != nil {
+			return fmt.Errorf("error creating base directory %s: %w", baseDir, err)
+		}
+	} else {
+		isAppExists = true
 	}
 
-	// -------------------------------------------------------------------
-	// Version handling – always create a fresh version before applying the
-	// incoming changes. If a version service is configured, we rely on it to
-	// duplicate the latest version (thereby preserving the existing state).
-	// If it is not available we fall back to the configured current version
-	// folder (legacy behaviour).
-	// -------------------------------------------------------------------
 	if h.versionService == nil {
 		return fmt.Errorf("version service is not configured for SaveAppHandler")
 	}
@@ -63,15 +66,10 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	var prevFiles []model.AppFile
 	if data, err := os.ReadFile(existingCfgPath); err == nil {
 		if existingCfg, err := model.ParseAppConfig(data); err == nil {
-			// If the stored name differs from the incoming one, keep the old name.
-			storedName := strings.TrimSpace(existingCfg.Name)
-			incomingName := strings.TrimSpace(app.Config.Name)
-			if storedName != "" && !strings.EqualFold(storedName, incomingName) {
-				log.Info("[SaveApp] Rename attempted from '%s' to '%s' for app ID %s – keeping the original name", incomingName, storedName, app.ID)
-				app.Config.Name = existingCfg.Name
+			if isAppExists && existingCfg.Name != "" {
+				// keep the old name
+				app.Config.Name = strings.TrimSpace(existingCfg.Name)
 			}
-
-			// Preserve previous files metadata for rename detection
 			prevFiles = existingCfg.Files
 		}
 	}
@@ -136,7 +134,7 @@ func (h *SaveAppHandler) writeConfig(versionDir string, cfg *model.AppConfig) er
 	if err != nil {
 		return fmt.Errorf("error marshaling app config: %w", err)
 	}
-	if err := os.WriteFile(configPath, data, 0o644); err != nil {
+	if err := os.WriteFile(configPath, data, filePerm); err != nil {
 		return fmt.Errorf("error writing config file: %w", err)
 	}
 	return nil
@@ -177,17 +175,23 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			continue
 		}
 
-		// Compute old and new paths.
-		oldRel := filepath.FromSlash(prevMeta.Filename)
-		oldRel = strings.TrimLeft(oldRel, string(os.PathSeparator))
+		// Compute old and new paths using the sanitizer.
+		oldRel, err := sanitizeTemplateFilename(prevMeta.Filename)
+		if err != nil {
+			log.Warn("Skipping rename for invalid source filename %s: %v", prevMeta.Filename, err)
+			continue
+		}
 		oldPath := filepath.Join(templatesDir, oldRel+".j2")
 
-		newRel := filepath.FromSlash(newMeta.Filename)
-		newRel = strings.TrimLeft(newRel, string(os.PathSeparator))
+		newRel, err := sanitizeTemplateFilename(newMeta.Filename)
+		if err != nil {
+			log.Warn("Skipping rename for invalid target filename %s: %v", newMeta.Filename, err)
+			continue
+		}
 		newPath := filepath.Join(templatesDir, newRel+".j2")
 
 		// Ensure target directory.
-		if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(newPath), dirPerm); err != nil {
 			return fmt.Errorf("error creating directories for %s: %w", newPath, err)
 		}
 
@@ -198,7 +202,11 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			continue
 		}
 
-		if err := os.WriteFile(newPath, data, 0o644); err != nil {
+		mode := filePerm
+		if newMeta.IsEncrypted {
+			mode = sensitiveFilePerm
+		}
+		if err := os.WriteFile(newPath, data, os.FileMode(mode)); err != nil {
 			return fmt.Errorf("error writing renamed template %s: %w", newPath, err)
 		}
 		log.Debug("Copied template from %s to %s (rename)", oldPath, newPath)
@@ -210,11 +218,12 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 	// Build a set with expected absolute paths (with .j2 suffix).
 	expectedPaths := make(map[string]struct{})
 	for filename := range expected {
-		// Ensure filename is always treated as a relative path (no leading separators)
-		rel := filepath.FromSlash(filename)
-		rel = strings.TrimLeft(rel, string(os.PathSeparator))
-		relPath := rel + ".j2"
-		expectedPaths[filepath.Clean(filepath.Join(templatesDir, relPath))] = struct{}{}
+		rel, err := sanitizeTemplateFilename(filename)
+		if err != nil {
+			log.Warn("Skipping filename with invalid path %s: %v", filename, err)
+			continue
+		}
+		expectedPaths[filepath.Join(templatesDir, rel+".j2")] = struct{}{}
 	}
 
 	// Walk through existing files and remove any .j2 that is not expected.
@@ -262,12 +271,15 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			continue
 		}
 
-		relFilename := filepath.FromSlash(fileMeta.Filename)
-		relFilename = strings.TrimLeft(relFilename, string(os.PathSeparator))
+		relFilename, err := sanitizeTemplateFilename(fileMeta.Filename)
+		if err != nil {
+			log.Warn("Skipping file with invalid filename %s: %v", fileMeta.Filename, err)
+			continue
+		}
 		targetPath := filepath.Join(templatesDir, relFilename+".j2")
 
 		// Ensure the directory for the file exists.
-		if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(targetPath), dirPerm); err != nil {
 			return fmt.Errorf("error creating directories for %s: %w", targetPath, err)
 		}
 
@@ -282,7 +294,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 				}
 
 				// New file with placeholder – create an empty stub so that path exists on disk.
-				if err := os.WriteFile(targetPath, []byte("<encrypted>"), 0o644); err != nil {
+				if err := os.WriteFile(targetPath, []byte("<encrypted>"), sensitiveFilePerm); err != nil {
 					return fmt.Errorf("error writing placeholder template %s: %w", targetPath, err)
 				}
 				log.Debug("Created placeholder for new encrypted file: %s", targetPath)
@@ -298,7 +310,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 				}
 			}
 
-			if err := os.WriteFile(targetPath, plaintext, 0o644); err != nil {
+			if err := os.WriteFile(targetPath, plaintext, sensitiveFilePerm); err != nil {
 				return fmt.Errorf("error writing template %s: %w", targetPath, err)
 			}
 			log.Debug("Wrote (decrypted) template: %s", targetPath)
@@ -306,7 +318,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 		}
 
 		// Non-encrypted files – write content as-is.
-		if err := os.WriteFile(targetPath, content, 0o644); err != nil {
+		if err := os.WriteFile(targetPath, content, filePerm); err != nil {
 			return fmt.Errorf("error writing template %s: %w", targetPath, err)
 		}
 		log.Debug("Wrote template: %s", targetPath)
@@ -371,7 +383,7 @@ func (h *SaveAppHandler) writeVars(varsDir string, cfg *model.AppConfig, input m
 	if err != nil {
 		return fmt.Errorf("error marshaling vars JSON: %w", err)
 	}
-	if err := os.WriteFile(varsFile, j, 0o644); err != nil {
+	if err := os.WriteFile(varsFile, j, sensitiveFilePerm); err != nil {
 		return fmt.Errorf("error writing vars file: %w", err)
 	}
 
@@ -424,6 +436,26 @@ func (h *SaveAppHandler) isNameUnique(name string, currentAppID string) (bool, e
 	}
 
 	return true, nil
+}
+
+// sanitizeTemplateFilename ensures that a user-supplied file name cannot escape the
+// templatesDir. It converts path separators to the platform format, cleans the
+// path, and rejects any absolute paths or those containing traversal ("..")
+// segments. A valid, cleaned, relative path is returned without the ".j2"
+// suffix.
+func sanitizeTemplateFilename(name string) (string, error) {
+	rel := filepath.Clean(filepath.FromSlash(name))
+	// Make sure the result is always relative by stripping an optional leading separator.
+	rel = strings.TrimLeft(rel, string(os.PathSeparator))
+
+	if rel == "" || rel == "." {
+		return "", fmt.Errorf("invalid empty filename")
+	}
+	// Reject absolute paths and any remaining traversal tokens.
+	if filepath.IsAbs(rel) || strings.Contains(rel, "..") {
+		return "", fmt.Errorf("invalid filename: potential path traversal detected")
+	}
+	return rel, nil
 }
 
 // SaveAppResult represents the result of creating an app

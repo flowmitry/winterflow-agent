@@ -243,7 +243,7 @@ func (s *AppVersionService) createFirstVersion(appID string) (uint32, error) {
 		return 0, fmt.Errorf("failed to marshal empty values: %w", err)
 	}
 
-	err = os.WriteFile(valuesPath, valuesData, 0644)
+	err = os.WriteFile(valuesPath, valuesData, 0600)
 	if err != nil {
 		return 0, fmt.Errorf("failed to write values file %s: %w", valuesPath, err)
 	}
@@ -252,7 +252,7 @@ func (s *AppVersionService) createFirstVersion(appID string) (uint32, error) {
 	configPath := filepath.Join(firstVersionDir, "config.json")
 	basicConfig := map[string]interface{}{
 		"id":        appID,
-		"name":      appID,
+		"name":      "",
 		"files":     []interface{}{},
 		"variables": []interface{}{},
 	}

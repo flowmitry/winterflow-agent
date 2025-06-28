@@ -194,6 +194,7 @@ func (r *composeRepository) RenameApp(appID, appName string) error {
 	if err := ensureDir(r.config.GetAppsPath()); err != nil {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
+
 	oldName, err := r.getAppNameById(appID)
 	if err != nil {
 		return fmt.Errorf("cannot rename app: %w", err)
@@ -204,12 +205,12 @@ func (r *composeRepository) RenameApp(appID, appName string) error {
 	}
 
 	oldDir := filepath.Join(r.config.GetAppsPath(), oldName)
-	newDir := filepath.Join(r.config.GetAppsPath(), appName)
-
-	if _, err := os.Stat(oldDir); os.IsNotExist(err) {
-		return fmt.Errorf("app directory %s does not exist", oldDir)
+	if !dirExists(oldDir) {
+		return nil
 	}
-	if _, err := os.Stat(newDir); err == nil {
+
+	newDir := filepath.Join(r.config.GetAppsPath(), appName)
+	if dirExists(newDir) {
 		return fmt.Errorf("target app directory %s already exists", newDir)
 	}
 
