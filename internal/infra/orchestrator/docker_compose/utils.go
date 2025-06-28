@@ -8,6 +8,7 @@ import (
 
 	"winterflow-agent/internal/domain/model"
 	appsvc "winterflow-agent/internal/domain/service/app"
+	"winterflow-agent/pkg/log"
 )
 
 // fileExists returns true if the provided path exists and is not a directory.
@@ -94,4 +95,80 @@ func getAppName(appPath string) (string, error) {
 	}
 
 	return name, nil
+}
+
+// removeDeployedFiles compares the file lists of the *previously* deployed configuration (oldCfg)
+// and the *new* configuration that is about to be deployed (newCfg). It removes only those files
+// from baseDir that existed in oldCfg but are absent in newCfg. This avoids unnecessary file
+// deletions when a file persists across versions and helps preserve any runtime-generated data
+// that might live next to the files.
+//
+// The function also attempts to prune now-empty parent directories, but it will never remove
+// baseDir itself.
+func (r *composeRepository) removeDeployedFiles(baseDir string, oldCfg, newCfg *model.AppConfig) error {
+	if oldCfg == nil {
+		return nil // Nothing to clean up.
+	}
+
+	log.Debug("Removing previously deployed files that are not part of the new version")
+
+	// Build a lookup map of filenames that are present in the new configuration so we can perform
+	// constant-time existence checks.
+	newFiles := make(map[string]struct{})
+	if newCfg != nil {
+		for _, nf := range newCfg.Files {
+			newFiles[nf.Filename] = struct{}{}
+		}
+	}
+
+	for _, f := range oldCfg.Files {
+		// If the file is still present in the new configuration, keep it.
+		if _, keep := newFiles[f.Filename]; keep {
+			continue
+		}
+
+		rel, err := sanitizeFileRelPath(f.Filename)
+		if err != nil {
+			log.Warn("[Cleanup] skipping invalid filename", "filename", f.Filename, "error", err)
+			continue
+		}
+
+		absPath := filepath.Join(baseDir, rel)
+		if err := os.Remove(absPath); err != nil {
+			if os.IsNotExist(err) {
+				continue // Already gone – nothing to do.
+			}
+			return fmt.Errorf("failed to remove file %s: %w", absPath, err)
+		}
+		log.Debug("Removed previously deployed file", "filename", rel)
+
+		// Attempt to prune empty directories going up the tree, but never remove baseDir itself.
+		dir := filepath.Dir(absPath)
+		for dir != baseDir {
+			entries, _ := os.ReadDir(dir)
+			if len(entries) == 0 {
+				_ = os.Remove(dir)
+				dir = filepath.Dir(dir)
+			} else {
+				break
+			}
+		}
+	}
+	return nil
+}
+
+// sanitizeFileRelPath ensures that a file path from AppConfig cannot escape the application
+// directory when joined with baseDir. The implementation mirrors the logic from the application
+// layer (sanitizeTemplateFilename) but is replicated locally to avoid cross-layer dependencies.
+func sanitizeFileRelPath(name string) (string, error) {
+	clean := filepath.Clean(filepath.FromSlash(name))
+	clean = strings.TrimLeft(clean, string(os.PathSeparator))
+
+	if clean == "" || clean == "." {
+		return "", fmt.Errorf("invalid empty filename")
+	}
+	if filepath.IsAbs(clean) || strings.Contains(clean, "..") {
+		return "", fmt.Errorf("invalid filename: potential path traversal detected")
+	}
+	return clean, nil
 }
