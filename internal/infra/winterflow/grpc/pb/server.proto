@@ -77,9 +77,21 @@ message AgentHeartbeatResponseV1 {
   BaseResponse base = 1;
 }
 
+//message AgentMetricValueV1 {
+//  google.protobuf.Timestamp timestamp = 1;
+//  string value = 2;
+//}
+
+//message AgentMetricValuesV1 {
+//  string name = 1;
+//  repeated AgentMetricValueV1 values = 2;
+//}
+
 // Agent metrics message
 message AgentMetricsV1 {
   BaseMessage base = 1;
+
+  //  repeated AgentMetricValuesV1 metrics = 2;
 }
 
 message AgentMetricsResponseV1 {
