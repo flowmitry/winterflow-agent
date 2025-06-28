@@ -283,7 +283,7 @@ func (s *AppVersionService) GetLatestAppVersion(appID string) (uint32, error) {
 	// When no versions are found we treat this as an error condition so that
 	// callers are forced to handle the un-initialised state explicitly.
 	if len(versions) == 0 {
-		return 0, fmt.Errorf("no versions found for app %s", appID)
+		return 0, nil
 	}
 
 	// Versions slice is sorted in ascending order, therefore the last element
