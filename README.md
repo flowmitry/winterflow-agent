@@ -59,7 +59,7 @@ sudo journalctl -u winterflow-agent -f
 
 ## Application Restoration
 
-If you re-install the agent, migrate the `/opt/winterflow` directory to a new machine, or re-register your agent, you can safely restore all application templates.
+If you re-install the agent, migrate the `/opt/winterflow` directory to a new machine, or re-register your agent, you can safely restore all application templates (not app's data).
 
 ### Prerequisites
 - The agent must already be **registered** (`agent_status` = `registered` in `agent.config.json`)
