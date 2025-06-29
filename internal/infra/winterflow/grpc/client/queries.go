@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"winterflow-agent/internal/application/query/get_app"
 	"winterflow-agent/internal/application/query/get_apps_status"
+	"winterflow-agent/internal/application/query/get_networks"
 	"winterflow-agent/internal/application/query/get_registries"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
@@ -146,6 +147,45 @@ func HandleGetRegistriesQuery(queryBus cqrs.QueryBus, getRegistriesRequest *pb.G
 
 	agentMsg := &pb.AgentMessage{
 		Message: &pb.AgentMessage_GetRegistriesResponseV1{GetRegistriesResponseV1: resp},
+	}
+
+	return agentMsg, nil
+}
+
+// HandleGetNetworksQuery handles the query dispatch and creates the appropriate response message
+func HandleGetNetworksQuery(queryBus cqrs.QueryBus, getNetworksRequest *pb.GetNetworksRequestV1, agentID string) (*pb.AgentMessage, error) {
+	log.Debug("Processing get networks request")
+
+	query := get_networks.GetNetworksQuery{}
+
+	responseCode := pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	responseMessage := "Networks retrieved successfully"
+	var networkNames []string
+
+	result, err := queryBus.Dispatch(query)
+	if err != nil {
+		log.Error("Error retrieving networks", "error", err)
+		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		responseMessage = fmt.Sprintf("Error retrieving networks: %v", err)
+	} else {
+		domainResult, ok := result.(*model.GetNetworksResult)
+		if !ok {
+			log.Error("Error retrieving networks: unexpected result type")
+			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+			responseMessage = "Error retrieving networks: unexpected result type"
+		} else {
+			networkNames = NetworksToProtoNames(domainResult.Networks)
+		}
+	}
+
+	baseResp := createBaseResponse(getNetworksRequest.Base.MessageId, agentID, responseCode, responseMessage)
+	resp := &pb.GetNetworksResponseV1{
+		Base: &baseResp,
+		Name: networkNames,
+	}
+
+	agentMsg := &pb.AgentMessage{
+		Message: &pb.AgentMessage_GetNetworksResponseV1{GetNetworksResponseV1: resp},
 	}
 
 	return agentMsg, nil

@@ -302,3 +302,13 @@ func ProtoDeleteRegistryRequestV1ToDeleteRegistryCommand(request *pb.DeleteRegis
 		Address: request.Address,
 	}
 }
+
+// NetworksToProtoNames converts a slice of domain Network models to a slice of strings
+// expected by GetNetworksResponseV1.
+func NetworksToProtoNames(networks []model.Network) []string {
+	names := make([]string, 0, len(networks))
+	for _, n := range networks {
+		names = append(names, n.Name)
+	}
+	return names
+}

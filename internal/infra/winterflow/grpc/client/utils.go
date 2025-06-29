@@ -71,6 +71,12 @@ func extractBaseMessageFromCommand(command interface{}) *pb.BaseMessage {
 		return cmd.CreateRegistryRequestV1.GetBase()
 	case *pb.ServerCommand_DeleteRegistryRequestV1:
 		return cmd.DeleteRegistryRequestV1.GetBase()
+	case *pb.ServerCommand_GetNetworksRequestV1:
+		return cmd.GetNetworksRequestV1.GetBase()
+	case *pb.ServerCommand_CreateNetworkRequestV1:
+		return cmd.CreateNetworkRequestV1.GetBase()
+	case *pb.ServerCommand_DeleteNetworkRequestV1:
+		return cmd.DeleteNetworkRequestV1.GetBase()
 	default:
 		return nil
 	}
@@ -112,6 +118,15 @@ func buildUnauthorizedAgentMessage(command interface{}, messageID, agentID strin
 	case *pb.ServerCommand_DeleteRegistryRequestV1:
 		resp := &pb.DeleteRegistryResponseV1{Base: &baseResp}
 		return &pb.AgentMessage{Message: &pb.AgentMessage_DeleteRegistryResponseV1{DeleteRegistryResponseV1: resp}}
+	case *pb.ServerCommand_GetNetworksRequestV1:
+		resp := &pb.GetNetworksResponseV1{Base: &baseResp}
+		return &pb.AgentMessage{Message: &pb.AgentMessage_GetNetworksResponseV1{GetNetworksResponseV1: resp}}
+	case *pb.ServerCommand_CreateNetworkRequestV1:
+		resp := &pb.CreateNetworkResponseV1{Base: &baseResp}
+		return &pb.AgentMessage{Message: &pb.AgentMessage_CreateNetworkResponseV1{CreateNetworkResponseV1: resp}}
+	case *pb.ServerCommand_DeleteNetworkRequestV1:
+		resp := &pb.DeleteNetworkResponseV1{Base: &baseResp}
+		return &pb.AgentMessage{Message: &pb.AgentMessage_DeleteNetworkResponseV1{DeleteNetworkResponseV1: resp}}
 	default:
 		log.Debug("Unsupported command type for unauthorized response", "type", fmt.Sprintf("%T", cmd))
 		return nil

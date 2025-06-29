@@ -234,6 +234,33 @@ message DeleteRegistryResponseV1 {
   BaseResponse base = 1;
 }
 
+message GetNetworksRequestV1 {
+  BaseMessage base = 1;
+}
+
+message GetNetworksResponseV1 {
+  BaseResponse base = 1;
+  repeated string name = 2;
+}
+
+message CreateNetworkRequestV1 {
+  BaseMessage base = 1;
+  string name = 2;
+}
+
+message CreateNetworkResponseV1 {
+  BaseResponse base = 1;
+}
+
+message DeleteNetworkRequestV1 {
+  BaseMessage base = 1;
+  string name = 2;
+}
+
+message DeleteNetworkResponseV1 {
+  BaseResponse base = 1;
+}
+
 // Command messages for bidirectional streaming
 message ServerCommand {
   oneof command {
@@ -253,6 +280,10 @@ message ServerCommand {
     GetRegistriesRequestV1 get_registries_request_v1 = 1008;
     CreateRegistryRequestV1 create_registry_request_v1 = 1009;
     DeleteRegistryRequestV1 delete_registry_request_v1 = 1010;
+
+    GetNetworksRequestV1 get_networks_request_v1 = 1011;
+    CreateNetworkRequestV1 create_network_request_v1 = 1012;
+    DeleteNetworkRequestV1 delete_network_request_v1 = 1013;
   }
 }
 
@@ -274,6 +305,10 @@ message AgentMessage {
     GetRegistriesResponseV1 get_registries_response_v1 = 1008;
     CreateRegistryResponseV1 create_registry_response_v1 = 1009;
     DeleteRegistryResponseV1 delete_registry_response_v1 = 1010;
+
+    GetNetworksResponseV1 get_networks_response_v1 = 1011;
+    CreateNetworkResponseV1 create_network_response_v1 = 1012;
+    DeleteNetworkResponseV1 delete_network_response_v1 = 1013;
   }
 }
 

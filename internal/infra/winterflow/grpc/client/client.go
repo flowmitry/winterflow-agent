@@ -608,6 +608,10 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			getRegistriesRequestCh := make(chan *pb.GetRegistriesRequestV1, queueChannelSize)
 			createRegistryRequestCh := make(chan *pb.CreateRegistryRequestV1, queueChannelSize)
 			deleteRegistryRequestCh := make(chan *pb.DeleteRegistryRequestV1, queueChannelSize)
+			// Network operations
+			getNetworksRequestCh := make(chan *pb.GetNetworksRequestV1, queueChannelSize)
+			createNetworkRequestCh := make(chan *pb.CreateNetworkRequestV1, queueChannelSize)
+			deleteNetworkRequestCh := make(chan *pb.DeleteNetworkRequestV1, queueChannelSize)
 
 			// Start goroutine to receive responses
 			go func() {
@@ -935,6 +939,54 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							}
 						}
 
+					case *pb.ServerCommand_CreateNetworkRequestV1:
+						log.Info("Received create network request", "messageId", cmd.CreateNetworkRequestV1.Base.MessageId)
+						select {
+						case createNetworkRequestCh <- cmd.CreateNetworkRequestV1:
+						default:
+							log.Warn("Create network request channel full, dropping request")
+							baseResp := createBaseResponse(cmd.CreateNetworkRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							resp := &pb.CreateNetworkResponseV1{Base: &baseResp}
+							agentMsg := &pb.AgentMessage{Message: &pb.AgentMessage_CreateNetworkResponseV1{CreateNetworkResponseV1: resp}}
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response", "error", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
+						}
+
+					case *pb.ServerCommand_DeleteNetworkRequestV1:
+						log.Info("Received delete network request", "messageId", cmd.DeleteNetworkRequestV1.Base.MessageId)
+						select {
+						case deleteNetworkRequestCh <- cmd.DeleteNetworkRequestV1:
+						default:
+							log.Warn("Delete network request channel full, dropping request")
+							baseResp := createBaseResponse(cmd.DeleteNetworkRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							resp := &pb.DeleteNetworkResponseV1{Base: &baseResp}
+							agentMsg := &pb.AgentMessage{Message: &pb.AgentMessage_DeleteNetworkResponseV1{DeleteNetworkResponseV1: resp}}
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response", "error", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
+						}
+
+					case *pb.ServerCommand_GetNetworksRequestV1:
+						log.Info("Received get networks request", "messageId", cmd.GetNetworksRequestV1.Base.MessageId)
+						select {
+						case getNetworksRequestCh <- cmd.GetNetworksRequestV1:
+						default:
+							log.Warn("Get networks request channel full, dropping request")
+							baseResp := createBaseResponse(cmd.GetNetworksRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							resp := &pb.GetNetworksResponseV1{Base: &baseResp, Name: nil}
+							agentMsg := &pb.AgentMessage{Message: &pb.AgentMessage_GetNetworksResponseV1{GetNetworksResponseV1: resp}}
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response", "error", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
+						}
+
 					default:
 						// Log details about the unknown command type
 						log.Warn("Received unknown command type", "type", fmt.Sprintf("%T", cmd))
@@ -1186,6 +1238,61 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						continue
 					}
 					log.Info("Get registries response sent successfully")
+
+				case createNetworkRequest := <-createNetworkRequestCh:
+					agentMsg, err := HandleCreateNetworkRequest(c.commandBus, createNetworkRequest, agentID)
+					if err != nil {
+						log.Error("Error creating network response", "error", err)
+						continue
+					}
+					if err := stream.Send(agentMsg); err != nil {
+						log.Error("Error sending create network response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							ticker.Stop()
+							metricsTicker.Stop()
+							continue outerLoop
+						}
+						continue
+					}
+					log.Info("Create network response sent successfully")
+
+				case deleteNetworkRequest := <-deleteNetworkRequestCh:
+					agentMsg, err := HandleDeleteNetworkRequest(c.commandBus, deleteNetworkRequest, agentID)
+					if err != nil {
+						log.Error("Error deleting network response", "error", err)
+						continue
+					}
+					if err := stream.Send(agentMsg); err != nil {
+						log.Error("Error sending delete network response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							ticker.Stop()
+							metricsTicker.Stop()
+							continue outerLoop
+						}
+						continue
+					}
+					log.Info("Delete network response sent successfully")
+
+				case getNetworksRequest := <-getNetworksRequestCh:
+					agentMsg, err := HandleGetNetworksQuery(c.queryBus, getNetworksRequest, agentID)
+					if err != nil {
+						log.Error("Error retrieving networks response", "error", err)
+						continue
+					}
+
+					if err := stream.Send(agentMsg); err != nil {
+						log.Error("Error sending get networks response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							ticker.Stop()
+							metricsTicker.Stop()
+							continue outerLoop
+						}
+						continue
+					}
+					log.Info("Get networks response sent successfully")
 
 				case <-streamDone:
 					log.Warn("Stream receiver stopped, recreating stream")

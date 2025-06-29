@@ -2,8 +2,10 @@ package command
 
 import (
 	"winterflow-agent/internal/application/command/control_app"
+	"winterflow-agent/internal/application/command/create_network"
 	"winterflow-agent/internal/application/command/create_registry"
 	"winterflow-agent/internal/application/command/delete_app"
+	"winterflow-agent/internal/application/command/delete_network"
 	"winterflow-agent/internal/application/command/delete_registry"
 	"winterflow-agent/internal/application/command/rename_app"
 	"winterflow-agent/internal/application/command/save_app"
@@ -44,6 +46,14 @@ func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appReposi
 
 	if err := b.Register(delete_registry.NewDeleteRegistryHandler(registryRepository, config)); err != nil {
 		return log.Errorf("failed to register delete registry handler", "error", err)
+	}
+
+	if err := b.Register(create_network.NewCreateNetworkHandler(networkRepository)); err != nil {
+		return log.Errorf("failed to register create network handler", "error", err)
+	}
+
+	if err := b.Register(delete_network.NewDeleteNetworkHandler(networkRepository)); err != nil {
+		return log.Errorf("failed to register delete network handler", "error", err)
 	}
 
 	return nil

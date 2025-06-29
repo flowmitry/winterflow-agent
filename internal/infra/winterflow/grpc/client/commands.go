@@ -2,8 +2,10 @@ package client
 
 import (
 	"fmt"
+	"winterflow-agent/internal/application/command/create_network"
 	"winterflow-agent/internal/application/command/create_registry"
 	"winterflow-agent/internal/application/command/delete_app"
+	"winterflow-agent/internal/application/command/delete_network"
 	"winterflow-agent/internal/application/command/delete_registry"
 	"winterflow-agent/internal/application/command/save_app"
 	"winterflow-agent/internal/application/command/update_agent"
@@ -222,6 +224,56 @@ func HandleDeleteRegistryRequest(commandBus cqrs.CommandBus, deleteRegistryReque
 
 	agentMsg := &pb.AgentMessage{
 		Message: &pb.AgentMessage_DeleteRegistryResponseV1{DeleteRegistryResponseV1: resp},
+	}
+
+	return agentMsg, nil
+}
+
+// HandleCreateNetworkRequest handles the create network command and sends back a response message
+func HandleCreateNetworkRequest(commandBus cqrs.CommandBus, createNetworkRequest *pb.CreateNetworkRequestV1, agentID string) (*pb.AgentMessage, error) {
+	log.Debug("Processing create network request", "name", createNetworkRequest.Name)
+
+	cmd := create_network.CreateNetworkCommand{NetworkName: createNetworkRequest.Name}
+
+	responseCode := pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	responseMessage := "Network created successfully"
+
+	if err := commandBus.Dispatch(cmd); err != nil {
+		log.Error("Error creating network", "error", err)
+		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		responseMessage = fmt.Sprintf("Error creating network: %v", err)
+	}
+
+	baseResp := createBaseResponse(createNetworkRequest.Base.MessageId, agentID, responseCode, responseMessage)
+	resp := &pb.CreateNetworkResponseV1{Base: &baseResp}
+
+	agentMsg := &pb.AgentMessage{
+		Message: &pb.AgentMessage_CreateNetworkResponseV1{CreateNetworkResponseV1: resp},
+	}
+
+	return agentMsg, nil
+}
+
+// HandleDeleteNetworkRequest handles the delete network command and sends back a response message
+func HandleDeleteNetworkRequest(commandBus cqrs.CommandBus, deleteNetworkRequest *pb.DeleteNetworkRequestV1, agentID string) (*pb.AgentMessage, error) {
+	log.Debug("Processing delete network request", "name", deleteNetworkRequest.Name)
+
+	cmd := delete_network.DeleteNetworkCommand{NetworkName: deleteNetworkRequest.Name}
+
+	responseCode := pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	responseMessage := "Network deleted successfully"
+
+	if err := commandBus.Dispatch(cmd); err != nil {
+		log.Error("Error deleting network", "error", err)
+		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		responseMessage = fmt.Sprintf("Error deleting network: %v", err)
+	}
+
+	baseResp := createBaseResponse(deleteNetworkRequest.Base.MessageId, agentID, responseCode, responseMessage)
+	resp := &pb.DeleteNetworkResponseV1{Base: &baseResp}
+
+	agentMsg := &pb.AgentMessage{
+		Message: &pb.AgentMessage_DeleteNetworkResponseV1{DeleteNetworkResponseV1: resp},
 	}
 
 	return agentMsg, nil
