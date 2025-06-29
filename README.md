@@ -1,102 +1,115 @@
 # WinterFlow Agent
 
+A lightweight agent for managing Docker applications on Unix systems.
+
 ## Requirements
 
-- Recommended OS: Any modern Unix system.
-- System Resources: at least 1 vCPU and 2GB RAM for Docker.
-- Software: jq, curl, [docker](https://docs.docker.com/engine/install/), [docker compose (plugin)](https://docs.docker.com/compose/install/linux/)
+### System Requirements
+- **OS**: Any modern Unix system (Linux, macOS, BSD)
+- **Resources**: Minimum 1 vCPU and 2GB RAM for Docker operations
+- **Software Dependencies**:
+  - [Docker](https://docs.docker.com/engine/install/)
+  - [Docker Compose (plugin)](https://docs.docker.com/compose/install/linux/)
+  - `jq` (JSON processor)
+  - `curl` (HTTP client)
 
+## Installation
 
-## Agent Installation
+### Automatic Installation
 
-Run on your server as root (use sudo):
+The recommended way to install the WinterFlow Agent is using the automatic installer:
 
-```sh
+```bash
 curl -fsSL https://get.winterflow.io/agent | sudo bash
 ```
 
-The installation process includes the generation of a unique
-6-character code. This code is required for your server's registration
-at [https://app.winterflow.io](https://app.winterflow.io).
+**Important**: The installation process generates a unique 6-character registration code. You'll need this code to register your server at [https://app.winterflow.io](https://app.winterflow.io).
 
-## Manual Agent installation
+### Manual Installation
 
-You can manually download and execute the [./install.sh](./install.sh) script with `sudo`.
+If you prefer to install manually, follow these steps:
 
+1. **Verify system requirements** and install dependencies
+2. **Create the winterflow user** and add it to the `docker` group
+3. **Create the installation directory**: `/opt/winterflow`
+4. **Download the agent binary** for your architecture from [GitHub Releases](https://github.com/flowmitry/winterflow-agent/releases) to `/opt/winterflow/agent`
+5. **Make the binary executable**: `chmod +x /opt/winterflow/agent`
+6. **Register your server**: `./agent --register`
+7. **Create and configure** the systemd service
+8. **Start the service** and complete automatic registration
 
-### Manual Agent Registration
-
-If automatic registration failed during installation, you can manually register:
-
-```sh
-sudo -u winterflow /opt/winterflow/agent --register
-```
+For detailed installation steps and troubleshooting, refer to the [install.sh](./install.sh) file.
 
 ## Service Management
 
-The WinterFlow Agent runs as a systemd service. Here are the commands to manage it:
+The WinterFlow Agent runs as a systemd service. Use the following commands to manage it:
 
-### Manager Winterflow agent service
-```sh
-sudo systemctl start winterflow-agent
-sudo systemctl stop winterflow-agent
-sudo systemctl restart winterflow-agent
-sudo systemctl status winterflow-agent
+### Control the Service
+
+```bash
+sudo systemctl start|stop|restart|status winterflow-agent
 ```
 
-### View service logs
-```sh
+### View Service Logs
+
+```bash
 # Follow logs in real-time
 sudo journalctl -u winterflow-agent -f
-
-# View logs from last hour
-sudo journalctl -u winterflow-agent --since "1 hour ago"
 ```
 
-### Log Files Location
-- Standard output: `/var/log/winterflow/winterflow_agent.log`
-- Error output: `/var/log/winterflow/winterflow_agent_error.log`
-
-
-## Agent Uninstallation
+## Uninstallation
 
 To completely remove the WinterFlow Agent from your system, run the following commands as root (use `sudo`):
 
-### 1. Stop and disable the service
-```sh
+### 1. Stop and Disable the Service
+
+```bash
 sudo systemctl stop winterflow-agent
 sudo systemctl disable winterflow-agent
 ```
 
-### 2. Remove the systemd service file
-```sh
+### 2. Remove Systemd Service File
+
+```bash
 sudo rm -f /etc/systemd/system/winterflow-agent.service
 sudo systemctl daemon-reload
 ```
 
-### 3. Remove installation directories
-```sh
+### 3. Remove Installation Directories
+
+```bash
 sudo rm -rf /opt/winterflow
 sudo rm -rf /var/log/winterflow
 ```
 
-### 4. Remove the winterflow user (optional)
-```sh
+### 4. Remove User (Optional)
+
+```bash
 sudo userdel -r winterflow
 ```
 
-### 5. Remove sudoers configuration (if added sudo)
-```sh
+### 5. Remove Sudoers Configuration (if added)
+
+```bash
 sudo rm -f /etc/sudoers.d/winterflow
 ```
 
 ## Directory Structure
 
-The following directories and files are part of the WinterFlow Agent's directory structure:
+The WinterFlow Agent uses the following directory structure:
 
-* `/opt/winterflow` - The root directory of the WinterFlow Agent.
-* `/opt/winterflow/agent` - This directory contains the agent binary.
-* `/opt/winterflow/agent.config.json` - The configuration file for the agent.
-* `/opt/winterflow/.certs` - Your private/public keys.
-* `/opt/winterflow/apps_templates` - This directory holds your apps versions.
-* `/opt/winterflow/apps` - The directory holds the Docker Compose files to run your apps.
+| Directory/File | Description |
+|----------------|-------------|
+| `/opt/winterflow` | Root installation directory |
+| `/opt/winterflow/agent` | Agent binary executable |
+| `/opt/winterflow/agent.config.json` | Agent configuration file |
+| `/opt/winterflow/.certs` | Private/public key certificates |
+| `/opt/winterflow/apps_templates` | Application version templates |
+| `/opt/winterflow/apps` | Docker Compose files for running applications |
+
+## Support
+
+For support and documentation, visit:
+- **Web Application**: [https://app.winterflow.io](https://app.winterflow.io)
+- **Documentation**: [https://winterflow.io](https://winterflow.io)
+- **GitHub Repository**: [https://github.com/flowmitry/winterflow-agent](https://github.com/flowmitry/winterflow-agent)

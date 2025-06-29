@@ -37,7 +37,6 @@ INSTALL_DIR="/opt/winterflow"
 AGENT_BINARY="${INSTALL_DIR}/agent"
 CONFIG_FILE="${INSTALL_DIR}/agent.config.json"
 SERVICE_FILE="/etc/systemd/system/winterflow-agent.service"
-LOGS_DIR="/var/log/winterflow/"
 
 # URLs
 GITHUB_API="https://api.github.com/repos/flowmitry/winterflow-agent/releases"
@@ -57,25 +56,6 @@ TEMP_AGENT_BINARY=""
 
 # Global variable that will hold user-selected orchestrator. Default is docker_compose
 ORCHESTRATOR="docker_compose"
-
-# Ask the user which orchestrator they want to use unless a non-empty config already exists.
-ask_orchestrator() {
-    if [ -f "${CONFIG_FILE}" ] && [ -s "${CONFIG_FILE}" ]; then
-        log "info" "Existing config detected - skipping orchestrator selection prompt"
-        return 0
-    fi
-
-    read -r -p "Choose orchestrator [docker_compose/docker_swarm] (default: docker_compose): " input_orch
-    case "$input_orch" in
-        docker_swarm)
-            ORCHESTRATOR="docker_swarm";;
-        ""|docker_compose)
-            ORCHESTRATOR="docker_compose";;
-        *)
-            log "warn" "Unknown orchestrator '$input_orch'. Using default 'docker_compose'.";;
-    esac
-    log "info" "Selected orchestrator: ${ORCHESTRATOR}"
-}
 
 #######################
 # Utility Functions
@@ -151,23 +131,11 @@ create_directories() {
         log "info" "Created directory ${INSTALL_DIR}"
     fi
 
-    # Create logs directory if it doesn't exist
-    if [ -d "${LOGS_DIR}" ]; then
-        log "info" "Directory ${LOGS_DIR} already exists"
-    else
-        mkdir -p "${LOGS_DIR}"
-        log "info" "Created directory ${LOGS_DIR}"
-    fi
-
     # Change ownership to service user
     if id "${USER}" &>/dev/null; then
         chown -R ${USER}:${USER} "${INSTALL_DIR}"
         chmod 755 "${INSTALL_DIR}"
         log "info" "Changed ownership of ${INSTALL_DIR} to ${USER} user"
-        
-        chown -R ${USER}:${USER} "${LOGS_DIR}"
-        chmod 755 "${LOGS_DIR}"
-        log "info" "Changed ownership of ${LOGS_DIR} to ${USER} user"
     else
         log "warn" "Could not change ownership of directories: ${USER} user does not exist"
     fi
@@ -395,8 +363,8 @@ RestartSec=10
 User=${USER}
 Group=${USER}
 WorkingDirectory=${INSTALL_DIR}
-StandardOutput=${LOGS_DIR}/agent.log
-StandardError=${LOGS_DIR}/agent_error.log
+StandardOutput=journal
+StandardError=journal
 SyslogIdentifier=winterflow-agent
 
 [Install]
@@ -425,12 +393,6 @@ ensure_ownership() {
         # Set ownership recursively for the entire install directory
         chown -R ${USER}:${USER} "${INSTALL_DIR}"
         log "info" "Ensured ownership of all content in ${INSTALL_DIR} is set to ${USER} user"
-        
-        # Also ensure logs directory ownership
-        if [ -d "${LOGS_DIR}" ]; then
-            chown -R ${USER}:${USER} "${LOGS_DIR}"
-            log "info" "Ensured ownership of ${LOGS_DIR} is set to ${USER} user"
-        fi
         
         # Verify key files have correct ownership
         log "info" "Ownership verification for key files:"
@@ -559,9 +521,6 @@ check_root
 # Check OS version
 log "info" "Checking OS version..."
 check_os_version
-
-# Ask for orchestrator early so we can verify related dependencies
-ask_orchestrator
 
 # Verify required packages are installed
 check_required_packages
