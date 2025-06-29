@@ -1,0 +1,368 @@
+---
+description: 
+globs: internal/**,cmd/**,pkg/**
+alwaysApply: false
+---
+# Logging Guidelines for Winterflow Agent
+
+## Import Standards
+
+### Required Import Pattern
+All Go files that need logging must import the custom logging package:
+
+```go
+import (
+    log "winterflow-agent/pkg/log"
+)
+```
+
+### Package Access
+- **ALWAYS** use the custom `log` package from `pkg/log`
+- **NEVER** import the standard library `log` package directly
+- **NEVER** use `fmt.Print*` functions for logging purposes
+
+## Mandatory Compliance
+
+### Apply During All Code Changes
+**These logging rules MUST be enforced during ANY code modification:**
+
+- **New Code**: Must follow all guidelines from the start
+- **Modified Files**: Must refactor ALL existing logging in the file to comply
+- **Code Reviews**: Must verify compliance before approval
+- **No Exceptions**: All logging must use structured patterns
+
+### Enforcement Scope
+When touching any file, you MUST:
+1. ✅ **Convert** all `log.Printf()` to structured logging
+2. ✅ **Remove** all logging from API handlers (`internal/api/endpoints/**`)
+3. ✅ **Add** proper context information to existing logs
+4. ✅ **Apply** security guidelines to prevent sensitive data logging
+5. ✅ **Use** appropriate log levels for all messages
+
+**Rationale**: Gradual improvement ensures consistent logging standards across the entire codebase without requiring a massive refactoring effort.
+
+## Log Levels and Usage Guidelines
+
+### Debug Level - `log.Debug()`
+**When to use:**
+- Development and troubleshooting information
+- Detailed execution flow tracking
+- Variable values and state information
+- Non-production diagnostic information
+
+**Examples:**
+```go
+log.Debug("Processing request", "user_id", userID, "endpoint", r.URL.Path)
+log.Debug("Database query executed", "query_time_ms", queryTime, "rows_affected", rowsAffected)
+```
+
+### Info Level - `log.Info()`
+**When to use:**
+- Important application events and milestones
+- Successful operations and state changes
+- System initialization and shutdown events
+- User actions and business logic completion
+
+**Examples:**
+```go
+log.Info("Database connection established successfully")
+log.Info("User authenticated successfully", "user_id", userID, "method", "oauth2")
+log.Info("Application deployed", "app_id", appID, "agent_id", agentID)
+```
+
+### Warn Level - `log.Warn()`
+**When to use:**
+- Recoverable errors or unexpected conditions
+- Deprecated functionality usage
+- Performance degradation warnings
+- Configuration issues that don't prevent operation
+
+**Examples:**
+```go
+log.Warn("Database health check failed", "error", err)
+log.Warn("High memory usage detected", "usage_percent", memUsage)
+log.Warn("API rate limit approaching", "current_requests", currentReqs, "limit", rateLimit)
+```
+
+### Error Level - `log.Error()`
+**When to use:**
+- Application errors that affect functionality
+- Failed operations that should be investigated
+- Database connection failures
+- Authentication and authorization failures
+- External service integration failures
+
+**Examples:**
+```go
+log.Error("Failed to get database repository", "error", err)
+log.Error("Authentication failed", "user_id", userID, "reason", "invalid_token")
+log.Error("External API call failed", "service", "docker_registry", "error", err)
+```
+
+### Fatal Level - `log.Fatal()` / `log.Fatalf()`
+**When to use:**
+- Unrecoverable application errors
+- Critical configuration missing
+- Essential service startup failures
+- System-level errors that prevent operation
+
+**Examples:**
+```go
+log.Fatal("Failed to load database configuration", "error", err)
+log.Fatalf("Port %d is already in use", port)
+```
+
+## Structured Logging Best Practices
+
+### Use Key-Value Pairs
+**Always prefer structured logging over string formatting:**
+
+```go
+// ✅ GOOD - Structured logging
+log.Error("Failed to create user account", "user_id", userID, "email", email, "error", err)
+
+// ❌ BAD - String interpolation
+log.Error(fmt.Sprintf("Failed to create user account for user %s with email %s: %v", userID, email, err))
+```
+
+### Consistent Key Naming
+Use standardized key names across the application:
+
+- `user_id` - for user identifiers
+- `agent_id` - for agent identifiers  
+- `app_id` - for application identifiers
+- `error` - for error objects
+- `method` - for HTTP methods
+- `path` - for URL paths
+- `remote_addr` - for client IP addresses
+- `duration_ms` - for operation timing
+- `count` - for quantities
+
+### Context Information
+Include relevant context for troubleshooting:
+
+```go
+// ✅ GOOD - Rich context
+log.Error("Database query failed", 
+    "query", "SELECT * FROM users WHERE id = ?",
+    "user_id", userID,
+    "error", err,
+    "duration_ms", queryDuration,
+    "connection_pool_size", poolSize)
+
+// ❌ BAD - Minimal context  
+log.Error("Database error", "error", err)
+```
+
+## Error Logging Patterns
+
+### Standard Error Pattern
+When logging errors, follow this pattern:
+
+```go
+if err != nil {
+    log.Error("Operation description failed", 
+        "operation", "specific_operation_name",
+        "context_key1", contextValue1,
+        "context_key2", contextValue2,
+        "error", err)
+    // Handle error appropriately
+    return err
+}
+```
+
+### Error Chain Preservation
+Preserve error context when wrapping errors:
+
+```go
+if err != nil {
+    log.Error("Failed to process user request", 
+        "user_id", userID,
+        "operation", "user_creation",
+        "error", err)
+    return fmt.Errorf("user creation failed for user %s: %w", userID, err)
+}
+```
+
+### Database Error Logging
+Specific pattern for database-related errors:
+
+```go
+repo, err := db.GetRepository(database)
+if err != nil {
+    log.Error("Failed to get database repository", "error", err)
+    utils.RespondWithError(w, "Database connection failed", http.StatusInternalServerError)
+    return
+}
+```
+
+## Security and Privacy Considerations
+
+### Sensitive Data Handling
+**NEVER log sensitive information:**
+
+```go
+// ❌ DANGEROUS - Contains sensitive data
+log.Info("User login", "email", email, "password", password, "token", accessToken)
+
+// ✅ SAFE - No sensitive data
+log.Info("User login successful", "user_id", userID, "login_method", "password")
+```
+
+### Sensitive Data Categories
+Never log the following:
+- Passwords or password hashes
+- Access tokens or refresh tokens
+- API keys or secrets
+- Personal identification numbers
+- Credit card information
+- Social security numbers
+- Full email addresses (use hashed or partial)
+
+### Safe Alternatives
+Use these patterns for potentially sensitive data:
+
+```go
+// For emails - use domain or hash
+log.Info("User registered", "email_domain", strings.Split(email, "@")[1])
+
+// For tokens - use prefix only
+log.Debug("Token validation", "token_prefix", token[:8]+"...")
+
+// For IDs - full IDs are usually safe
+log.Info("User action", "user_id", userID)
+```
+
+## Performance Considerations
+
+### Avoid Expensive Operations in Logs
+Don't perform costly operations just for logging:
+
+```go
+// ❌ BAD - Expensive JSON marshaling
+userJSON, _ := json.Marshal(user)
+log.Debug("User data", "user_json", string(userJSON))
+
+// ✅ GOOD - Only log necessary fields
+log.Debug("User data", "user_id", user.ID, "user_status", user.Status)
+```
+
+### Conditional Debug Logging
+For expensive debug operations, consider conditional logging:
+
+```go
+if log.GetLog().Enabled(context.Background(), slog.LevelDebug) {
+    // Expensive debug operation here
+    log.Debug("Complex debug info", "expensive_data", expensiveCalculation())
+}
+```
+
+## Message Format Consistency
+
+### Use Action-Based Messages
+Structure log messages as actions with outcomes:
+
+```go
+// ✅ GOOD - Clear action and outcome
+log.Info("User account created successfully", "user_id", newUserID)
+log.Error("User account creation failed", "email", email, "error", err)
+
+// ❌ BAD - Vague messages
+log.Info("User stuff")
+log.Error("Something went wrong")
+```
+
+## Code Refactoring Requirements
+
+### No Printf Style Logging
+**All `log.Printf()` usage must be refactored** to use appropriate structured logging methods:
+
+```go
+// ✅ REQUIRED - Use structured logging
+log.Info("Processing migration", "version", targetVersion)
+
+// ❌ FORBIDDEN - Printf style logging
+log.Printf("Processing migration to version %d", targetVersion)
+```
+
+### Mandatory Refactoring During Changes
+**When making ANY changes to files containing legacy logging patterns:**
+
+1. **MUST refactor** all `log.Printf()` calls in the modified file
+2. **MUST convert** string interpolation to structured key-value pairs
+3. **MUST add** relevant context information
+4. **MUST follow** security guidelines for sensitive data
+5. **MUST remove** any logging from API handlers (`internal/api/endpoints/**`)
+
+### Refactoring Strategy
+When updating existing code, apply these transformations:
+
+**Before (Legacy):**
+```go
+log.Printf("User %s created account with email %s", userID, email)
+log.Printf("Error processing request: %v", err)
+```
+
+**After (Required):**
+```go
+log.Info("User account created", "user_id", userID, "email_domain", domain)
+log.Error("Failed to process request", "user_id", userID, "operation", "account_creation", "error", err)
+```
+
+## Common Anti-Patterns to Avoid
+
+### String Concatenation in Logs
+```go
+// ❌ BAD
+log.Info("User " + userID + " performed action " + action)
+
+// ✅ GOOD  
+log.Info("User performed action", "user_id", userID, "action", action)
+```
+
+### Logging Inside Loops Without Rate Limiting
+```go
+// ❌ BAD - Can flood logs
+for _, item := range items {
+    log.Debug("Processing item", "item_id", item.ID)
+    // ... process item ...
+}
+
+// ✅ GOOD - Batch logging
+log.Debug("Processing items batch", "item_count", len(items))
+for _, item := range items {
+    // ... process item ...
+}
+log.Debug("Items batch processed successfully", "item_count", len(items))
+```
+
+### Inconsistent Error Context
+```go
+// ❌ BAD - Inconsistent error handling
+if err != nil {
+    log.Error("Error occurred", "error", err)
+}
+
+// ✅ GOOD - Consistent and descriptive
+if err != nil {
+    log.Error("Failed to save user preferences", 
+        "user_id", userID,
+        "preferences_count", len(preferences),
+        "error", err)
+}
+```
+
+## Testing Considerations
+
+### Log Testing
+When writing tests, consider:
+- Capturing log output for verification
+- Testing that appropriate log levels are used
+- Verifying sensitive data is not logged
+- Checking performance impact of logging
+
+### Test Environment Logging
+Use appropriate log levels for test environments:
+- Enable Debug level for local development
+- Use Info level for integration tests
+- Use Warn+ levels for production tests

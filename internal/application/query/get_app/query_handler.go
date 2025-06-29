@@ -17,7 +17,7 @@ type GetAppQueryHandler struct {
 
 // Handle executes the GetAppQuery and returns the result
 func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.AppDetails, error) {
-	log.Printf("Processing get app request for app ID: %s", query.AppID)
+	log.Info("Processing get app request", "app_id", query.AppID)
 
 	appID := query.AppID
 
@@ -152,7 +152,7 @@ func (h *GetAppQueryHandler) loadFiles(appConfig *model.AppConfig, filesDir stri
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			// If the file is missing we log and continue – it might be optional.
-			log.Printf("Warning: template file %s not found: %v", filePath, err)
+			log.Warn("Template file not found", "file_path", filePath, "error", err)
 			continue
 		}
 		files[f.ID] = content

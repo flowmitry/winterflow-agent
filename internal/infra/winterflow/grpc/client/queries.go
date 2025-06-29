@@ -13,7 +13,7 @@ import (
 
 // HandleGetAppQuery handles the query dispatch and creates the appropriate response message
 func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1, agentID string) (*pb.AgentMessage, error) {
-	log.Debug("Processing get app request for app ID: %s", getAppRequest.AppId)
+	log.Debug("Processing get app request", "app_id", getAppRequest.AppId)
 
 	// Create the query with properties directly
 	query := get_app.GetAppQuery{
@@ -30,7 +30,7 @@ func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1
 	// Dispatch the query to the handler
 	result, err := queryBus.Dispatch(query)
 	if err != nil {
-		log.Error("Error retrieving app: %v", err)
+		log.Error("Error retrieving app", "error", err)
 		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 		responseMessage = fmt.Sprintf("Error retrieving app: %v", err)
 	} else {
@@ -81,7 +81,7 @@ func HandleGetAppsStatusQuery(queryBus cqrs.QueryBus, getAppsStatusRequest *pb.G
 	// Dispatch the query to the handler
 	result, err := queryBus.Dispatch(query)
 	if err != nil {
-		log.Error("Error retrieving apps statuses: %v", err)
+		log.Error("Error retrieving apps statuses", "error", err)
 		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 		responseMessage = fmt.Sprintf("Error retrieving apps statuses: %v", err)
 	} else {

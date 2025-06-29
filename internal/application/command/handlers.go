@@ -19,31 +19,31 @@ func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appReposi
 	versionService := app.NewAppVersionService(config)
 
 	if err := b.Register(save_app.NewSaveAppHandler(config.GetAppsTemplatesPath(), config.GetPrivateKeyPath(), versionService)); err != nil {
-		return log.Errorf("failed to register save app handler: %v", err)
+		return log.Errorf("failed to register save app handler", "error", err)
 	}
 
 	if err := b.Register(delete_app.NewDeleteAppHandler(appRepository, config.GetAppsTemplatesPath())); err != nil {
-		return log.Errorf("failed to register delete app handler: %v", err)
+		return log.Errorf("failed to register delete app handler", "error", err)
 	}
 
 	if err := b.Register(control_app.NewControlAppHandler(appRepository, versionService)); err != nil {
-		return log.Errorf("failed to register control app handler: %v", err)
+		return log.Errorf("failed to register control app handler", "error", err)
 	}
 
 	if err := b.Register(update_agent.NewUpdateAgentHandler(config)); err != nil {
-		return log.Errorf("failed to register update agent handler: %v", err)
+		return log.Errorf("failed to register update agent handler", "error", err)
 	}
 
 	if err := b.Register(rename_app.NewRenameAppHandler(appRepository, config.GetAppsTemplatesPath(), versionService)); err != nil {
-		return log.Errorf("failed to register rename app handler: %v", err)
+		return log.Errorf("failed to register rename app handler", "error", err)
 	}
 
 	if err := b.Register(create_registry.NewCreateRegistryHandler(registryRepository, config)); err != nil {
-		return log.Errorf("failed to register create registry handler: %v", err)
+		return log.Errorf("failed to register create registry handler", "error", err)
 	}
 
 	if err := b.Register(delete_registry.NewDeleteRegistryHandler(registryRepository, config)); err != nil {
-		return log.Errorf("failed to register delete registry handler: %v", err)
+		return log.Errorf("failed to register delete registry handler", "error", err)
 	}
 
 	return nil

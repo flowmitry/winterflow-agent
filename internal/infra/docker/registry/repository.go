@@ -10,7 +10,7 @@ import (
 
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // dockerRegistryRepository provides a Docker-CLI backed implementation of the

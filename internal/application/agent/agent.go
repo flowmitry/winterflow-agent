@@ -40,10 +40,10 @@ func NewAgent(config *config.Config, appRepository repository.AppRepository, reg
 
 // Register the agent with the server
 func (a *Agent) Register() error {
-	log.Printf("Getting system capabilities")
+	log.Info("Getting system capabilities")
 	capabilities := GetCapabilities().ToMap()
 
-	log.Printf("Registering agent with server")
+	log.Info("Registering agent with server")
 	resp, err := a.client.RegisterAgent(capabilities, a.config.Features, a.config.AgentID)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (a *Agent) Register() error {
 		return log.Errorf("registration failed: %s", resp.Base.Message)
 	}
 
-	log.Printf("Agent registered successfully")
+	log.Info("Agent registered successfully")
 	return nil
 }
 
@@ -69,12 +69,12 @@ func (a *Agent) collectSystemInfo() map[string]string {
 
 // StartHeartbeat starts the heartbeat stream
 func (a *Agent) StartHeartbeat() error {
-	log.Printf("Collecting system metrics for heartbeat")
+	log.Info("Collecting system metrics for heartbeat")
 
-	log.Printf("Getting system capabilities for heartbeat")
+	log.Info("Getting system capabilities for heartbeat")
 	capabilities := GetCapabilities().ToMap()
 
-	log.Printf("Starting heartbeat stream with server")
+	log.Info("Starting heartbeat stream with server")
 	return a.client.StartAgentStream(
 		a.config.AgentID,
 		a.collectMetrics,
@@ -95,18 +95,18 @@ func (a *Agent) Run(ctx context.Context) error {
 	// Silence unused warning if caller intentionally passes context for future use
 	_ = ctx
 	// Register the agent (client handles internal retry & backoff)
-	log.Printf("Registering agent with server: %s", a.config.GetGRPCServerAddress())
+	log.Info("Registering agent with server", "server_address", a.config.GetGRPCServerAddress())
 	if err := a.Register(); err != nil {
 		return log.Errorf("failed to register agent: %v", err)
 	}
-	log.Printf("Agent registered successfully")
+	log.Info("Agent registered successfully")
 
 	// Start heartbeat stream
-	log.Printf("Starting heartbeat stream")
+	log.Info("Starting heartbeat stream")
 	if err := a.StartHeartbeat(); err != nil {
 		return log.Errorf("failed to start heartbeat stream: %v", err)
 	}
-	log.Printf("Heartbeat stream started successfully")
+	log.Info("Heartbeat stream started successfully")
 
 	return nil
 }

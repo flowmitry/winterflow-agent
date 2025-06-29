@@ -37,6 +37,6 @@ func NewManager(configPath string) *Manager {
 
 // SyncFiles synchronizes the certificate files using the embeddedManager's SyncFiles method.
 func (m *Manager) SyncFiles() error {
-	log.Printf("Syncing certificates")
+	log.Debug("Syncing certificates")
 	return m.embeddedManager.SyncFiles()
 }

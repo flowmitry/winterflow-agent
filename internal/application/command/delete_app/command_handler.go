@@ -16,7 +16,7 @@ type DeleteAppHandler struct {
 // Handle executes the DeleteAppCommand
 func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
 	appID := cmd.AppID
-	log.Debug("Processing delete app request for app ID: %s", appID)
+	log.Debug("Processing delete app request", "app_id", appID)
 
 	// Validate the app ID
 	if appID == "" {
@@ -26,8 +26,8 @@ func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
 	// Check if the app exists
 	appDir := filepath.Join(h.AppsTemplatesPath, appID)
 	if _, err := os.Stat(appDir); os.IsNotExist(err) {
-		log.Warn("App directory for app ID %s does not exist, it may have been already deleted", appID)
-		log.Info("Successfully deleted app with ID: %s", appID)
+		log.Warn("App directory does not exist, it may have been already deleted", "app_id", appID)
+		log.Info("Successfully deleted app", "app_id", appID)
 		return nil
 	}
 
@@ -41,7 +41,7 @@ func (h *DeleteAppHandler) Handle(cmd DeleteAppCommand) error {
 		return log.Errorf("failed to delete app directory for app ID %s: %w", appID, err)
 	}
 
-	log.Info("Successfully deleted app with ID: %s", appID)
+	log.Info("Successfully deleted app", "app_id", appID)
 	return nil
 }
 

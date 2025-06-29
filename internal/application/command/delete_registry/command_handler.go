@@ -5,7 +5,7 @@ import (
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // DeleteRegistryHandler handles DeleteRegistryCommand operations.

@@ -7,7 +7,7 @@ import (
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
 	"winterflow-agent/pkg/certs"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // CreateRegistryHandler integrates with the DockerRegistryRepository to execute CreateRegistryCommand.

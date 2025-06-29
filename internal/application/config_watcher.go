@@ -28,7 +28,7 @@ func NewConfigWatcher(configPath string, onChange func(*config.Config)) *ConfigW
 
 // Start begins watching the configuration file for changes
 func (w *ConfigWatcher) Start(ctx context.Context) error {
-	log.Info("Config watcher starting for %s", w.fileWatcher.GetFilePath())
+	log.Info("Config watcher starting", "file_path", w.fileWatcher.GetFilePath())
 	return w.fileWatcher.Start(ctx)
 }
 
@@ -45,7 +45,7 @@ func (w *ConfigWatcher) handleFileChange(filePath string) {
 	// Load the new configuration
 	newConfig, err := config.LoadConfig(filePath)
 	if err != nil {
-		log.Error("Failed to load new configuration: %v", err)
+		log.Error("Failed to load new configuration", "file_path", filePath, "error", err)
 		return
 	}
 

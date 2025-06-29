@@ -18,7 +18,7 @@ type ControlAppHandler struct {
 
 // Handle executes the ControlAppCommand
 func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
-	log.Debug("Processing control app request for app ID: %s, action: %d", cmd.AppID, cmd.Action)
+	log.Debug("Processing control app request", "app_id", cmd.AppID, "action", cmd.Action)
 
 	// Validate the app ID
 	if cmd.AppID == "" {
@@ -85,7 +85,7 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 		return log.Errorf("command failed with error: %v", actionErr)
 	}
 
-	log.Printf("Successfully executed %s playbook on app %s", playbook, appConfig.Name)
+	log.Info("Successfully executed playbook", "playbook", playbook, "app_name", appConfig.Name)
 	return nil
 }
 

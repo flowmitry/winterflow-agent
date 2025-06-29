@@ -248,13 +248,13 @@ func (c *Client) getNextReconnectInterval() time.Duration {
 
 // waitForConnectionReady waits for the connection to be ready with endless retries
 func (c *Client) waitForConnectionReady() error {
-	log.Debug("Waiting for connection to be ready to server: %s", c.serverAddress)
+	log.Debug("Waiting for connection to be ready", "server_address", c.serverAddress)
 
 	// Start connection attempt
-	log.Debug("Initiating connection attempt to %s", c.serverAddress)
+	log.Debug("Initiating connection attempt", "server_address", c.serverAddress)
 	startTime := time.Now()
 	c.conn.Connect()
-	log.Debug("Connection attempt initiated, took %v", time.Since(startTime))
+	log.Debug("Connection attempt initiated", "duration", time.Since(startTime))
 
 	// First connection attempt already issued above.
 	attemptCount := 1
@@ -328,15 +328,15 @@ func (c *Client) waitForConnectionReady() error {
 
 // waitForReady waits for the connection to be ready
 func (c *Client) waitForReady() error {
-	log.Debug("Checking if connection to %s is ready", c.serverAddress)
+	log.Debug("Checking if connection is ready", "server_address", c.serverAddress)
 	startTime := time.Now()
 
 	state := c.conn.GetState()
-	log.Info("Current connection state", "serverAddress", c.serverAddress, "state", state, "checkTime", time.Since(startTime))
+	log.Info("Current connection state", "server_address", c.serverAddress, "state", state, "check_time", time.Since(startTime))
 
 	switch state {
 	case connectivity.Ready:
-		log.Debug("Connection to %s is ready", c.serverAddress)
+		log.Debug("Connection is ready", "server_address", c.serverAddress)
 		return nil
 
 	case connectivity.Shutdown:
@@ -1256,10 +1256,10 @@ func (c *Client) reconnect() error {
 
 	// Close existing connection if it exists
 	if c.conn != nil {
-		log.Debug("Closing existing connection to %s", c.serverAddress)
+		log.Debug("Closing existing connection", "server_address", c.serverAddress)
 		closeStartTime := time.Now()
 		c.conn.Close()
-		log.Debug("Existing connection closed in %v", time.Since(closeStartTime))
+		log.Debug("Existing connection closed", "duration", time.Since(closeStartTime))
 	} else {
 		log.Debug("No existing connection to close")
 	}
@@ -1280,12 +1280,12 @@ func (c *Client) reconnect() error {
 	log.Debug("TLS certificates verified successfully")
 
 	// Setup new connection
-	log.Debug("Setting up new connection to %s", c.serverAddress)
+	log.Debug("Setting up new connection", "server_address", c.serverAddress)
 	setupStartTime := time.Now()
 	if err := c.setupConnection(); err != nil {
 		return log.Errorf("Failed to setup connection: %v (took %v)", err, time.Since(setupStartTime))
 	}
-	log.Debug("Connection setup completed in %v", time.Since(setupStartTime))
+	log.Debug("Connection setup completed", "duration", time.Since(setupStartTime))
 
 	// Wait for the connection to be ready with endless retries
 	log.Debug("Waiting for connection to be ready")
@@ -1293,10 +1293,10 @@ func (c *Client) reconnect() error {
 	if err := c.waitForConnectionReady(); err != nil {
 		closeStartTime := time.Now()
 		c.conn.Close()
-		log.Debug("Connection closed in %v after failed wait", time.Since(closeStartTime))
+		log.Debug("Connection closed after failed wait", "duration", time.Since(closeStartTime))
 		return fmt.Errorf("failed to establish connection: %v (waited for %v)", err, time.Since(waitStartTime))
 	}
-	log.Debug("Connection ready after waiting %v", time.Since(waitStartTime))
+	log.Debug("Connection ready after waiting", "duration", time.Since(waitStartTime))
 
 	// Reset the backoff sequence after a successful reconnection.
 	c.backoffStrategy.Reset()

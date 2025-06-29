@@ -34,7 +34,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	}
 	app := cmd.App
 
-	log.Printf("Processing save app request for app ID: %s", app.ID)
+	log.Info("Processing save app request", "app_id", app.ID)
 
 	// Ensure the base directory for the application exists. This is required so that subsequent
 	// operations (like reading a previous config or creating version directories) do not fail
@@ -60,7 +60,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 
 	// Use the service helpers to construct version specific paths
 	versionDir := h.versionService.GetVersionDir(app.ID, newVersion)
-	log.Debug("Created new version %d for app %s", newVersion, app.ID)
+	log.Debug("Created new version", "version", newVersion, "app_id", app.ID)
 
 	existingCfgPath := filepath.Join(versionDir, "config.json")
 	var prevFiles []model.AppFile
@@ -118,10 +118,10 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 
 	// 5. Clean up old versions if we have a version service
 	if err := h.versionService.DeleteOldVersions(app.ID); err != nil {
-		log.Warn("Failed to clean up old versions for app %s: %v", app.ID, err)
+		log.Warn("Failed to clean up old versions", "app_id", app.ID, "error", err)
 		// Don't fail the save operation if cleanup fails
 	} else {
-		log.Debug("Successfully cleaned up old versions for app %s", app.ID)
+		log.Debug("Successfully cleaned up old versions", "app_id", app.ID)
 	}
 
 	return nil
@@ -178,14 +178,14 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 		// Compute old and new paths using the sanitizer.
 		oldRel, err := sanitizeTemplateFilename(prevMeta.Filename)
 		if err != nil {
-			log.Warn("Skipping rename for invalid source filename %s: %v", prevMeta.Filename, err)
+			log.Warn("Skipping rename for invalid source filename", "filename", prevMeta.Filename, "error", err)
 			continue
 		}
 		oldPath := filepath.Join(templatesDir, oldRel+".j2")
 
 		newRel, err := sanitizeTemplateFilename(newMeta.Filename)
 		if err != nil {
-			log.Warn("Skipping rename for invalid target filename %s: %v", newMeta.Filename, err)
+			log.Warn("Skipping rename for invalid target filename", "filename", newMeta.Filename, "error", err)
 			continue
 		}
 		newPath := filepath.Join(templatesDir, newRel+".j2")
@@ -198,7 +198,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 		// Copy file bytes.
 		data, err := os.ReadFile(oldPath)
 		if err != nil {
-			log.Warn("Failed to read source file %s for rename: %v", oldPath, err)
+			log.Warn("Failed to read source file for rename", "file_path", oldPath, "error", err)
 			continue
 		}
 
@@ -209,7 +209,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 		if err := os.WriteFile(newPath, data, os.FileMode(mode)); err != nil {
 			return fmt.Errorf("error writing renamed template %s: %w", newPath, err)
 		}
-		log.Debug("Copied template from %s to %s (rename)", oldPath, newPath)
+		log.Debug("Copied template for rename", "source_path", oldPath, "target_path", newPath)
 	}
 
 	// ---------------------------------------------------------------------
@@ -220,7 +220,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 	for filename := range expected {
 		rel, err := sanitizeTemplateFilename(filename)
 		if err != nil {
-			log.Warn("Skipping filename with invalid path %s: %v", filename, err)
+			log.Warn("Skipping filename with invalid path", "filename", filename, "error", err)
 			continue
 		}
 		expectedPaths[filepath.Join(templatesDir, rel+".j2")] = struct{}{}
@@ -242,7 +242,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			if err := os.Remove(path); err != nil {
 				return fmt.Errorf("error removing obsolete template %s: %w", path, err)
 			}
-			log.Debug("Deleted obsolete template: %s", path)
+			log.Debug("Deleted obsolete template", "file_path", path)
 
 			// Attempt to clean up empty directories up the chain.
 			dir := filepath.Dir(path)
@@ -267,13 +267,13 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 	for id, content := range contentMap {
 		fileMeta, ok := idToFile[id]
 		if !ok {
-			log.Warn("No metadata found for file ID %s, skipping", id)
+			log.Warn("No metadata found for file ID, skipping", "file_id", id)
 			continue
 		}
 
 		relFilename, err := sanitizeTemplateFilename(fileMeta.Filename)
 		if err != nil {
-			log.Warn("Skipping file with invalid filename %s: %v", fileMeta.Filename, err)
+			log.Warn("Skipping file with invalid filename", "filename", fileMeta.Filename, "error", err)
 			continue
 		}
 		targetPath := filepath.Join(templatesDir, relFilename+".j2")
@@ -289,7 +289,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			if string(content) == "<encrypted>" {
 				if _, err := os.Stat(targetPath); err == nil {
 					// File already exists – nothing to overwrite.
-					log.Debug("Placeholder received for encrypted file %s (ID: %s), keeping existing file", fileMeta.Filename, id)
+					log.Debug("Placeholder received for encrypted file, keeping existing file", "filename", fileMeta.Filename, "file_id", id)
 					continue
 				}
 
@@ -297,7 +297,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 				if err := os.WriteFile(targetPath, []byte("<encrypted>"), sensitiveFilePerm); err != nil {
 					return fmt.Errorf("error writing placeholder template %s: %w", targetPath, err)
 				}
-				log.Debug("Created placeholder for new encrypted file: %s", targetPath)
+				log.Debug("Created placeholder for new encrypted file", "file_path", targetPath)
 				continue
 			}
 
@@ -306,14 +306,14 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 				if dec, err := certs.DecryptWithPrivateKey(h.PrivateKeyPath, string(content)); err == nil {
 					plaintext = []byte(dec)
 				} else {
-					log.Warn("Failed to decrypt file %s: %v", fileMeta.Filename, err)
+					log.Warn("Failed to decrypt file", "filename", fileMeta.Filename, "error", err)
 				}
 			}
 
 			if err := os.WriteFile(targetPath, plaintext, sensitiveFilePerm); err != nil {
 				return fmt.Errorf("error writing template %s: %w", targetPath, err)
 			}
-			log.Debug("Wrote (decrypted) template: %s", targetPath)
+			log.Debug("Wrote decrypted template", "file_path", targetPath)
 			continue
 		}
 
@@ -321,7 +321,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 		if err := os.WriteFile(targetPath, content, filePerm); err != nil {
 			return fmt.Errorf("error writing template %s: %w", targetPath, err)
 		}
-		log.Debug("Wrote template: %s", targetPath)
+		log.Debug("Wrote template", "file_path", targetPath)
 	}
 
 	return nil
@@ -369,7 +369,7 @@ func (h *SaveAppHandler) writeVars(varsDir string, cfg *model.AppConfig, input m
 				if err == nil {
 					vars[v.Name] = dec
 				} else {
-					log.Warn("Failed to decrypt variable %s: %v", v.Name, err)
+					log.Warn("Failed to decrypt variable", "variable_name", v.Name, "error", err)
 				}
 			}
 		} else {

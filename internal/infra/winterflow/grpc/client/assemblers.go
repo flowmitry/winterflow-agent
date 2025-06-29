@@ -41,7 +41,7 @@ func AppToProtoAppV1(app *model.App) *pb.AppV1 {
 	// Convert AppConfig to JSON bytes
 	configBytes, err := json.Marshal(app.Config)
 	if err != nil {
-		log.Error("Error marshaling app config: %v", err)
+		log.Error("Error marshaling app config", "error", err)
 		configBytes = []byte{}
 	}
 
@@ -139,7 +139,7 @@ func ProtoAppV1ToApp(app *pb.AppV1) *model.App {
 	// Parse config bytes into AppConfig
 	appConfig, err := model.ParseAppConfig(app.Config)
 	if err != nil {
-		log.Error("Error parsing app config: %v", err)
+		log.Error("Error parsing app config", "error", err)
 		appConfig = &model.AppConfig{ID: app.AppId}
 	}
 

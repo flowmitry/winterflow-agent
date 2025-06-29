@@ -67,7 +67,7 @@ func (r *composeRepository) DeployApp(appID string) error {
 		}
 	} else if !os.IsNotExist(errCfg) {
 		// An error other than "file does not exist" indicates an unexpected problem – surface it.
-		log.Warn("failed to load current configuration: %w", errCfg)
+		log.Warn("failed to load current configuration", "error", errCfg)
 	}
 
 	// Ensure the output directory exists in case it was not present before.
