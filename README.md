@@ -27,7 +27,7 @@ curl -fsSL https://get.winterflow.io/agent | sudo bash
 
 ### Manual Installation
 
-If you prefer to install manually, follow these steps:
+If you prefer to install manually or the automatic installation fails, follow these steps:
 
 1. **Verify system requirements** and install dependencies
 2. **Create the winterflow user** and add it to the `docker` group
