@@ -136,9 +136,26 @@ func getDockerConfigPath() (string, error) {
 func stringReader(s string) *os.File {
 	// Using a temporary pipe is slightly more efficient than bytes.NewBuffer.
 	r, w, _ := os.Pipe()
+
+	// Create a buffered channel to ensure the goroutine doesn't block
+	// if the command exits before reading all data
+	done := make(chan struct{}, 1)
+
+	// Create a goroutine that will write the data to the pipe
+	// and then close the write end
 	go func() {
-		_, _ = w.Write([]byte(s))
-		_ = w.Close()
+		defer w.Close()
+
+		// Write the data to the pipe
+		_, err := w.Write([]byte(s))
+		if err != nil {
+			log.Debug("Failed to write to pipe", "error", err)
+		}
+
+		// Signal that we're done
+		done <- struct{}{}
 	}()
+
+	// Return the read end of the pipe
 	return r
 }
