@@ -57,38 +57,62 @@ sudo systemctl start|stop|restart|status winterflow-agent
 sudo journalctl -u winterflow-agent -f
 ```
 
+## Application Restoration
+
+If you re-install the agent, migrate the `/opt/winterflow` directory to a new machine, or re-register your agent, you can safely restore all application templates.
+
+### Prerequisites
+- The agent must already be **registered** (`agent_status` = `registered` in `agent.config.json`)
+- The directory `/opt/winterflow/apps_templates` contains your previous application templates
+
+### Restore Command
+
+```bash
+./agent --restore
+```
+
+### Restoration Process
+
+1. **Backup creation** – A full copy of `apps_templates` is made to `apps_templates.bak`
+   - If the backup directory already exists, the command aborts to avoid overwriting previous data
+2. **UUID regeneration** – Every application ID is replaced with a fresh UUID to avoid collisions
+3. **Version pruning** – Only the newest version directory of each app is kept and renamed to `1` for consistency
+4. **Cloud notification** – Sent to WinterFlow server to recreate *all* applications
+
+If the server responds with `200 OK`, the restore has succeeded. All applications will appear in the dashboard moments later.
+
 ## Uninstallation
 
 To completely remove the WinterFlow Agent from your system, run the following commands as root (use `sudo`):
 
-### 1. Stop and Disable the Service
+### Stop and Disable the Service
 
 ```bash
 sudo systemctl stop winterflow-agent
 sudo systemctl disable winterflow-agent
 ```
 
-### 2. Remove Systemd Service File
+### Remove Systemd Service File
 
 ```bash
 sudo rm -f /etc/systemd/system/winterflow-agent.service
 sudo systemctl daemon-reload
 ```
 
-### 3. Remove Installation Directories
+### Remove Installation Directories
 
 ```bash
 sudo rm -rf /opt/winterflow
 sudo rm -rf /var/log/winterflow
 ```
 
-### 4. Remove User (Optional)
+### Remove User (Optional)
 
 ```bash
 sudo userdel -r winterflow
 ```
 
-### 5. Remove Sudoers Configuration (if added)
+### Remove Sudoers Configuration (if added)
 
 ```bash
 sudo rm -f /etc/sudoers.d/winterflow

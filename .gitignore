@@ -3,7 +3,7 @@ requests/
 /agent*
 custom/
 .certs/
-apps_templates
+apps_templates*
 apps
 
 # Binaries for programs and plugins

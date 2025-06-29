@@ -31,6 +31,8 @@ func main() {
 	showHelp := flag.Bool("help", false, "Show help information")
 	configPath := flag.String("config", "agent.config.json", "Path to configuration file")
 	register := flag.Bool("register", false, "Register the agent with the server. Optionally specify orchestrator as positional argument (e.g., --register docker_compose)")
+	// New flag to trigger data restoration flow
+	restore := flag.Bool("restore", false, "Restore agent data and templates after reinstall or migration")
 	flag.Parse()
 
 	// Show version if requested
@@ -43,10 +45,11 @@ func main() {
 		fmt.Println("\nWinterFlow.io Agent")
 		fmt.Println("Usage: winterflow-agent [options]")
 		fmt.Println("Options:")
-		fmt.Println("  --version  Show version information")
-		fmt.Println("  --help     Show help information")
-		fmt.Println("  --config   Path to configuration file (default: agent.config.json)")
-		fmt.Println("  --register Register the agent with the server. Optionally specify orchestrator as positional argument (e.g., --register docker_compose)")
+		fmt.Println("  --version   Show version information")
+		fmt.Println("  --help      Show help information")
+		fmt.Println("  --config    Path to configuration file (default: agent.config.json)")
+		fmt.Println("  --register  Register the agent with the server. Optionally specify orchestrator as positional argument (e.g., --register docker_compose)")
+		fmt.Println("  --restore   Restore local state and notify the WinterFlow backend (used after agent re-installation)")
 		os.Exit(0)
 	}
 
@@ -60,6 +63,15 @@ func main() {
 		}
 		if err := api.RegisterAgent(*configPath, orchestrator); err != nil {
 			fmt.Printf("Registration failed: %v\n", err)
+		}
+		return
+	}
+
+	// Handle data restoration if requested
+	if *restore {
+		if err := api.RestoreAgentData(*configPath); err != nil {
+			fmt.Printf("Restore failed: %v\n", err)
+			os.Exit(1)
 		}
 		return
 	}
