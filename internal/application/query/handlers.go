@@ -28,7 +28,7 @@ func RegisterQueryHandlers(b cqrs.QueryBus, config *config.Config, appRepository
 		return log.Errorf("failed to register get registries query handler", "error", err)
 	}
 
-	if err := b.Register(get_networks.NewGetNetworksQueryHandler(networkRepository)); err != nil {
+	if err := b.Register(get_networks.NewGetNetworksQueryHandler(networkRepository, config)); err != nil {
 		return log.Errorf("failed to register get networks query handler", "error", err)
 	}
 

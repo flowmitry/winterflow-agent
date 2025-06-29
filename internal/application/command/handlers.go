@@ -48,11 +48,11 @@ func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appReposi
 		return log.Errorf("failed to register delete registry handler", "error", err)
 	}
 
-	if err := b.Register(create_network.NewCreateNetworkHandler(networkRepository)); err != nil {
+	if err := b.Register(create_network.NewCreateNetworkHandler(networkRepository, config)); err != nil {
 		return log.Errorf("failed to register create network handler", "error", err)
 	}
 
-	if err := b.Register(delete_network.NewDeleteNetworkHandler(networkRepository)); err != nil {
+	if err := b.Register(delete_network.NewDeleteNetworkHandler(networkRepository, config)); err != nil {
 		return log.Errorf("failed to register delete network handler", "error", err)
 	}
 
