@@ -9,18 +9,12 @@ BUILD_DIR=.
 LDFLAGS=-X winterflow-agent/internal/application/version.version=${VERSION} -X winterflow-agent/internal/application/config.grpcServerAddress=${GRPC_ADDR} -X winterflow-agent/internal/application/config.apiBaseURL=${API_URL}
 BUILD_FLAGS=-v
 
-.PHONY: all clean grpc build run install-tools ansible-version
+.PHONY: all clean grpc build run install-tools
 
 all: grpc build
 
-# Create version file
-ansible-version:
-	@echo "Creating version file..."
-	@mkdir -p ansible
-	@echo "${VERSION}" > ansible/version.txt
-
 # Build for local development
-build: ansible-version
+build:
 	@echo "Building ${BINARY_NAME}..."
 	@mkdir -p ${BUILD_DIR}
 	@echo "go build ${BUILD_FLAGS} -ldflags=\"${LDFLAGS}\" -o ${BUILD_DIR}/${BINARY_NAME} ./cmd/agent/main.go"
@@ -37,7 +31,6 @@ clean:
 	@echo "Cleaning build directory..."
 	@rm -f ${BUILD_DIR}/${BINARY_NAME}
 	@rm -f internal/infra/winterflow/grpc/pb/*.pb.go
-	@rm -f ansible/version.txt
 
 grpc:
 	@echo "Generating gRPC code..."

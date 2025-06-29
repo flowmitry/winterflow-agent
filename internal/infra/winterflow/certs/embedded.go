@@ -17,7 +17,6 @@ type Manager struct {
 	embeddedManager *embedded.Manager
 }
 
-// NewManager creates a new Ansible manager
 func NewManager(configPath string) *Manager {
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
