@@ -101,18 +101,18 @@ func (r *dockerRegistryRepository) CreateRegistry(registry model.Registry, usern
 }
 
 // DeleteRegistry logs-out from a Docker registry (`docker logout`).
-func (r *dockerRegistryRepository) DeleteRegistry(registry model.Registry) error {
+func (r *dockerRegistryRepository) DeleteRegistry(address string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	cmd := exec.Command("docker", "logout", registry.Address)
+	cmd := exec.Command("docker", "logout", address)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Error("[Registry] docker logout failed", "address", registry.Address, "error", err, "output", string(output))
+		log.Error("[Registry] docker logout failed", "address", address, "error", err, "output", string(output))
 		return fmt.Errorf("docker logout failed: %w", err)
 	}
 
-	log.Info("[Registry] logout successful", "address", registry.Address)
+	log.Info("[Registry] logout successful", "address", address)
 	return nil
 }
 

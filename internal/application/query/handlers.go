@@ -11,7 +11,7 @@ import (
 	"winterflow-agent/pkg/log"
 )
 
-func RegisterQueryHandlers(b cqrs.QueryBus, config *config.Config, appRepository repository.AppRepository, registryRepository repository.DockerRegistryRepository) error {
+func RegisterQueryHandlers(b cqrs.QueryBus, config *config.Config, appRepository repository.AppRepository, registryRepository repository.DockerRegistryRepository, networkRepository repository.DockerNetworkRepository) error {
 	// Initialise the service responsible for application versions.
 	versionService := appservice.NewAppVersionService(config)
 

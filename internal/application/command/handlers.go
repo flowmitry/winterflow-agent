@@ -15,7 +15,7 @@ import (
 	"winterflow-agent/pkg/log"
 )
 
-func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appRepository repository.AppRepository, registryRepository repository.DockerRegistryRepository) error {
+func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appRepository repository.AppRepository, registryRepository repository.DockerRegistryRepository, networkRepository repository.DockerNetworkRepository) error {
 	versionService := app.NewAppVersionService(config)
 
 	if err := b.Register(save_app.NewSaveAppHandler(config.GetAppsTemplatesPath(), config.GetPrivateKeyPath(), versionService)); err != nil {

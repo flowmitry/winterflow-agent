@@ -3,7 +3,6 @@ package delete_registry
 import (
 	"fmt"
 	"winterflow-agent/internal/application/config"
-	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
 	"winterflow-agent/pkg/log"
 )
@@ -27,8 +26,7 @@ func (h *DeleteRegistryHandler) Handle(cmd DeleteRegistryCommand) error {
 		return log.Errorf("registry address is required")
 	}
 
-	reg := model.Registry{Address: cmd.Address}
-	if err := h.repository.DeleteRegistry(reg); err != nil {
+	if err := h.repository.DeleteRegistry(cmd.Address); err != nil {
 		return fmt.Errorf("failed to delete registry: %w", err)
 	}
 

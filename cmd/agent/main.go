@@ -136,10 +136,11 @@ func startAgent(ctx context.Context, cancel context.CancelFunc, configPath strin
 
 	appRepository := application.NewAppRepository(cfg)
 	registryRepository := application.NewRegistryRepository()
+	networkRepository := application.NewNetworkRepository()
 
 	// Create and initialize agent
 	log.Debug("Creating agent")
-	a, err := agent.NewAgent(cfg, appRepository, registryRepository)
+	a, err := agent.NewAgent(cfg, appRepository, registryRepository, networkRepository)
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
 	}

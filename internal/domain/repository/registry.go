@@ -10,5 +10,5 @@ type DockerRegistryRepository interface {
 
 	CreateRegistry(registry model.Registry, username string, password string) error
 
-	DeleteRegistry(registry model.Registry) error
+	DeleteRegistry(address string) error
 }
