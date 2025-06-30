@@ -261,6 +261,49 @@ message DeleteNetworkResponseV1 {
   BaseResponse base = 1;
 }
 
+message GetAppLogsRequestV1 {
+  BaseMessage base = 1;
+  // UUID
+  string app_id = 2;
+  google.protobuf.Timestamp since = 3;
+  google.protobuf.Timestamp until = 4;
+}
+
+enum LogChannel {
+  LOG_CHANNEL_UNKNOWN = 0;
+  LOG_CHANNEL_STDERR = 1;
+  LOG_CHANNEL_STDOUT = 2;
+}
+
+enum LogLevel {
+  LOG_LEVEL_UNKNOWN = 0;
+  LOG_LEVEL_TRACE = 1;
+  LOG_LEVEL_DEBUG = 2;
+  LOG_LEVEL_INFO = 3;
+  LOG_LEVEL_WARN = 4;
+  LOG_LEVEL_ERROR = 5;
+  LOG_LEVEL_FATAL = 6;
+}
+
+message AppLogsV1 {
+  map<string, string> containers = 1;
+  repeated LogEntryV1 logs = 2;
+}
+
+message LogEntryV1 {
+  google.protobuf.Timestamp timestamp = 1;
+  LogChannel channel = 2;
+  LogLevel level = 3;
+  string message = 4;
+  string data = 5;
+  string container_id = 6;
+}
+
+message GetAppLogsResponseV1 {
+  BaseResponse base = 1;
+  AppLogsV1 logs = 2;
+}
+
 // Command messages for bidirectional streaming
 message ServerCommand {
   oneof command {
@@ -284,6 +327,8 @@ message ServerCommand {
     GetNetworksRequestV1 get_networks_request_v1 = 1011;
     CreateNetworkRequestV1 create_network_request_v1 = 1012;
     DeleteNetworkRequestV1 delete_network_request_v1 = 1013;
+
+    GetAppLogsRequestV1 get_app_logs_request_v1 = 1014;
   }
 }
 
@@ -309,6 +354,8 @@ message AgentMessage {
     GetNetworksResponseV1 get_networks_response_v1 = 1011;
     CreateNetworkResponseV1 create_network_response_v1 = 1012;
     DeleteNetworkResponseV1 delete_network_response_v1 = 1013;
+
+    GetAppLogsResponseV1 get_app_logs_response_v1 = 1014;
   }
 }
 

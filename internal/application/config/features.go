@@ -5,6 +5,7 @@ const (
 	FeatureEarlyAccess      = "early_access"
 	FeatureDockerRegistries = "docker_registries"
 	FeatureDockerNetworks   = "docker_networks"
+	FeatureAppLogs          = "app_logs"
 )
 
 // DefaultFeatureValues defines the default values for each feature
@@ -13,6 +14,7 @@ var DefaultFeatureValues = map[string]bool{
 	FeatureEarlyAccess:      false,
 	FeatureDockerRegistries: true,
 	FeatureDockerNetworks:   true,
+	FeatureAppLogs:          true,
 }
 
 // IsFeatureEnabled checks if a feature is enabled in the configuration.

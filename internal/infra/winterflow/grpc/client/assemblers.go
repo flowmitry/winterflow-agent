@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"time"
 	"winterflow-agent/internal/application/command/control_app"
 	"winterflow-agent/internal/application/command/create_registry"
 	"winterflow-agent/internal/application/command/delete_app"
@@ -10,6 +11,8 @@ import (
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	"winterflow-agent/pkg/log"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Domain to Infrastructure transformations
@@ -311,4 +314,82 @@ func NetworksToProtoNames(networks []model.Network) []string {
 		names = append(names, n.Name)
 	}
 	return names
+}
+
+// LogsToProtoAppLogsV1 converts domain logs model to a protobuf AppLogsV1 message.
+func LogsToProtoAppLogsV1(l *model.Logs) *pb.AppLogsV1 {
+	if l == nil {
+		return nil
+	}
+
+	// Map containers to a map[containerID]name
+	containersMap := make(map[string]string)
+	for _, c := range l.Containers {
+		containersMap[c.ID] = c.Name
+	}
+
+	// Convert log entries
+	var protoEntries []*pb.LogEntryV1
+	for _, le := range l.Logs {
+		protoEntries = append(protoEntries, LogEntryToProtoLogEntryV1(le))
+	}
+
+	return &pb.AppLogsV1{
+		Containers: containersMap,
+		Logs:       protoEntries,
+	}
+}
+
+// LogEntryToProtoLogEntryV1 converts a domain LogEntry to protobuf LogEntryV1.
+func LogEntryToProtoLogEntryV1(e model.LogEntry) *pb.LogEntryV1 {
+	ts := timestamppb.New(time.Unix(e.Timestamp, 0))
+
+	// Marshal Data map to string if present
+	var dataStr string
+	if e.Data != nil {
+		if b, err := json.Marshal(e.Data); err == nil {
+			dataStr = string(b)
+		}
+	}
+
+	return &pb.LogEntryV1{
+		Timestamp:   ts,
+		Channel:     LogChannelToProtoLogChannel(e.Channel),
+		Level:       LogLevelToProtoLogLevel(e.Level),
+		Message:     e.Message,
+		Data:        dataStr,
+		ContainerId: e.ContainerID,
+	}
+}
+
+// LogChannelToProtoLogChannel converts domain LogChannel to protobuf LogChannel.
+func LogChannelToProtoLogChannel(ch model.LogChannel) pb.LogChannel {
+	switch ch {
+	case model.LogChannelStdout:
+		return pb.LogChannel_LOG_CHANNEL_STDOUT
+	case model.LogChannelStderr:
+		return pb.LogChannel_LOG_CHANNEL_STDERR
+	default:
+		return pb.LogChannel_LOG_CHANNEL_UNKNOWN
+	}
+}
+
+// LogLevelToProtoLogLevel converts domain LogLevel to protobuf LogLevel.
+func LogLevelToProtoLogLevel(lvl model.LogLevel) pb.LogLevel {
+	switch lvl {
+	case model.LogLevelTrace:
+		return pb.LogLevel_LOG_LEVEL_TRACE
+	case model.LogLevelDebug:
+		return pb.LogLevel_LOG_LEVEL_DEBUG
+	case model.LogLevelInfo:
+		return pb.LogLevel_LOG_LEVEL_INFO
+	case model.LogLevelWarn:
+		return pb.LogLevel_LOG_LEVEL_WARN
+	case model.LogLevelError:
+		return pb.LogLevel_LOG_LEVEL_ERROR
+	case model.LogLevelFatal:
+		return pb.LogLevel_LOG_LEVEL_FATAL
+	default:
+		return pb.LogLevel_LOG_LEVEL_UNKNOWN
+	}
 }

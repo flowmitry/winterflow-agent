@@ -3,6 +3,7 @@ package query
 import (
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/application/query/get_app"
+	"winterflow-agent/internal/application/query/get_app_logs"
 	"winterflow-agent/internal/application/query/get_apps_status"
 	"winterflow-agent/internal/application/query/get_networks"
 	"winterflow-agent/internal/application/query/get_registries"
@@ -30,6 +31,10 @@ func RegisterQueryHandlers(b cqrs.QueryBus, config *config.Config, appRepository
 
 	if err := b.Register(get_networks.NewGetNetworksQueryHandler(networkRepository, config)); err != nil {
 		return log.Errorf("failed to register get networks query handler", "error", err)
+	}
+
+	if err := b.Register(get_app_logs.NewGetAppLogsQueryHandler(appRepository, config)); err != nil {
+		return log.Errorf("failed to register get app logs query handler", "error", err)
 	}
 
 	return nil
