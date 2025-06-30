@@ -6,6 +6,10 @@ custom/
 apps_templates*
 apps
 
+# LLM
+.cursor*
+.junie*
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
