@@ -30,4 +30,9 @@ type AppRepository interface {
 
 	// DeleteApp removes an application identified by the provided appID.
 	DeleteApp(appID string) error
+
+	// GetLogs retrieves logs for a specific application identified by appID.
+	// The time range is defined by unix timestamps (seconds) in the `since` and `until` parameters.
+	// A zero value disables the respective boundary (i.e. retrieve from the beginning or up to now).
+	GetLogs(appID string, since int64, until int64) (model.Logs, error)
 }
