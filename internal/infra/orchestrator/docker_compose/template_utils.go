@@ -7,6 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"winterflow-agent/internal/domain/model"
+	"winterflow-agent/internal/infra/orchestrator"
+	"winterflow-agent/pkg/log"
 )
 
 // loadTemplateVariables merges default and variable files into a single map used for template substitution.
@@ -105,6 +109,60 @@ func (r *composeRepository) renderTemplates(templateDir, destDir string, vars ma
 
 	if err := filepath.WalkDir(filesRoot, walkFn); err != nil {
 		return fmt.Errorf("failed to process templates: %w", err)
+	}
+
+	return nil
+}
+
+// renderApp prepares the application files for deployment by rendering templates from templateDir
+// into destDir. It also performs differential cleanup of previously deployed files and writes
+// a copy of the active configuration for external inspection. This function does NOT start or
+// stop any containers – it merely ensures the on-disk representation of the application matches
+// the requested version.
+func (r *composeRepository) renderApp(appID, templateDir, destDir string) error {
+	// Load configuration of the version to be rendered so we can compare it with the currently
+	// deployed version (if any) and subsequently save a copy for external tools.
+	cfgPath := filepath.Join(templateDir, "config.json")
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return fmt.Errorf("failed to read configuration %s: %w", cfgPath, err)
+	}
+
+	newCfg, err := model.ParseAppConfig(data)
+	if err != nil {
+		return fmt.Errorf("failed to parse new configuration: %w", err)
+	}
+
+	// Remove files that belonged to the previously deployed version but are absent in the new one.
+	if currentCfg, errCfg := orchestrator.GetCurrentConfig(r.config.GetAppsTemplatesPath(), appID); errCfg == nil {
+		if err := r.removeDeployedFiles(destDir, currentCfg, newCfg); err != nil {
+			return fmt.Errorf("failed to remove previously deployed files: %w", err)
+		}
+	} else if !os.IsNotExist(errCfg) {
+		// An unexpected error occurred while attempting to load the active configuration – log it
+		// and continue rendering instead of aborting the deployment.
+		log.Warn("failed to load current configuration", "error", errCfg)
+	}
+
+	// Ensure the destination directory exists – template rendering relies on it being present.
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
+		return fmt.Errorf("failed to ensure destination directory %s: %w", destDir, err)
+	}
+
+	// Collect substitution variables and run the rendering pipeline.
+	vars, err := r.loadTemplateVariables(templateDir)
+	if err != nil {
+		return fmt.Errorf("failed to load template variables: %w", err)
+	}
+
+	if err := r.renderTemplates(templateDir, destDir, vars); err != nil {
+		return fmt.Errorf("failed to render templates: %w", err)
+	}
+
+	// Persist a copy of the configuration that has just been rendered so that other components can
+	// quickly inspect the active version without having to resolve templateDir themselves.
+	if err := orchestrator.SaveCurrentConfigCopy(r.config, appID, templateDir); err != nil {
+		return err
 	}
 
 	return nil

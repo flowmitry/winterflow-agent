@@ -1,6 +1,7 @@
 package cqrs
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -15,10 +16,20 @@ type DefaultCommandBus struct {
 }
 
 // NewCommandBus creates a new DefaultCommandBus.
-func NewCommandBus() *DefaultCommandBus {
-	return &DefaultCommandBus{
+func NewCommandBus(ctx context.Context) *DefaultCommandBus {
+	b := &DefaultCommandBus{
 		Bus: NewBus("command"),
 	}
+
+	// Listen for context cancellation and initiate graceful shutdown.
+	if ctx != nil {
+		go func() {
+			<-ctx.Done()
+			b.Shutdown()
+		}()
+	}
+
+	return b
 }
 
 // validateCommandHandler checks if the handler implements CommandHandler[C] and returns the command name.

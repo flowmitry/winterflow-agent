@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"time"
-	"winterflow-agent/internal/application/command"
 	"winterflow-agent/internal/application/config"
-	"winterflow-agent/internal/application/query"
-	"winterflow-agent/internal/domain/repository"
 	"winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
@@ -34,8 +32,6 @@ const (
 type Client struct {
 	conn   *grpc.ClientConn
 	client pb.AgentServiceClient
-	ctx    context.Context
-	cancel context.CancelFunc
 
 	// Reconnection and timeouts
 	serverAddress     string
@@ -140,28 +136,13 @@ func (c *Client) setupConnection() error {
 }
 
 // NewClient creates a new gRPC client
-func NewClient(config *config.Config, appRepository repository.AppRepository, registryRepository repository.DockerRegistryRepository, networkRepository repository.DockerNetworkRepository) (*Client, error) {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewClient(ctx context.Context, config *config.Config, commandBus cqrs.CommandBus, queryBus cqrs.QueryBus) (*Client, error) {
 	serverAddress := config.GetGRPCServerAddress()
 	caCertPath := config.GetCACertificatePath()
 	certPath := config.GetCertificatePath()
 	keyPath := config.GetPrivateKeyPath()
 
 	log.Info("Creating new gRPC client", "serverAddress", serverAddress)
-
-	// Create command bus and register handlers
-	commandBus := cqrs.NewCommandBus()
-	if err := command.RegisterCommandHandlers(commandBus, config, appRepository, registryRepository, networkRepository); err != nil {
-		cancel()
-		return nil, log.Errorf("failed to register command handlers: %v", err)
-	}
-
-	// Create query bus and register handlers
-	queryBus := cqrs.NewQueryBus()
-	if err := query.RegisterQueryHandlers(queryBus, config, appRepository, registryRepository, networkRepository); err != nil {
-		cancel()
-		return nil, log.Errorf("failed to register query handlers: %v", err)
-	}
 
 	// Always use TLS and fail if certificates don't exist
 	if caCertPath == "" || certPath == "" || keyPath == "" {
@@ -183,8 +164,6 @@ func NewClient(config *config.Config, appRepository repository.AppRepository, re
 	log.Info("TLS enabled", "certificate", certPath)
 
 	client := &Client{
-		ctx:               ctx,
-		cancel:            cancel,
 		serverAddress:     serverAddress,
 		connectionTimeout: DefaultConnectionTimeout,
 		streamCleanup:     make(chan struct{}),
@@ -200,14 +179,12 @@ func NewClient(config *config.Config, appRepository repository.AppRepository, re
 	}
 
 	if err := client.setupConnection(); err != nil {
-		cancel()
 		return nil, err
 	}
 
 	// Wait for the connection to be ready with endless retries
-	if err := client.waitForConnectionReady(); err != nil {
+	if err := client.waitForConnectionReady(ctx); err != nil {
 		client.conn.Close()
-		cancel()
 		return nil, log.Errorf("failed to establish initial connection: %v", err)
 	}
 
@@ -230,9 +207,6 @@ func (c *Client) Close() error {
 	c.commandBus.Shutdown()
 	c.queryBus.Shutdown()
 
-	// Cancel the context to stop any ongoing operations
-	c.cancel()
-
 	// Wait for all active commands and queries to complete
 	c.commandBus.WaitForCompletion()
 	c.queryBus.WaitForCompletion()
@@ -247,7 +221,7 @@ func (c *Client) getNextReconnectInterval() time.Duration {
 }
 
 // waitForConnectionReady waits for the connection to be ready with endless retries
-func (c *Client) waitForConnectionReady() error {
+func (c *Client) waitForConnectionReady(ctx context.Context) error {
 	log.Debug("Waiting for connection to be ready", "server_address", c.serverAddress)
 
 	// Start connection attempt
@@ -263,8 +237,8 @@ func (c *Client) waitForConnectionReady() error {
 	for {
 		// Check for context cancellation first
 		select {
-		case <-c.ctx.Done():
-			return log.Errorf("connection cancelled: %v", c.ctx.Err())
+		case <-ctx.Done():
+			return log.Errorf("connection cancelled: %v", ctx.Err())
 		default:
 			// Continue with normal operation
 		}
@@ -292,9 +266,9 @@ func (c *Client) waitForConnectionReady() error {
 			select {
 			case <-timer.C:
 				// Proceed with the next attempt
-			case <-c.ctx.Done():
+			case <-ctx.Done():
 				timer.Stop()
-				return log.Errorf("connection cancelled during reconnection: %v", c.ctx.Err())
+				return log.Errorf("connection cancelled during reconnection: %v", ctx.Err())
 			}
 
 			// Start a new connection attempt after backoff.
@@ -308,9 +282,9 @@ func (c *Client) waitForConnectionReady() error {
 			// gRPC will transition either to READY, TRANSIENT_FAILURE or SHUTDOWN.
 			log.Debug("Waiting for state change", "currentState", state)
 
-			if !c.conn.WaitForStateChange(c.ctx, state) {
+			if !c.conn.WaitForStateChange(ctx, state) {
 				// Context was cancelled while waiting.
-				return log.Errorf("connection cancelled while waiting for state change: %v", c.ctx.Err())
+				return log.Errorf("connection cancelled while waiting for state change: %v", ctx.Err())
 			}
 			// State changed, loop and evaluate again.
 			continue
@@ -318,8 +292,8 @@ func (c *Client) waitForConnectionReady() error {
 		default:
 			// Unknown state, wait for a state change.
 			log.Debug("Encountered unknown connection state, waiting for change", "state", state)
-			if !c.conn.WaitForStateChange(c.ctx, state) {
-				return log.Errorf("connection cancelled while waiting for state change: %v", c.ctx.Err())
+			if !c.conn.WaitForStateChange(ctx, state) {
+				return log.Errorf("connection cancelled while waiting for state change: %v", ctx.Err())
 			}
 			continue
 		}
@@ -327,7 +301,7 @@ func (c *Client) waitForConnectionReady() error {
 }
 
 // waitForReady waits for the connection to be ready
-func (c *Client) waitForReady() error {
+func (c *Client) waitForReady(ctx context.Context) error {
 	log.Debug("Checking if connection is ready", "server_address", c.serverAddress)
 	startTime := time.Now()
 
@@ -373,7 +347,7 @@ func (c *Client) SetRegistered(registered bool) {
 }
 
 // RegisterAgent registers the agent with the server
-func (c *Client) RegisterAgent(capabilities map[string]string, features map[string]bool, agentID string) (*pb.RegisterAgentResponseV1, error) {
+func (c *Client) RegisterAgent(ctx context.Context, capabilities map[string]string, features map[string]bool, agentID string) (*pb.RegisterAgentResponseV1, error) {
 	log.Info("Starting agent registration process")
 
 	// Create a unique message ID
@@ -392,16 +366,16 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 	for {
 		// Check for context cancellation first
 		select {
-		case <-c.ctx.Done():
-			return nil, fmt.Errorf("registration cancelled: %v", c.ctx.Err())
+		case <-ctx.Done():
+			return nil, fmt.Errorf("registration cancelled: %v", ctx.Err())
 		default:
 			// Continue with normal operation
 		}
 
 		// Ensure connection is ready before making the request
-		if err := c.waitForReady(); err != nil {
+		if err := c.waitForReady(ctx); err != nil {
 			log.Warn("Connection not ready before registration", "error", err)
-			if err := c.reconnect(); err != nil {
+			if err := c.reconnect(ctx); err != nil {
 				log.Warn("Failed to reconnect, will retry", "error", err)
 
 				// Use a timer so we can interrupt the wait
@@ -409,10 +383,10 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 				select {
 				case <-timer.C:
 					// Timer expired, continue with next attempt
-				case <-c.ctx.Done():
+				case <-ctx.Done():
 					// Context cancelled, abort reconnection
 					timer.Stop()
-					return nil, fmt.Errorf("registration cancelled during reconnection: %v", c.ctx.Err())
+					return nil, fmt.Errorf("registration cancelled during reconnection: %v", ctx.Err())
 				}
 
 				continue
@@ -420,7 +394,7 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 		}
 
 		log.Info("Sending RegisterAgentV1 request")
-		resp, err := c.client.RegisterAgentV1(c.ctx, req)
+		resp, err := c.client.RegisterAgentV1(ctx, req)
 		if err != nil {
 			grpcCode := status.Code(err)
 			switch grpcCode {
@@ -430,14 +404,14 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 				return nil, ErrUnrecoverableAgentAlreadyConnected
 			case codes.Unavailable:
 				log.Warn("Connection unavailable during registration", "action", "attempting to reconnect")
-				if err := c.reconnect(); err != nil {
+				if err := c.reconnect(ctx); err != nil {
 					log.Warn("Failed to reconnect, will retry", "error", err)
 					timer := time.NewTimer(c.getNextReconnectInterval())
 					select {
 					case <-timer.C:
-					case <-c.ctx.Done():
+					case <-ctx.Done():
 						timer.Stop()
-						return nil, fmt.Errorf("registration cancelled during reconnection: %v", c.ctx.Err())
+						return nil, fmt.Errorf("registration cancelled during reconnection: %v", ctx.Err())
 					}
 				}
 				continue
@@ -446,9 +420,9 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 				timer := time.NewTimer(c.getNextReconnectInterval())
 				select {
 				case <-timer.C:
-				case <-c.ctx.Done():
+				case <-ctx.Done():
 					timer.Stop()
-					return nil, fmt.Errorf("registration cancelled during retry: %v", c.ctx.Err())
+					return nil, fmt.Errorf("registration cancelled during retry: %v", ctx.Err())
 				}
 				continue
 			}
@@ -464,9 +438,9 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 				timer := time.NewTimer(c.getNextReconnectInterval())
 				select {
 				case <-timer.C:
-				case <-c.ctx.Done():
+				case <-ctx.Done():
 					timer.Stop()
-					return nil, fmt.Errorf("registration cancelled during retry: %v", c.ctx.Err())
+					return nil, fmt.Errorf("registration cancelled during retry: %v", ctx.Err())
 				}
 				continue
 			}
@@ -481,7 +455,7 @@ func (c *Client) RegisterAgent(capabilities map[string]string, features map[stri
 }
 
 // StartAgentStream starts a bidirectional stream
-func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[string]string, capabilities map[string]string, features map[string]bool) error {
+func (c *Client) StartAgentStream(ctx context.Context, agentID string, metricsProvider func() map[string]string, capabilities map[string]string, features map[string]bool) error {
 	log.Info("Starting Agent stream", "agentID", agentID)
 	log.Debug("Current registration state", "registered", c.IsRegistered())
 
@@ -505,9 +479,9 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			}
 
 			// Ensure connection is ready before starting the stream
-			if err := c.waitForReady(); err != nil {
+			if err := c.waitForReady(ctx); err != nil {
 				log.Warn("Connection not ready before starting Agent stream", "error", err)
-				if err := c.reconnect(); err != nil {
+				if err := c.reconnect(ctx); err != nil {
 					log.Error("Failed to reconnect, will retry", "error", err)
 
 					// Use a timer so we can interrupt the wait
@@ -515,10 +489,10 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					select {
 					case <-timer.C:
 						// Timer expired, continue with next attempt
-					case <-c.ctx.Done():
+					case <-ctx.Done():
 						// Context cancelled, abort reconnection
 						timer.Stop()
-						log.Warn("Stream cancelled during reconnection", "error", c.ctx.Err())
+						log.Warn("Stream cancelled during reconnection", "error", ctx.Err())
 						return
 					}
 					continue
@@ -527,10 +501,10 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			}
 
 			log.Debug("Creating Agent stream")
-			stream, err := c.client.AgentStream(c.ctx)
+			stream, err := c.client.AgentStream(ctx)
 			if err != nil {
 				log.Error("Failed to create Agent stream", "error", err)
-				if err := c.reconnect(); err != nil {
+				if err := c.reconnect(ctx); err != nil {
 					log.Warn("Failed to reconnect, will retry", "error", err)
 
 					// Use a timer so we can interrupt the wait
@@ -538,10 +512,10 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					select {
 					case <-timer.C:
 						// Timer expired, continue with next attempt
-					case <-c.ctx.Done():
+					case <-ctx.Done():
 						// Context cancelled, abort reconnection
 						timer.Stop()
-						log.Warn("Stream cancelled during reconnection", "error", c.ctx.Err())
+						log.Warn("Stream cancelled during reconnection", "error", ctx.Err())
 						return
 					}
 					continue
@@ -574,7 +548,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					log.Warn("Connection unavailable or stream closed, recreating stream")
 					continue outerLoop
 				}
-				if err := c.reconnect(); err != nil {
+				if err := c.reconnect(ctx); err != nil {
 					log.Warn("Failed to reconnect, will retry", "error", err)
 
 					// Use a timer so we can interrupt the wait
@@ -582,10 +556,10 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					select {
 					case <-timer.C:
 						// Timer expired, continue with next attempt
-					case <-c.ctx.Done():
+					case <-ctx.Done():
 						// Context cancelled, abort reconnection
 						timer.Stop()
-						log.Warn("Stream cancelled during reconnection", "error", c.ctx.Err())
+						log.Warn("Stream cancelled during reconnection", "error", ctx.Err())
 						return
 					}
 					continue
@@ -622,6 +596,11 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				for {
 					serverCmd, err := stream.Recv()
 					if err != nil {
+						// Treat context cancellation as a graceful exit to avoid noisy error logs
+						if err == context.Canceled || status.Code(err) == codes.Canceled {
+							log.Info("Stream receiver exiting due to context cancellation")
+							return
+						}
 						if status.Code(err) == codes.Unavailable || err == io.EOF {
 							log.Error("Connection unavailable or stream closed", "error", err)
 							log.Warn("Stream receiver stopping, will recreate stream")
@@ -1341,7 +1320,7 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 				case <-reregisterCh:
 					log.Warn("Re-registering agent due to agent not found")
 					stream.CloseSend()
-					_, err := c.RegisterAgent(capabilities, features, agentID)
+					_, err := c.RegisterAgent(ctx, capabilities, features, agentID)
 					if err != nil {
 						log.Error("Failed to re-register agent", "error", err)
 						ticker.Stop()
@@ -1352,10 +1331,10 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						select {
 						case <-timer.C:
 							// Timer expired, continue with next attempt
-						case <-c.ctx.Done():
+						case <-ctx.Done():
 							// Context cancelled, abort reconnection
 							timer.Stop()
-							log.Warn("Stream cancelled during re-registration", "error", c.ctx.Err())
+							log.Warn("Stream cancelled during re-registration", "error", ctx.Err())
 							return
 						}
 						continue outerLoop
@@ -1372,8 +1351,40 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 					metricsTicker.Stop()
 					return
 
-				case <-c.ctx.Done():
+				case <-ctx.Done():
+					// Graceful shutdown on context cancellation
+					// 1. Stop accepting new work
+					// 2. Wait for all in-flight commands and queries to finish
+					// 3. Disconnect from the server
+
+					log.Info("Context cancelled, initiating graceful shutdown")
+
+					// Prevent new commands/queries from being dispatched
+					c.commandBus.Shutdown()
+					c.queryBus.Shutdown()
+
+					// Wait for all active commands and queries to complete
+					log.Debug("Waiting for command bus to complete pending commands")
+					c.commandBus.WaitForCompletion()
+					log.Debug("Waiting for query bus to complete pending queries")
+					c.queryBus.WaitForCompletion()
+
+					// Close the gRPC stream first, then the underlying connection
 					stream.CloseSend()
+					if err := c.conn.Close(); err != nil {
+						// Suppress noisy warnings when the connection is already closing/cancelled
+						if err == context.Canceled || strings.Contains(err.Error(), "client connection is closing") {
+							log.Info("gRPC connection already closing")
+						} else if status.Code(err) == codes.Canceled {
+							log.Info("gRPC connection close canceled")
+						} else {
+							log.Warn("Error while closing gRPC connection", "error", err)
+						}
+					} else {
+						log.Info("gRPC connection closed successfully")
+					}
+
+					// Stop tickers after all work is done
 					ticker.Stop()
 					metricsTicker.Stop()
 					return
@@ -1386,13 +1397,13 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 }
 
 // reconnect attempts to reconnect to the server
-func (c *Client) reconnect() error {
+func (c *Client) reconnect(ctx context.Context) error {
 	c.reconnectMu.Lock()
 	defer c.reconnectMu.Unlock()
 
 	// If another goroutine already re-established the connection while we were waiting
 	// for the lock, simply return without doing any work.
-	if err := c.waitForReady(); err == nil {
+	if err := c.waitForReady(ctx); err == nil {
 		return nil
 	}
 
@@ -1435,7 +1446,7 @@ func (c *Client) reconnect() error {
 	// Wait for the connection to be ready with endless retries
 	log.Debug("Waiting for connection to be ready")
 	waitStartTime := time.Now()
-	if err := c.waitForConnectionReady(); err != nil {
+	if err := c.waitForConnectionReady(ctx); err != nil {
 		closeStartTime := time.Now()
 		c.conn.Close()
 		log.Debug("Connection closed after failed wait", "duration", time.Since(closeStartTime))

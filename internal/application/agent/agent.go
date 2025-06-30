@@ -3,11 +3,14 @@ package agent
 import (
 	"context"
 	"time"
-	"winterflow-agent/internal/domain/repository"
+	"winterflow-agent/internal/application"
+	"winterflow-agent/internal/application/command"
+	"winterflow-agent/internal/application/query"
 	"winterflow-agent/pkg/log"
 
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/infra/winterflow/grpc/client"
+	"winterflow-agent/pkg/cqrs"
 	"winterflow-agent/pkg/metrics"
 )
 
@@ -21,8 +24,24 @@ type Agent struct {
 }
 
 // NewAgent creates a new agent instance
-func NewAgent(config *config.Config, appRepository repository.AppRepository, registryRepository repository.DockerRegistryRepository, networkRepository repository.DockerNetworkRepository) (*Agent, error) {
-	c, err := client.NewClient(config, appRepository, registryRepository, networkRepository)
+func NewAgent(ctx context.Context, config *config.Config) (*Agent, error) {
+	appRepository := application.NewAppRepository(config)
+	registryRepository := application.NewRegistryRepository()
+	networkRepository := application.NewNetworkRepository()
+
+	// Create command bus and register handlers
+	commandBus := cqrs.NewCommandBus(ctx)
+	if err := command.RegisterCommandHandlers(commandBus, config, appRepository, registryRepository, networkRepository); err != nil {
+		log.Fatalf("Failed to register command handlers: %v", err)
+	}
+
+	// Create query bus and register handlers
+	queryBus := cqrs.NewQueryBus(ctx)
+	if err := query.RegisterQueryHandlers(queryBus, config, appRepository, registryRepository, networkRepository); err != nil {
+		log.Fatalf("Failed to register query handlers: %v", err)
+	}
+
+	c, err := client.NewClient(ctx, config, commandBus, queryBus)
 	if err != nil {
 		return nil, log.Errorf("New GRPC client failed", err)
 	}
@@ -38,13 +57,10 @@ func NewAgent(config *config.Config, appRepository repository.AppRepository, reg
 	}, nil
 }
 
-// Register the agent with the server
-func (a *Agent) Register() error {
-	log.Info("Getting system capabilities")
-	capabilities := GetCapabilities().ToMap()
-
-	log.Info("Registering agent with server")
-	resp, err := a.client.RegisterAgent(capabilities, a.config.Features, a.config.AgentID)
+// registerAgent the agent with the server
+func (a *Agent) registerAgent(ctx context.Context, capabilities map[string]string) error {
+	log.Debug("Registering agent with server")
+	resp, err := a.client.RegisterAgent(ctx, capabilities, a.config.Features, a.config.AgentID)
 	if err != nil {
 		return err
 	}
@@ -67,15 +83,9 @@ func (a *Agent) collectSystemInfo() map[string]string {
 	return a.systemInfoFactory.Collect()
 }
 
-// StartHeartbeat starts the heartbeat stream
-func (a *Agent) StartHeartbeat() error {
-	log.Info("Collecting system metrics for heartbeat")
-
-	log.Info("Getting system capabilities for heartbeat")
-	capabilities := GetCapabilities().ToMap()
-
-	log.Info("Starting heartbeat stream with server")
+func (a *Agent) startAgentStream(ctx context.Context, capabilities map[string]string) error {
 	return a.client.StartAgentStream(
+		ctx,
 		a.config.AgentID,
 		a.collectMetrics,
 		capabilities,
@@ -92,18 +102,16 @@ func (a *Agent) Close() {
 
 // Run starts the agent's main loop
 func (a *Agent) Run(ctx context.Context) error {
-	// Silence unused warning if caller intentionally passes context for future use
-	_ = ctx
-	// Register the agent (client handles internal retry & backoff)
+	capabilities := GetCapabilities().ToMap()
 	log.Info("Registering agent with server", "server_address", a.config.GetGRPCServerAddress())
-	if err := a.Register(); err != nil {
+	if err := a.registerAgent(ctx, capabilities); err != nil {
 		return log.Errorf("failed to register agent: %v", err)
 	}
 	log.Info("Agent registered successfully")
 
 	// Start heartbeat stream
-	log.Info("Starting heartbeat stream")
-	if err := a.StartHeartbeat(); err != nil {
+	log.Info("Starting agent's stream")
+	if err := a.startAgentStream(ctx, capabilities); err != nil {
 		return log.Errorf("failed to start heartbeat stream: %v", err)
 	}
 	log.Info("Heartbeat stream started successfully")

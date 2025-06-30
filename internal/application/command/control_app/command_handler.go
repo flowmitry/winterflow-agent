@@ -59,8 +59,8 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	var actionErr error
 	switch cmd.Action {
 	case AppActionStart:
-		playbook = "deploy_app"
-		actionErr = h.repository.DeployApp(cmd.AppID)
+		playbook = "start_app"
+		actionErr = h.repository.StartApp(cmd.AppID)
 	case AppActionStop:
 		playbook = "stop_app"
 		actionErr = h.repository.StopApp(cmd.AppID)
@@ -72,10 +72,6 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 		actionErr = h.repository.UpdateApp(cmd.AppID)
 	case AppActionRedeploy:
 		playbook = "redeploy_app"
-		actionErr = h.repository.StopApp(cmd.AppID)
-		if actionErr != nil {
-			return log.Errorf("command failed with error: %v", actionErr)
-		}
 		actionErr = h.repository.DeployApp(cmd.AppID)
 	default:
 		return log.Errorf("unsupported action: %d", cmd.Action)

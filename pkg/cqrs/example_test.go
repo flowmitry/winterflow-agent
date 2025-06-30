@@ -1,6 +1,7 @@
 package cqrs_test
 
 import (
+	"context"
 	"fmt"
 	"winterflow-agent/pkg/cqrs"
 )
@@ -58,8 +59,9 @@ func (h *GetUserHandler) Handle(query GetUserQuery) (User, error) {
 
 // ExampleCommandBus demonstrates how to use the command bus
 func Example_commandBus() {
-	// Create a new command bus
-	commandBus := cqrs.NewCommandBus()
+	ctx := context.Background()
+	// Create a new command bus with context
+	commandBus := cqrs.NewCommandBus(ctx)
 
 	// Register a command handler
 	handler := &CreateUserHandler{}
@@ -87,8 +89,9 @@ func Example_commandBus() {
 
 // ExampleQueryBus demonstrates how to use the query bus
 func Example_queryBus() {
-	// Create a new query bus
-	queryBus := cqrs.NewQueryBus()
+	ctx := context.Background()
+	// Create a new query bus with context
+	queryBus := cqrs.NewQueryBus(ctx)
 
 	// Register a query handler
 	handler := &GetUserHandler{}

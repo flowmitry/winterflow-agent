@@ -1,6 +1,7 @@
 package cqrs
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -15,10 +16,20 @@ type DefaultQueryBus struct {
 }
 
 // NewQueryBus creates a new DefaultQueryBus.
-func NewQueryBus() *DefaultQueryBus {
-	return &DefaultQueryBus{
+func NewQueryBus(ctx context.Context) *DefaultQueryBus {
+	b := &DefaultQueryBus{
 		Bus: NewBus("query"),
 	}
+
+	// Listen for context cancellation and initiate graceful shutdown.
+	if ctx != nil {
+		go func() {
+			<-ctx.Done()
+			b.Shutdown()
+		}()
+	}
+
+	return b
 }
 
 // validateQueryHandler checks if the handler implements QueryHandler[Q, R] and returns the query name.
