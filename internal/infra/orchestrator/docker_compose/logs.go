@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,40 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 )
+
+// Precompiled regexp that matches ANSI escape sequences (e.g. \x1b[31m).
+var ansiRegexp = regexp.MustCompile("\x1b\\[[0-9;]*[A-Za-z]")
+
+// sanitizeMessage strips ANSI colour/control codes, removes a UTF-8 BOM if present,
+// and guarantees the string is valid UTF-8. This avoids odd leading characters
+// in rendered logs and prevents protobuf marshal errors.
+func sanitizeMessage(msg string) string {
+	// first remove Docker multiplex header if present
+	msg = stripDockerHeader(msg)
+	// Remove ANSI escape sequences
+	msg = ansiRegexp.ReplaceAllString(msg, "")
+	// Remove UTF-8 BOM if present
+	msg = strings.TrimPrefix(msg, "\uFEFF")
+	// Ensure valid UTF-8, dropping invalid sequences
+	return strings.ToValidUTF8(msg, "")
+}
+
+// stripDockerHeader removes the 8-byte multiplexed stream header that the Docker
+// Engine prefixes to each log frame when a container is not running in TTY
+// mode. The header format is: [STREAM_TYPE][0][0][0][SIZE1][SIZE2][SIZE3][SIZE4]
+// where STREAM_TYPE is 1 (stdout), 2 (stderr), or 3 (combined). We only care
+// about dropping it so the caller gets clean text.
+func stripDockerHeader(s string) string {
+	if len(s) < 8 {
+		return s
+	}
+
+	b := []byte(s)
+	if (b[0] == 1 || b[0] == 2 || b[0] == 3) && b[1] == 0 && b[2] == 0 && b[3] == 0 {
+		return string(b[8:])
+	}
+	return s
+}
 
 func (r *composeRepository) GetLogs(appID string, since int64, until int64) (model.Logs, error) {
 	// Prepare the result struct so we can populate it incrementally.
@@ -90,6 +125,10 @@ func (r *composeRepository) GetLogs(appID string, since int64, until int64) (mod
 					continue
 				}
 
+				// Remove Docker multiplex header before any further parsing to ensure
+				// a clean line that potentially starts with a timestamp.
+				line = stripDockerHeader(line)
+
 				// Expected format when Timestamps=true: "<timestamp> <message>"
 				ts := time.Now()
 				rawMsg := line
@@ -118,16 +157,30 @@ func (r *composeRepository) GetLogs(appID string, since int64, until int64) (mod
 					msg = rawMsg
 				}
 
-				level := detectLogLevel(msg)
+				// Perform final sanitisation to strip ANSI escape sequences, BOM, any
+				// residual multiplex header and ensure valid UTF-8.
+				msg = sanitizeMessage(msg)
 
-				res.Logs = append(res.Logs, model.LogEntry{
+				// Determine log level: prefer explicit JSON field, then textual prefix.
+				var level model.LogLevel
+				if dataMap != nil {
+					if l, ok := dataMap["level"].(string); ok {
+						level = detectLogLevel(l)
+					}
+				}
+				if level == model.LogLevelUnknown {
+					level = detectLogLevel(msg)
+				}
+
+				entry := model.LogEntry{
 					Timestamp:   ts.Unix(),
 					Channel:     ch.channel,
 					Level:       level,
 					Message:     msg,
 					Data:        dataMap,
 					ContainerID: c.ID,
-				})
+				}
+				res.Logs = append(res.Logs, entry)
 			}
 			// Intentionally ignore scanner error – in most cases incomplete logs are acceptable.
 			_ = logsReader.Close()
