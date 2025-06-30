@@ -613,6 +613,9 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 			createNetworkRequestCh := make(chan *pb.CreateNetworkRequestV1, queueChannelSize)
 			deleteNetworkRequestCh := make(chan *pb.DeleteNetworkRequestV1, queueChannelSize)
 
+			// Logs operations
+			getAppLogsRequestCh := make(chan *pb.GetAppLogsRequestV1, queueChannelSize)
+
 			// Start goroutine to receive responses
 			go func() {
 				defer close(streamDone)
@@ -987,6 +990,22 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 							}
 						}
 
+					case *pb.ServerCommand_GetAppLogsRequestV1:
+						log.Info("Received get app logs request", "messageId", cmd.GetAppLogsRequestV1.Base.MessageId)
+						select {
+						case getAppLogsRequestCh <- cmd.GetAppLogsRequestV1:
+						default:
+							log.Warn("Get app logs request channel full, dropping request")
+							baseResp := createBaseResponse(cmd.GetAppLogsRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
+							resp := &pb.GetAppLogsResponseV1{Base: &baseResp}
+							agentMsg := &pb.AgentMessage{Message: &pb.AgentMessage_GetAppLogsResponseV1{GetAppLogsResponseV1: resp}}
+							if err := stream.Send(agentMsg); err != nil {
+								log.Warn("Error sending dropped request response", "error", err)
+							} else {
+								log.Info("Dropped request response sent successfully")
+							}
+						}
+
 					default:
 						// Log details about the unknown command type
 						log.Warn("Received unknown command type", "type", fmt.Sprintf("%T", cmd))
@@ -1293,6 +1312,25 @@ func (c *Client) StartAgentStream(agentID string, metricsProvider func() map[str
 						continue
 					}
 					log.Info("Get networks response sent successfully")
+
+				case getAppLogsRequest := <-getAppLogsRequestCh:
+					agentMsg, err := HandleGetAppLogsQuery(c.queryBus, getAppLogsRequest, agentID)
+					if err != nil {
+						log.Error("Error retrieving app logs response", "error", err)
+						continue
+					}
+
+					if err := stream.Send(agentMsg); err != nil {
+						log.Error("Error sending get app logs response", "error", err)
+						if status.Code(err) == codes.Unavailable || err == io.EOF {
+							log.Warn("Connection unavailable or stream closed, recreating stream")
+							ticker.Stop()
+							metricsTicker.Stop()
+							continue outerLoop
+						}
+						continue
+					}
+					log.Info("Get app logs response sent successfully")
 
 				case <-streamDone:
 					log.Warn("Stream receiver stopped, recreating stream")

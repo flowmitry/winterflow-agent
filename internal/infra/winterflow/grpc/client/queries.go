@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"winterflow-agent/internal/application/query/get_app"
+	"winterflow-agent/internal/application/query/get_app_logs"
 	"winterflow-agent/internal/application/query/get_apps_status"
 	"winterflow-agent/internal/application/query/get_networks"
 	"winterflow-agent/internal/application/query/get_registries"
@@ -186,6 +187,59 @@ func HandleGetNetworksQuery(queryBus cqrs.QueryBus, getNetworksRequest *pb.GetNe
 
 	agentMsg := &pb.AgentMessage{
 		Message: &pb.AgentMessage_GetNetworksResponseV1{GetNetworksResponseV1: resp},
+	}
+
+	return agentMsg, nil
+}
+
+// HandleGetAppLogsQuery handles the query dispatch and creates the appropriate response message
+func HandleGetAppLogsQuery(queryBus cqrs.QueryBus, getAppLogsRequest *pb.GetAppLogsRequestV1, agentID string) (*pb.AgentMessage, error) {
+	log.Debug("Processing get app logs request", "app_id", getAppLogsRequest.AppId)
+
+	sinceUnix := int64(0)
+	untilUnix := int64(0)
+	if getAppLogsRequest.Since != nil {
+		sinceUnix = getAppLogsRequest.Since.AsTime().Unix()
+	}
+	if getAppLogsRequest.Until != nil {
+		untilUnix = getAppLogsRequest.Until.AsTime().Unix()
+	}
+
+	// Build query
+	query := get_app_logs.GetAppLogsQuery{
+		AppID: getAppLogsRequest.AppId,
+		Since: sinceUnix,
+		Until: untilUnix,
+	}
+
+	responseCode := pb.ResponseCode_RESPONSE_CODE_SUCCESS
+	responseMessage := "Logs retrieved successfully"
+	var appLogs *pb.AppLogsV1
+
+	result, err := queryBus.Dispatch(query)
+	if err != nil {
+		log.Error("Error retrieving app logs", "error", err)
+		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+		responseMessage = fmt.Sprintf("Error retrieving app logs: %v", err)
+	} else {
+		domainLogs, ok := result.(*model.Logs)
+		if !ok {
+			log.Error("Error retrieving app logs: unexpected result type")
+			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
+			responseMessage = "Error retrieving app logs: unexpected result type"
+		} else {
+			appLogs = LogsToProtoAppLogsV1(domainLogs)
+		}
+	}
+
+	baseResp := createBaseResponse(getAppLogsRequest.Base.MessageId, agentID, responseCode, responseMessage)
+	resp := &pb.GetAppLogsResponseV1{
+		Base: &baseResp,
+		Logs: appLogs,
+	}
+
+	agentMsg := &pb.AgentMessage{
+		Message: &pb.AgentMessage_GetAppLogsResponseV1{GetAppLogsResponseV1: resp},
 	}
 
 	return agentMsg, nil

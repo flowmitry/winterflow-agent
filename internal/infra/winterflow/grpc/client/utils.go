@@ -77,6 +77,8 @@ func extractBaseMessageFromCommand(command interface{}) *pb.BaseMessage {
 		return cmd.CreateNetworkRequestV1.GetBase()
 	case *pb.ServerCommand_DeleteNetworkRequestV1:
 		return cmd.DeleteNetworkRequestV1.GetBase()
+	case *pb.ServerCommand_GetAppLogsRequestV1:
+		return cmd.GetAppLogsRequestV1.GetBase()
 	default:
 		return nil
 	}
@@ -127,6 +129,9 @@ func buildUnauthorizedAgentMessage(command interface{}, messageID, agentID strin
 	case *pb.ServerCommand_DeleteNetworkRequestV1:
 		resp := &pb.DeleteNetworkResponseV1{Base: &baseResp}
 		return &pb.AgentMessage{Message: &pb.AgentMessage_DeleteNetworkResponseV1{DeleteNetworkResponseV1: resp}}
+	case *pb.ServerCommand_GetAppLogsRequestV1:
+		resp := &pb.GetAppLogsResponseV1{Base: &baseResp}
+		return &pb.AgentMessage{Message: &pb.AgentMessage_GetAppLogsResponseV1{GetAppLogsResponseV1: resp}}
 	default:
 		log.Debug("Unsupported command type for unauthorized response", "type", fmt.Sprintf("%T", cmd))
 		return nil
