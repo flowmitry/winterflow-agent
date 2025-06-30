@@ -16,6 +16,9 @@ type AppRepository interface {
 	// DeployApp deploys an application with the specified ID (deploys latest version)
 	DeployApp(appID string) error
 
+	// StartApp starts an application with the specified ID
+	StartApp(appID string) error
+
 	// StopApp stops the application specified by the given app ID.
 	StopApp(appID string) error
 

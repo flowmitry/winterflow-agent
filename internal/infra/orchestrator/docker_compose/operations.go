@@ -5,9 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"winterflow-agent/internal/domain/model"
 	appsvc "winterflow-agent/internal/domain/service/app"
-	"winterflow-agent/internal/infra/orchestrator"
 	"winterflow-agent/pkg/log"
 )
 
@@ -35,67 +33,53 @@ func (r *composeRepository) DeployApp(appID string) error {
 		return fmt.Errorf("role directory %s does not exist: %w", templateDir, err)
 	}
 
-	// If the application is already deployed, stop running containers before deleting files.
+	// If the application is already deployed, stop running containers before we re-render.
 	if dirExists(outputDir) {
 		if err := r.composeDown(outputDir); err != nil {
 			return fmt.Errorf("failed to stop running containers before deployment: %w", err)
 		}
 	}
 
-	// Load the configuration of the version that is about to be deployed so we can compare it with
-	// the configuration of the currently running version (if any).
-	var newCfg *model.AppConfig
-	{
-		cfgPath := filepath.Join(templateDir, "config.json")
-		data, err := os.ReadFile(cfgPath)
-		if err != nil {
-			return fmt.Errorf("failed to read new configuration %s: %w", cfgPath, err)
-		}
-		parsed, err := model.ParseAppConfig(data)
-		if err != nil {
-			return fmt.Errorf("failed to parse new configuration: %w", err)
-		}
-		newCfg = parsed
+	// Render (or re-render) the application files on disk.
+	if err := r.renderApp(appID, templateDir, outputDir); err != nil {
+		return err
 	}
 
-	// Remove only the files that belong to the *currently* deployed version but are **absent** in
-	// the new version instead of wiping the whole directory. This helps preserve any other data
-	// that might have been generated or mounted in the application directory at runtime.
-	if currentCfg, errCfg := orchestrator.GetCurrentConfig(r.config.GetAppsTemplatesPath(), appID); errCfg == nil {
-		if err := r.removeDeployedFiles(outputDir, currentCfg, newCfg); err != nil {
-			return fmt.Errorf("failed to remove previously deployed files: %w", err)
-		}
-	} else if !os.IsNotExist(errCfg) {
-		// An error other than "file does not exist" indicates an unexpected problem – surface it.
-		log.Warn("failed to load current configuration", "error", errCfg)
-	}
-
-	// Ensure the output directory exists in case it was not present before.
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
-		return fmt.Errorf("failed to ensure output directory %s: %w", outputDir, err)
-	}
-
-	vars, err := r.loadTemplateVariables(templateDir)
-	if err != nil {
-		return fmt.Errorf("failed to load template variables: %w", err)
-	}
-
-	if err := r.renderTemplates(templateDir, outputDir, vars); err != nil {
-		return fmt.Errorf("failed to render templates: %w", err)
-	}
-
+	// Start containers using the freshly rendered project definition.
 	if err := r.composeUp(outputDir); err != nil {
 		return fmt.Errorf("docker compose up failed: %w", err)
 	}
 
-	// Save a copy of the configuration being deployed so that external tools can
-	// easily inspect the active configuration without resolving version
-	// directories.
-	if err := orchestrator.SaveCurrentConfigCopy(r.config, appID, templateDir); err != nil {
-		return err
+	log.Info("[Deploy] successfully deployed app", "app_id", appID, "app_name", appName, "version", latest)
+	return nil
+}
+
+// StartApp starts an application with the specified ID (deploys latest version)
+func (r *composeRepository) StartApp(appID string) error {
+	// Ensure the base applications directory exists before proceeding.
+	if err := ensureDir(r.config.GetAppsPath()); err != nil {
+		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
 
-	log.Info("[Deploy] successfully deployed app", "app_id", appID, "app_name", appName, "version", latest)
+	// Resolve the human-readable application name from the latest version's config.
+	appName, err := r.getAppNameById(appID)
+	if err != nil {
+		// Could not resolve name – fall back to a full deploy which will surface a clearer error.
+		return r.DeployApp(appID)
+	}
+	outputDir := filepath.Join(r.config.GetAppsPath(), appName)
+
+	// If the app hasn't been rendered yet, perform a full deploy (render + start).
+	if !dirExists(outputDir) {
+		return r.DeployApp(appID)
+	}
+
+	// Start (or resume) the containers for the already rendered project.
+	if err := r.composeUp(outputDir); err != nil {
+		return fmt.Errorf("docker compose up failed: %w", err)
+	}
+
+	log.Info("[Start] successfully started app", "app_id", appID)
 	return nil
 }
 
@@ -134,22 +118,19 @@ func (r *composeRepository) RestartApp(appID string) error {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
 
-	// Resolve the human-readable application name from its ID.
 	appName, err := r.getAppNameById(appID)
 	if err != nil {
-		return fmt.Errorf("cannot restart app: %w", err)
+		// If we cannot resolve the name it likely means the app hasn't been rendered yet – deploy it.
+		return r.DeployApp(appID)
 	}
 	appDir := filepath.Join(r.config.GetAppsPath(), appName)
 
-	// Verify that the compose project directory exists before attempting the restart.
-	if _, err := os.Stat(appDir); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("app directory %s does not exist", appDir)
-		}
-		return fmt.Errorf("failed to stat app directory: %w", err)
+	// If the application directory does not exist, fall back to a full deploy (render + start).
+	if !dirExists(appDir) {
+		return r.DeployApp(appID)
 	}
 
-	// Execute `docker compose restart` for the application.
+	// Perform an in-place container restart.
 	if err := r.composeRestart(appDir); err != nil {
 		return fmt.Errorf("docker compose restart failed: %w", err)
 	}
