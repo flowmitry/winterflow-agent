@@ -267,6 +267,7 @@ message GetAppLogsRequestV1 {
   string app_id = 2;
   google.protobuf.Timestamp since = 3;
   google.protobuf.Timestamp until = 4;
+  int32 tail = 5;
 }
 
 enum LogChannel {

@@ -7,6 +7,8 @@ type GetAppLogsQuery struct {
 	AppID string
 	Since int64
 	Until int64
+	// Tail limits the number of log lines returned. A value <= 0 returns all available logs.
+	Tail int32
 }
 
 // Name returns the name of the query.

@@ -36,5 +36,6 @@ type AppRepository interface {
 	// GetLogs retrieves logs for a specific application identified by appID.
 	// The time range is defined by unix timestamps (seconds) in the `since` and `until` parameters.
 	// A zero value disables the respective boundary (i.e. retrieve from the beginning or up to now).
-	GetLogs(appID string, since int64, until int64) (model.Logs, error)
+	// The `tail` parameter limits the number of log lines returned. A value <= 0 returns all available logs.
+	GetLogs(appID string, since int64, until int64, tail int32) (model.Logs, error)
 }

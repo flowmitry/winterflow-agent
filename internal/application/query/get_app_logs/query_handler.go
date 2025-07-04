@@ -25,9 +25,9 @@ func (h *GetAppLogsQueryHandler) Handle(query GetAppLogsQuery) (*model.Logs, err
 		return nil, log.Errorf("logs operations are disabled by configuration")
 	}
 
-	log.Info("Processing get app logs request", "app_id", query.AppID)
+	log.Info("Processing get app logs request", "app_id", query.AppID, "tail", query.Tail)
 
-	logs, err := h.appRepository.GetLogs(query.AppID, query.Since, query.Until)
+	logs, err := h.appRepository.GetLogs(query.AppID, query.Since, query.Until, query.Tail)
 	if err != nil {
 		log.Error("Error getting app logs", "error", err)
 		return nil, fmt.Errorf("failed to get app logs: %w", err)

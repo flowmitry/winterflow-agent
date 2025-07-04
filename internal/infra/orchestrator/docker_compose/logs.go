@@ -52,7 +52,7 @@ func stripDockerHeader(s string) string {
 	return s
 }
 
-func (r *composeRepository) GetLogs(appID string, since int64, until int64) (model.Logs, error) {
+func (r *composeRepository) GetLogs(appID string, since int64, until int64, tail int32) (model.Logs, error) {
 	// Prepare the result struct so we can populate it incrementally.
 	res := model.Logs{
 		Logs:       make([]model.LogEntry, 0),
@@ -86,6 +86,12 @@ func (r *composeRepository) GetLogs(appID string, since int64, until int64) (mod
 		untilStr = strconv.FormatInt(until, 10)
 	}
 
+	// Determine how many lines to tail. The Docker API expects a string value: "all" or an integer.
+	tailStr := "all"
+	if tail > 0 {
+		tailStr = strconv.Itoa(int(tail))
+	}
+
 	// Iterate over each container and fetch its logs.
 	for _, c := range containers {
 		containerModel := model.Container{
@@ -110,6 +116,7 @@ func (r *composeRepository) GetLogs(appID string, since int64, until int64) (mod
 				Timestamps: true,
 				Since:      sinceStr,
 				Until:      untilStr,
+				Tail:       tailStr,
 				Follow:     false,
 				Details:    false,
 			})

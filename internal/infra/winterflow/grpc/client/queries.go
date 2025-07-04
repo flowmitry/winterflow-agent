@@ -210,6 +210,7 @@ func HandleGetAppLogsQuery(queryBus cqrs.QueryBus, getAppLogsRequest *pb.GetAppL
 		AppID: getAppLogsRequest.AppId,
 		Since: sinceUnix,
 		Until: untilUnix,
+		Tail:  getAppLogsRequest.Tail,
 	}
 
 	responseCode := pb.ResponseCode_RESPONSE_CODE_SUCCESS
