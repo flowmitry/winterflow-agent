@@ -1,17 +1,16 @@
 package repository
 
 import (
-	"context"
 	"winterflow-agent/internal/domain/model"
 )
 
 // AppRepository is an interface for managing Docker operations
 type AppRepository interface {
 	// GetAppStatus returns the status of a specific application
-	GetAppStatus(ctx context.Context, appID string) (model.GetAppStatusResult, error)
+	GetAppStatus(appID string) (model.GetAppStatusResult, error)
 
 	// GetAppsStatus returns the status of all available applications
-	GetAppsStatus(ctx context.Context) (model.GetAppsStatusResult, error)
+	GetAppsStatus() (model.GetAppsStatusResult, error)
 
 	// DeployApp deploys an application with the specified ID (deploys latest version)
 	DeployApp(appID string) error

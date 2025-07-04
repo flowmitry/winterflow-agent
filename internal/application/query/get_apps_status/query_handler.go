@@ -1,7 +1,6 @@
 package get_apps_status
 
 import (
-	"context"
 	"fmt"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/domain/repository"
@@ -17,11 +16,8 @@ type GetAppsStatusQueryHandler struct {
 func (h *GetAppsStatusQueryHandler) Handle(query GetAppsStatusQuery) (*model.GetAppsStatusResult, error) {
 	log.Info("Processing get apps status request")
 
-	// Create a context for the operation
-	ctx := context.Background()
-
 	// Get all apps status using the containerAppRepository's GetAppsStatus method
-	result, err := h.containerAppRepository.GetAppsStatus(ctx)
+	result, err := h.containerAppRepository.GetAppsStatus()
 	if err != nil {
 		log.Error("Error getting apps status", "error", err)
 		return nil, fmt.Errorf("failed to get apps status: %w", err)

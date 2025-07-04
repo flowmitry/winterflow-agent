@@ -1,7 +1,6 @@
 package docker_compose
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -205,7 +204,7 @@ func (r *composeRepository) RenameApp(appID, appName string) error {
 		return fmt.Errorf("target app directory %s already exists", newDir)
 	}
 
-	statusResult, statusErr := r.GetAppStatus(context.Background(), appID)
+	statusResult, statusErr := r.GetAppStatus(appID)
 	containersWereRunning := false
 	if statusErr == nil && statusResult.App != nil {
 		code := statusResult.App.StatusCode
