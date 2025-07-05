@@ -11,6 +11,7 @@ import (
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/orchestrator"
 	"winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/template"
 )
 
 // loadTemplateVariables merges default and variable files into a single map used for template substitution.
@@ -36,7 +37,8 @@ func (r *composeRepository) loadTemplateVariables(templateDir string) (map[strin
 	return vars, nil
 }
 
-// renderTemplates processes all *.j2 files from templateDir/files into destDir performing a naïve variable substitution.
+// renderTemplates processes all *.j2 files from templateDir/files into destDir performing Docker-Compose-style
+// variable substitution (see pkg/template.Substitute for supported syntax).
 func (r *composeRepository) renderTemplates(templateDir, destDir string, vars map[string]string) error {
 	filesRoot := filepath.Join(templateDir, "files")
 
@@ -68,24 +70,12 @@ func (r *composeRepository) renderTemplates(templateDir, destDir string, vars ma
 			if err != nil {
 				return fmt.Errorf("failed to read template %s: %w", path, err)
 			}
-			content := string(contentBytes)
 
-			// Naïve variable substitution – full Jinja support not required.
-			for name, value := range vars {
-				patterns := []string{
-					fmt.Sprintf("{{ %s }}", name),
-					fmt.Sprintf("{{%s }}", name),
-					fmt.Sprintf("{{ %s}}", name),
-					fmt.Sprintf("{{%s}}", name),
-				}
-				for _, p := range patterns {
-					content = strings.ReplaceAll(content, p, value)
-				}
+			// Perform Docker-Compose style variable substitution using the shared template package.
+			content, err := template.Substitute(string(contentBytes), vars)
+			if err != nil {
+				return fmt.Errorf("failed to render template %s: %w", path, err)
 			}
-
-			// Remove any leftover delimiters.
-			content = strings.ReplaceAll(content, "{{", "")
-			content = strings.ReplaceAll(content, "}}", "")
 
 			// Drop the ".j2" extension for destination file.
 			destPath = strings.TrimSuffix(destPath, ".j2")
