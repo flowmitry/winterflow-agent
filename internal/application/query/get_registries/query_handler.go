@@ -3,7 +3,7 @@ package get_registries
 import (
 	"fmt"
 	"winterflow-agent/internal/application/config"
-	"winterflow-agent/internal/domain/model"
+	"winterflow-agent/internal/domain/dto"
 	"winterflow-agent/internal/domain/repository"
 	"winterflow-agent/pkg/log"
 )
@@ -15,7 +15,7 @@ type GetRegistriesQueryHandler struct {
 }
 
 // Handle executes the GetRegistriesQuery and returns the list of registries.
-func (h *GetRegistriesQueryHandler) Handle(query GetRegistriesQuery) (*model.GetRegistriesResult, error) {
+func (h *GetRegistriesQueryHandler) Handle(query GetRegistriesQuery) (*dto.GetRegistriesResult, error) {
 	// Check if registries feature is disabled
 	if h.config != nil && !h.config.IsFeatureEnabled(config.FeatureDockerRegistries) {
 		return nil, log.Errorf("registries operations are disabled by configuration")
@@ -31,7 +31,7 @@ func (h *GetRegistriesQueryHandler) Handle(query GetRegistriesQuery) (*model.Get
 
 	log.Info("Retrieved registries", "count", len(registries))
 
-	return &model.GetRegistriesResult{Registries: registries}, nil
+	return &dto.GetRegistriesResult{Registries: registries}, nil
 }
 
 // NewGetRegistriesQueryHandler creates a new GetRegistriesQueryHandler.

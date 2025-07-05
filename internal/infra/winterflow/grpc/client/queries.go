@@ -7,6 +7,7 @@ import (
 	"winterflow-agent/internal/application/query/get_apps_status"
 	"winterflow-agent/internal/application/query/get_networks"
 	"winterflow-agent/internal/application/query/get_registries"
+	"winterflow-agent/internal/domain/dto"
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/winterflow/grpc/pb"
 	"winterflow-agent/pkg/cqrs"
@@ -130,7 +131,7 @@ func HandleGetRegistriesQuery(queryBus cqrs.QueryBus, getRegistriesRequest *pb.G
 		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 		responseMessage = fmt.Sprintf("Error retrieving registries: %v", err)
 	} else {
-		domainResult, ok := result.(*model.GetRegistriesResult)
+		domainResult, ok := result.(*dto.GetRegistriesResult)
 		if !ok {
 			log.Error("Error retrieving registries: unexpected result type")
 			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
@@ -169,7 +170,7 @@ func HandleGetNetworksQuery(queryBus cqrs.QueryBus, getNetworksRequest *pb.GetNe
 		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 		responseMessage = fmt.Sprintf("Error retrieving networks: %v", err)
 	} else {
-		domainResult, ok := result.(*model.GetNetworksResult)
+		domainResult, ok := result.(*dto.GetNetworksResult)
 		if !ok {
 			log.Error("Error retrieving networks: unexpected result type")
 			responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
