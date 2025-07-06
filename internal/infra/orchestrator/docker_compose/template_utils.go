@@ -39,7 +39,7 @@ func (r *composeRepository) loadTemplateVariables(templateDir string) (map[strin
 
 // renderTemplates processes template files from templateDir/files into destDir performing Docker-Compose-style
 // variable substitution (see pkg/template.Substitute for supported syntax). Only files located under the
-// "template" root are subject to variable substitution; files from the "router" and "user" roots are copied
+// "template" root are subject to variable substitution; files from the "expose" and "user" roots are copied
 // verbatim.
 func (r *composeRepository) renderTemplates(templateDir, destDir string, vars map[string]string) error {
 	filesRoot := filepath.Join(templateDir, "files")
