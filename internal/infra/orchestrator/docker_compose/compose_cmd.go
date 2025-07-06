@@ -14,7 +14,14 @@ func (r *composeRepository) composeUp(appDir string) error {
 	if err != nil {
 		return err
 	}
-	args := append(r.buildComposeFileArgs(files), "up", "-d")
+
+	args := make([]string, 0)
+	if fileExists(filepath.Join(appDir, ".winterflow.env")) {
+		args = append(args, "--env-file", ".winterflow.env")
+	}
+	args = append(args, r.buildComposeFileArgs(files)...)
+	args = append(args, "up", "-d")
+
 	return r.runDockerCompose(appDir, args...)
 }
 
@@ -23,7 +30,14 @@ func (r *composeRepository) composeDown(appDir string) error {
 	if err != nil {
 		return err
 	}
-	args := append(r.buildComposeFileArgs(files), "down", "--remove-orphans")
+
+	args := make([]string, 0)
+	if fileExists(filepath.Join(appDir, ".winterflow.env")) {
+		args = append(args, "--env-file", ".winterflow.env")
+	}
+	args = append(args, r.buildComposeFileArgs(files)...)
+	args = append(args, "down", "--remove-orphans")
+
 	return r.runDockerCompose(appDir, args...)
 }
 
@@ -32,7 +46,14 @@ func (r *composeRepository) composeRestart(appDir string) error {
 	if err != nil {
 		return err
 	}
-	args := append(r.buildComposeFileArgs(files), "restart")
+
+	args := make([]string, 0)
+	if fileExists(filepath.Join(appDir, ".winterflow.env")) {
+		args = append(args, "--env-file", ".winterflow.env")
+	}
+	args = append(args, r.buildComposeFileArgs(files)...)
+	args = append(args, "restart")
+
 	return r.runDockerCompose(appDir, args...)
 }
 
