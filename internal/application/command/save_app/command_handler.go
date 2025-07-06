@@ -181,14 +181,14 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			log.Warn("Skipping rename for invalid source filename", "filename", prevMeta.Filename, "error", err)
 			continue
 		}
-		oldPath := filepath.Join(templatesDir, oldRel+".j2")
+		oldPath := filepath.Join(templatesDir, oldRel)
 
 		newRel, err := sanitizeTemplateFilename(newMeta.Filename)
 		if err != nil {
 			log.Warn("Skipping rename for invalid target filename", "filename", newMeta.Filename, "error", err)
 			continue
 		}
-		newPath := filepath.Join(templatesDir, newRel+".j2")
+		newPath := filepath.Join(templatesDir, newRel)
 
 		// Ensure target directory.
 		if err := os.MkdirAll(filepath.Dir(newPath), dirPerm); err != nil {
@@ -223,7 +223,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			log.Warn("Skipping filename with invalid path", "filename", filename, "error", err)
 			continue
 		}
-		expectedPaths[filepath.Join(templatesDir, rel+".j2")] = struct{}{}
+		expectedPaths[filepath.Join(templatesDir, rel)] = struct{}{}
 	}
 
 	// Walk through existing files and remove any .j2 that is not expected.
@@ -234,9 +234,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 		if d.IsDir() {
 			return nil
 		}
-		if !strings.HasSuffix(d.Name(), ".j2") {
-			return nil
-		}
+		// No extension filter – consider all files within templatesDir
 
 		if _, ok := expectedPaths[filepath.Clean(path)]; !ok {
 			if err := os.Remove(path); err != nil {
@@ -276,7 +274,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			log.Warn("Skipping file with invalid filename", "filename", fileMeta.Filename, "error", err)
 			continue
 		}
-		targetPath := filepath.Join(templatesDir, relFilename+".j2")
+		targetPath := filepath.Join(templatesDir, relFilename)
 
 		// Ensure the directory for the file exists.
 		if err := os.MkdirAll(filepath.Dir(targetPath), dirPerm); err != nil {

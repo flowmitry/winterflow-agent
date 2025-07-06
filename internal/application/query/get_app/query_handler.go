@@ -148,7 +148,7 @@ func (h *GetAppQueryHandler) loadFiles(appConfig *model.AppConfig, filesDir stri
 			continue
 		}
 
-		filePath := filepath.Join(filesDir, f.Filename+".j2")
+		filePath := filepath.Join(filesDir, f.Filename)
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			// If the file is missing we log and continue – it might be optional.

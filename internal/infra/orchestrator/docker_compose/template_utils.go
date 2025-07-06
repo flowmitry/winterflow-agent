@@ -6,10 +6,10 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"winterflow-agent/internal/domain/model"
 	"winterflow-agent/internal/infra/orchestrator"
+	"winterflow-agent/pkg/env"
 	"winterflow-agent/pkg/log"
 	"winterflow-agent/pkg/template"
 )
@@ -37,8 +37,10 @@ func (r *composeRepository) loadTemplateVariables(templateDir string) (map[strin
 	return vars, nil
 }
 
-// renderTemplates processes all *.j2 files from templateDir/files into destDir performing Docker-Compose-style
-// variable substitution (see pkg/template.Substitute for supported syntax).
+// renderTemplates processes template files from templateDir/files into destDir performing Docker-Compose-style
+// variable substitution (see pkg/template.Substitute for supported syntax). Only files located under the
+// "template" root are subject to variable substitution; files from the "router" and "user" roots are copied
+// verbatim.
 func (r *composeRepository) renderTemplates(templateDir, destDir string, vars map[string]string) error {
 	filesRoot := filepath.Join(templateDir, "files")
 
@@ -47,15 +49,17 @@ func (r *composeRepository) renderTemplates(templateDir, destDir string, vars ma
 			return walkErr
 		}
 
-		// Determine the destination relative to filesRoot.
 		relPath, err := filepath.Rel(filesRoot, path)
 		if err != nil {
 			return fmt.Errorf("failed to calculate relative path: %w", err)
 		}
 
+		if relPath == "." {
+			return nil // Skip root
+		}
+
 		destPath := filepath.Join(destDir, relPath)
 
-		// Handle directories by ensuring they exist in the destination.
 		if d.IsDir() {
 			if err := os.MkdirAll(destPath, 0o755); err != nil {
 				return fmt.Errorf("failed to create directory %s: %w", destPath, err)
@@ -63,36 +67,19 @@ func (r *composeRepository) renderTemplates(templateDir, destDir string, vars ma
 			return nil
 		}
 
-		// For files, process depending on extension.
-		if strings.HasSuffix(d.Name(), ".j2") {
-			// Render template file.
-			contentBytes, err := os.ReadFile(path)
-			if err != nil {
-				return fmt.Errorf("failed to read template %s: %w", path, err)
-			}
-
-			// Perform Docker-Compose style variable substitution using the shared template package.
-			content, err := template.Substitute(string(contentBytes), vars)
-			if err != nil {
-				return fmt.Errorf("failed to render template %s: %w", path, err)
-			}
-
-			// Drop the ".j2" extension for destination file.
-			destPath = strings.TrimSuffix(destPath, ".j2")
-
-			if err := os.WriteFile(destPath, []byte(content), 0o644); err != nil {
-				return fmt.Errorf("failed to write rendered template to %s: %w", destPath, err)
-			}
-			return nil
-		}
-
-		// Non-template file – copy as-is.
-		data, err := os.ReadFile(path)
+		// Always attempt variable substitution; it's a no-op when the file lacks placeholders.
+		contentBytes, err := os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("failed to read source file %s: %w", path, err)
 		}
-		if err := os.WriteFile(destPath, data, 0o644); err != nil {
-			return fmt.Errorf("failed to copy file to %s: %w", destPath, err)
+
+		rendered, err := template.Substitute(string(contentBytes), vars)
+		if err != nil {
+			return fmt.Errorf("failed to render template %s: %w", path, err)
+		}
+
+		if err := os.WriteFile(destPath, []byte(rendered), 0o644); err != nil {
+			return fmt.Errorf("failed to write file to %s: %w", destPath, err)
 		}
 		return nil
 	}
@@ -149,6 +136,11 @@ func (r *composeRepository) renderApp(appID, templateDir, destDir string) error 
 		return fmt.Errorf("failed to render templates: %w", err)
 	}
 
+	// Generate .winterflow.env file so that compose commands can load variable values.
+	if err := writeEnvFile(destDir, vars); err != nil {
+		return fmt.Errorf("failed to write .winterflow.env: %w", err)
+	}
+
 	// Persist a copy of the configuration that has just been rendered so that other components can
 	// quickly inspect the active version without having to resolve templateDir themselves.
 	if err := orchestrator.SaveCurrentConfigCopy(r.config, appID, templateDir); err != nil {
@@ -156,4 +148,18 @@ func (r *composeRepository) renderApp(appID, templateDir, destDir string) error 
 	}
 
 	return nil
+}
+
+// writeEnvFile creates (or overwrites) `.winterflow.env` in dir using the provided vars map.
+// The file is written using a simple KEY=value format, one per line. It does NOT attempt to quote
+// values – users should avoid characters that require shell escaping inside the values. This method
+// is intentionally simple as the env-file format supported by Docker Compose does not mandate
+// quoting unless special characters are present.
+func writeEnvFile(dir string, vars map[string]string) error {
+	if len(vars) == 0 {
+		return nil
+	}
+
+	envPath := filepath.Join(dir, ".winterflow.env")
+	return env.Save(envPath, vars)
 }
