@@ -68,19 +68,19 @@ func (r *composeRepository) composePull(appDir string) error {
 
 // detectComposeFiles mimics the original playbook logic to decide which compose files to use.
 func (r *composeRepository) detectComposeFiles(appDir string) ([]string, error) {
-	custom := filepath.Join(appDir, "compose.custom.yml")
-	override := filepath.Join(appDir, "compose.override.yml")
 	compose := filepath.Join(appDir, "compose.yml")
+	expose := filepath.Join(appDir, "compose.expose.yml")
+	override := filepath.Join(appDir, "compose.override.yml")
 
-	customExists := fileExists(custom)
-	overrideExists := fileExists(override)
 	composeExists := fileExists(compose)
+	exposeExists := fileExists(expose)
+	overrideExists := fileExists(override)
 
 	switch {
-	case customExists && overrideExists:
-		return []string{custom, override}, nil
-	case customExists:
-		return []string{custom}, nil
+	case composeExists && exposeExists && overrideExists:
+		return []string{compose, expose, override}, nil
+	case composeExists && exposeExists:
+		return []string{compose, expose}, nil
 	case composeExists && overrideExists:
 		return []string{compose, override}, nil
 	case composeExists:
