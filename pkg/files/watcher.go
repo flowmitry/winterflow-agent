@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 	"time"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // FileWatcher watches a file for changes and calls a callback when modified

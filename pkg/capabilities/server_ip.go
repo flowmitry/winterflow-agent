@@ -3,7 +3,7 @@ package capabilities
 import (
 	"winterflow-agent/internal/application/config"
 	"winterflow-agent/internal/infra/winterflow/api"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 )
 
 // ServerIPCapability represents the IP Address capability

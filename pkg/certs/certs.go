@@ -16,7 +16,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	log "winterflow-agent/pkg/log"
+	"winterflow-agent/pkg/log"
 
 	"crypto/aes"
 	"crypto/cipher"
