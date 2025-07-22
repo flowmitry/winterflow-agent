@@ -24,7 +24,7 @@ const (
 type SaveAppHandler struct {
 	AppsTemplatesPath string
 	PrivateKeyPath    string
-	versionService    app.AppVersionServiceInterface
+	revisionService   app.RevisionServiceInterface
 }
 
 // Handle executes the SaveAppCommand
@@ -37,7 +37,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	log.Info("Processing save app request", "app_id", app.ID)
 
 	// Ensure the base directory for the application exists. This is required so that subsequent
-	// operations (like reading a previous config or creating version directories) do not fail
+	// operations (like reading a previous config or creating revision directories) do not fail
 	// due to a missing parent path.
 	baseDir := filepath.Join(h.AppsTemplatesPath, app.ID)
 	isAppExists := false
@@ -49,20 +49,20 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 		isAppExists = true
 	}
 
-	if h.versionService == nil {
-		return fmt.Errorf("version service is not configured for SaveAppHandler")
+	if h.revisionService == nil {
+		return fmt.Errorf("revision service is not configured for SaveAppHandler")
 	}
 
-	newVersion, err := h.versionService.CreateVersion(app.ID)
+	newRevision, err := h.revisionService.CreateRevision(app.ID)
 	if err != nil {
-		return fmt.Errorf("failed to create new version for app %s: %w", app.ID, err)
+		return fmt.Errorf("failed to create new revision for app %s: %w", app.ID, err)
 	}
 
-	// Use the service helpers to construct version specific paths
-	versionDir := h.versionService.GetVersionDir(app.ID, newVersion)
-	log.Debug("Created new version", "version", newVersion, "app_id", app.ID)
+	// Use the service helpers to construct revision specific paths
+	revisionDir := h.revisionService.GetRevisionDir(app.ID, newRevision)
+	log.Debug("Created new revision", "revision", newRevision, "app_id", app.ID)
 
-	existingCfgPath := filepath.Join(versionDir, "config.json")
+	existingCfgPath := filepath.Join(revisionDir, "config.json")
 	var prevFiles []model.AppFile
 	if data, err := os.ReadFile(existingCfgPath); err == nil {
 		if existingCfg, err := model.ParseAppConfig(data); err == nil {
@@ -87,11 +87,11 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 		return fmt.Errorf("application name '%s' is already in use by another app", app.Config.Name)
 	}
 
-	// Resolve important directories once (baseDir & versionDir already calculated above)
+	// Resolve important directories once (baseDir & revisionDir already calculated above)
 	dirs := map[string]string{
-		"version": versionDir,
-		"vars":    h.versionService.GetVarsDir(app.ID, newVersion),
-		"files":   h.versionService.GetFilesDir(app.ID, newVersion),
+		"revision": revisionDir,
+		"vars":     h.revisionService.GetVarsDir(app.ID, newRevision),
+		"files":    h.revisionService.GetFilesDir(app.ID, newRevision),
 	}
 
 	// 1. Ensure directory structure exists
@@ -102,7 +102,7 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 	}
 
 	// 2. Persist config.json
-	if err := h.writeConfig(dirs["version"], app.Config); err != nil {
+	if err := h.writeConfig(dirs["revision"], app.Config); err != nil {
 		return err
 	}
 
@@ -116,20 +116,20 @@ func (h *SaveAppHandler) Handle(cmd SaveAppCommand) error {
 		return err
 	}
 
-	// 5. Clean up old versions if we have a version service
-	if err := h.versionService.DeleteOldVersions(app.ID); err != nil {
-		log.Warn("Failed to clean up old versions", "app_id", app.ID, "error", err)
+	// 5. Clean up old revisions if we have a revision service
+	if err := h.revisionService.DeleteOldRevisions(app.ID); err != nil {
+		log.Warn("Failed to clean up old revisions", "app_id", app.ID, "error", err)
 		// Don't fail the save operation if cleanup fails
 	} else {
-		log.Debug("Successfully cleaned up old versions", "app_id", app.ID)
+		log.Debug("Successfully cleaned up old revisions", "app_id", app.ID)
 	}
 
 	return nil
 }
 
-// writeConfig marshals the AppConfig and writes it to config.json inside versionDir.
-func (h *SaveAppHandler) writeConfig(versionDir string, cfg *model.AppConfig) error {
-	configPath := filepath.Join(versionDir, "config.json")
+// writeConfig marshals the AppConfig and writes it to config.json inside revisionDir.
+func (h *SaveAppHandler) writeConfig(revisionDir string, cfg *model.AppConfig) error {
+	configPath := filepath.Join(revisionDir, "config.json")
 	data, err := json.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("error marshaling app config: %w", err)
@@ -148,7 +148,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 	prevIDToFile := make(map[string]model.AppFile)
 
 	for _, f := range cfg.Files {
-		expected[f.Filename] = f
+		expected[f.Name] = f
 		idToFile[f.ID] = f
 	}
 	for _, f := range prevFiles {
@@ -164,7 +164,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			continue // new file or unknown – nothing to rename
 		}
 
-		if prevMeta.Filename == newMeta.Filename {
+		if prevMeta.Name == newMeta.Name {
 			continue // same path – nothing to rename
 		}
 
@@ -176,16 +176,16 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 		}
 
 		// Compute old and new paths using the sanitizer.
-		oldRel, err := sanitizeTemplateFilename(prevMeta.Filename)
+		oldRel, err := sanitizeTemplateFilename(prevMeta.Name)
 		if err != nil {
-			log.Warn("Skipping rename for invalid source filename", "filename", prevMeta.Filename, "error", err)
+			log.Warn("Skipping rename for invalid source filename", "filename", prevMeta.Name, "error", err)
 			continue
 		}
 		oldPath := filepath.Join(templatesDir, oldRel)
 
-		newRel, err := sanitizeTemplateFilename(newMeta.Filename)
+		newRel, err := sanitizeTemplateFilename(newMeta.Name)
 		if err != nil {
-			log.Warn("Skipping rename for invalid target filename", "filename", newMeta.Filename, "error", err)
+			log.Warn("Skipping rename for invalid target filename", "filename", newMeta.Name, "error", err)
 			continue
 		}
 		newPath := filepath.Join(templatesDir, newRel)
@@ -269,9 +269,9 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			continue
 		}
 
-		relFilename, err := sanitizeTemplateFilename(fileMeta.Filename)
+		relFilename, err := sanitizeTemplateFilename(fileMeta.Name)
 		if err != nil {
-			log.Warn("Skipping file with invalid filename", "filename", fileMeta.Filename, "error", err)
+			log.Warn("Skipping file with invalid filename", "filename", fileMeta.Name, "error", err)
 			continue
 		}
 		targetPath := filepath.Join(templatesDir, relFilename)
@@ -287,7 +287,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 			if string(content) == "<encrypted>" {
 				if _, err := os.Stat(targetPath); err == nil {
 					// File already exists – nothing to overwrite.
-					log.Debug("Placeholder received for encrypted file, keeping existing file", "filename", fileMeta.Filename, "file_id", id)
+					log.Debug("Placeholder received for encrypted file, keeping existing file", "filename", fileMeta.Name, "file_id", id)
 					continue
 				}
 
@@ -304,7 +304,7 @@ func (h *SaveAppHandler) syncTemplates(templatesDir string, cfg *model.AppConfig
 				if dec, err := certs.DecryptWithPrivateKey(h.PrivateKeyPath, string(content)); err == nil {
 					plaintext = []byte(dec)
 				} else {
-					log.Warn("Failed to decrypt file", "filename", fileMeta.Filename, "error", err)
+					log.Warn("Failed to decrypt file", "filename", fileMeta.Name, "error", err)
 				}
 			}
 
@@ -406,18 +406,18 @@ func (h *SaveAppHandler) isNameUnique(name string, currentAppID string) (bool, e
 			continue
 		}
 
-		// Resolve the latest version for the application so we always check the most up-to-date config.
-		latestVersion, err := h.versionService.GetLatestAppVersion(appID)
+		// Resolve the latest revision for the application so we always check the most up-to-date config.
+		latestRevision, err := h.revisionService.GetLatestAppRevision(appID)
 		if err != nil {
-			// If we cannot determine the latest version, skip this application – not critical.
+			// If we cannot determine the latest revision, skip this application – not critical.
 			continue
 		}
-		if latestVersion == 0 {
-			// Application does not have any versions yet (should not normally happen).
+		if latestRevision == 0 {
+			// Application does not have any revisions yet (should not normally happen).
 			continue
 		}
 
-		cfgPath := filepath.Join(h.versionService.GetVersionDir(appID, latestVersion), "config.json")
+		cfgPath := filepath.Join(h.revisionService.GetRevisionDir(appID, latestRevision), "config.json")
 		data, err := os.ReadFile(cfgPath)
 		if err != nil {
 			continue // ignore missing configs or read errors – not critical for uniqueness check
@@ -464,10 +464,10 @@ type SaveAppResult struct {
 }
 
 // NewSaveAppHandler creates a new SaveAppHandler
-func NewSaveAppHandler(appsTemplatesPath, privateKeyPath string, versionService app.AppVersionServiceInterface) *SaveAppHandler {
+func NewSaveAppHandler(appsTemplatesPath, privateKeyPath string, revisionService app.RevisionServiceInterface) *SaveAppHandler {
 	return &SaveAppHandler{
 		AppsTemplatesPath: appsTemplatesPath,
 		PrivateKeyPath:    privateKeyPath,
-		versionService:    versionService,
+		revisionService:   revisionService,
 	}
 }

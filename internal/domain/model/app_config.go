@@ -18,7 +18,7 @@ type AppConfig struct {
 // AppFile represents a file in the app configuration
 type AppFile struct {
 	ID          string      `json:"id"`
-	Filename    string      `json:"filename"`
+	Name        string      `json:"name"`
 	IsEncrypted bool        `json:"is_encrypted"`
 	Type        ContentType `json:"type"`
 }
@@ -35,13 +35,15 @@ type ContentType string
 
 const (
 	ContentTypeTemplate ContentType = "template"
+	ContentTypeConstant ContentType = "constant"
+	ContentTypeSystem   ContentType = "system"
 	ContentTypeUser     ContentType = "user"
 	ContentTypeExpose   ContentType = "expose"
 )
 
 func (ct ContentType) Validate() error {
 	switch ct {
-	case ContentTypeTemplate, ContentTypeUser, ContentTypeExpose:
+	case ContentTypeTemplate, ContentTypeConstant, ContentTypeSystem, ContentTypeUser, ContentTypeExpose:
 		return nil
 	default:
 		return fmt.Errorf("invalid content type: %s", ct)

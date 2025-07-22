@@ -4,12 +4,12 @@ import (
 	"winterflow-agent/internal/application/version"
 )
 
-// AgentVersionCapability represents the Agent Version capability
+// AgentVersionCapability represents the Agent Revision capability
 type AgentVersionCapability struct {
 	version string
 }
 
-// NewAgentVersionCapability creates a new Agent Version capability
+// NewAgentVersionCapability creates a new Agent Revision capability
 func NewAgentVersionCapability() *AgentVersionCapability {
 	return &AgentVersionCapability{
 		version: version.GetVersion(),

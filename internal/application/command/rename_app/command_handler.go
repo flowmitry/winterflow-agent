@@ -16,7 +16,7 @@ import (
 type RenameAppHandler struct {
 	repository        repository.AppRepository
 	AppsTemplatesPath string
-	VersionService    app.AppVersionServiceInterface
+	VersionService    app.RevisionServiceInterface
 }
 
 // Handle executes the RenameAppCommand.
@@ -43,7 +43,7 @@ func (h *RenameAppHandler) Handle(cmd RenameAppCommand) error {
 	}
 
 	// Resolve the latest version directory via the version service.
-	latestVersion, err := h.VersionService.GetLatestAppVersion(appID)
+	latestVersion, err := h.VersionService.GetLatestAppRevision(appID)
 	if err != nil {
 		return log.Errorf("failed to determine latest version for app", "app_id", appID, "error", err)
 	}
@@ -51,7 +51,7 @@ func (h *RenameAppHandler) Handle(cmd RenameAppCommand) error {
 		return log.Errorf("application does not have any versions yet", "app_id", appID)
 	}
 
-	configPath := filepath.Join(h.VersionService.GetVersionDir(appID, latestVersion), "config.json")
+	configPath := filepath.Join(h.VersionService.GetRevisionDir(appID, latestVersion), "config.json")
 
 	// Read existing config.
 	cfgBytes, err := os.ReadFile(configPath)
@@ -107,12 +107,12 @@ func (h *RenameAppHandler) isNameUnique(name, currentAppID string) (bool, error)
 		}
 
 		// Determine latest version for each application to read its current name.
-		latestVersion, err := h.VersionService.GetLatestAppVersion(appID)
+		latestVersion, err := h.VersionService.GetLatestAppRevision(appID)
 		if err != nil || latestVersion == 0 {
 			continue
 		}
 
-		cfgPath := filepath.Join(h.VersionService.GetVersionDir(appID, latestVersion), "config.json")
+		cfgPath := filepath.Join(h.VersionService.GetRevisionDir(appID, latestVersion), "config.json")
 		data, err := os.ReadFile(cfgPath)
 		if err != nil {
 			// Ignore missing or unreadable config files.
@@ -130,7 +130,7 @@ func (h *RenameAppHandler) isNameUnique(name, currentAppID string) (bool, error)
 }
 
 // NewRenameAppHandler creates a new RenameAppHandler.
-func NewRenameAppHandler(repository repository.AppRepository, appsTemplatesPath string, versionService app.AppVersionServiceInterface) *RenameAppHandler {
+func NewRenameAppHandler(repository repository.AppRepository, appsTemplatesPath string, versionService app.RevisionServiceInterface) *RenameAppHandler {
 	return &RenameAppHandler{
 		repository:        repository,
 		AppsTemplatesPath: appsTemplatesPath,

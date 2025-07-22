@@ -711,9 +711,9 @@ func (c *Client) StartAgentStream(ctx context.Context, agentID string, metricsPr
 							// Create and send error response immediately
 							baseResp := createBaseResponse(cmd.GetAppRequestV1.Base.MessageId, agentID, pb.ResponseCode_RESPONSE_CODE_TOO_MANY_REQUESTS, "Request dropped: channel full")
 							getAppResp := &pb.GetAppResponseV1{
-								Base:       &baseResp,
-								App:        nil,
-								AppVersion: cmd.GetAppRequestV1.AppVersion,
+								Base:        &baseResp,
+								App:         nil,
+								AppRevision: cmd.GetAppRequestV1.AppRevision,
 							}
 
 							agentMsg := &pb.AgentMessage{

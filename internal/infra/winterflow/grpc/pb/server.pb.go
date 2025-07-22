@@ -1053,7 +1053,7 @@ type GetAppRequestV1 struct {
 	Base  *BaseMessage           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
 	// UUID
 	AppId         string `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
-	AppVersion    uint32 `protobuf:"varint,3,opt,name=app_version,json=appVersion,proto3" json:"app_version,omitempty"`
+	AppRevision   uint32 `protobuf:"varint,3,opt,name=app_revision,json=appRevision,proto3" json:"app_revision,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1102,21 +1102,21 @@ func (x *GetAppRequestV1) GetAppId() string {
 	return ""
 }
 
-func (x *GetAppRequestV1) GetAppVersion() uint32 {
+func (x *GetAppRequestV1) GetAppRevision() uint32 {
 	if x != nil {
-		return x.AppVersion
+		return x.AppRevision
 	}
 	return 0
 }
 
 type GetAppResponseV1 struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Base              *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
-	App               *AppV1                 `protobuf:"bytes,2,opt,name=app,proto3" json:"app,omitempty"`
-	AppVersion        uint32                 `protobuf:"varint,3,opt,name=app_version,json=appVersion,proto3" json:"app_version,omitempty"`
-	AvailableVersions []uint32               `protobuf:"varint,4,rep,packed,name=available_versions,json=availableVersions,proto3" json:"available_versions,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Base               *BaseResponse          `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	App                *AppV1                 `protobuf:"bytes,2,opt,name=app,proto3" json:"app,omitempty"`
+	AppRevision        uint32                 `protobuf:"varint,3,opt,name=app_revision,json=appRevision,proto3" json:"app_revision,omitempty"`
+	AvailableRevisions []uint32               `protobuf:"varint,4,rep,packed,name=available_revisions,json=availableRevisions,proto3" json:"available_revisions,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *GetAppResponseV1) Reset() {
@@ -1163,16 +1163,16 @@ func (x *GetAppResponseV1) GetApp() *AppV1 {
 	return nil
 }
 
-func (x *GetAppResponseV1) GetAppVersion() uint32 {
+func (x *GetAppResponseV1) GetAppRevision() uint32 {
 	if x != nil {
-		return x.AppVersion
+		return x.AppRevision
 	}
 	return 0
 }
 
-func (x *GetAppResponseV1) GetAvailableVersions() []uint32 {
+func (x *GetAppResponseV1) GetAvailableRevisions() []uint32 {
 	if x != nil {
-		return x.AvailableVersions
+		return x.AvailableRevisions
 	}
 	return nil
 }
@@ -3307,18 +3307,16 @@ const file_internal_infra_winterflow_grpc_pb_server_proto_rawDesc = "" +
 	"\x06app_id\x18\x01 \x01(\tR\x05appId\x12\x16\n" +
 	"\x06config\x18\x02 \x01(\fR\x06config\x12*\n" +
 	"\tvariables\x18\x03 \x03(\v2\f.pb.AppVarV1R\tvariables\x12#\n" +
-	"\x05files\x18\x04 \x03(\v2\r.pb.AppFileV1R\x05files\"n\n" +
+	"\x05files\x18\x04 \x03(\v2\r.pb.AppFileV1R\x05files\"p\n" +
 	"\x0fGetAppRequestV1\x12#\n" +
 	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x15\n" +
-	"\x06app_id\x18\x02 \x01(\tR\x05appId\x12\x1f\n" +
-	"\vapp_version\x18\x03 \x01(\rR\n" +
-	"appVersion\"\xa5\x01\n" +
+	"\x06app_id\x18\x02 \x01(\tR\x05appId\x12!\n" +
+	"\fapp_revision\x18\x03 \x01(\rR\vappRevision\"\xa9\x01\n" +
 	"\x10GetAppResponseV1\x12$\n" +
 	"\x04base\x18\x01 \x01(\v2\x10.pb.BaseResponseR\x04base\x12\x1b\n" +
-	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\x12\x1f\n" +
-	"\vapp_version\x18\x03 \x01(\rR\n" +
-	"appVersion\x12-\n" +
-	"\x12available_versions\x18\x04 \x03(\rR\x11availableVersions\"U\n" +
+	"\x03app\x18\x02 \x01(\v2\t.pb.AppV1R\x03app\x12!\n" +
+	"\fapp_revision\x18\x03 \x01(\rR\vappRevision\x12/\n" +
+	"\x13available_revisions\x18\x04 \x03(\rR\x12availableRevisions\"U\n" +
 	"\x14UpdateAgentRequestV1\x12#\n" +
 	"\x04base\x18\x01 \x01(\v2\x0f.pb.BaseMessageR\x04base\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\"=\n" +

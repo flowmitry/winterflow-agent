@@ -38,7 +38,7 @@ type restoreDataRequest struct {
 }
 
 // RestoreAgentData scans the local apps_templates folder, regenerates UUIDs,
-// keeps only the latest version for every app, updates the config.json files
+// keeps only the latest revision for every app, updates the config.json files
 // accordingly and notifies the WinterFlow backend via /api/v1/data/restore.
 //
 // It is intended to be executed via `winterflow-agent --restore` after the
@@ -92,7 +92,7 @@ func RestoreAgentData(configPath string) error {
 		oldAppID := entry.Name()
 		oldAppPath := filepath.Join(templatesRoot, oldAppID)
 
-		// Determine latest version subdirectory (highest numeric name).
+		// Determine latest revision subdirectory (highest numeric name).
 		versions, err := os.ReadDir(oldAppPath)
 		if err != nil {
 			log.Error("Failed to list versions", "app", oldAppID, "error", err)
@@ -125,7 +125,7 @@ func RestoreAgentData(configPath string) error {
 		newAppID := uuid.New().String()
 
 		newAppPath := filepath.Join(templatesRoot, newAppID)
-		newVersionPath := filepath.Join(newAppPath, "1")
+		newRevisionPath := filepath.Join(newAppPath, "1")
 
 		// Make sure parent directory exists.
 		if err := os.MkdirAll(newAppPath, 0755); err != nil {
@@ -135,8 +135,8 @@ func RestoreAgentData(configPath string) error {
 
 		// Move (rename) latest version directory to the new location.
 		src := filepath.Join(oldAppPath, latestDirName)
-		if err := os.Rename(src, newVersionPath); err != nil {
-			log.Error("Failed to move version directory", "src", src, "dst", newVersionPath, "error", err)
+		if err := os.Rename(src, newRevisionPath); err != nil {
+			log.Error("Failed to move version directory", "src", src, "dst", newRevisionPath, "error", err)
 			continue
 		}
 
@@ -152,7 +152,7 @@ func RestoreAgentData(configPath string) error {
 		// -----------------------------------------------------------------
 		// 2.1 Update config.json with new app ID
 		// -----------------------------------------------------------------
-		cfgPath := filepath.Join(newVersionPath, "config.json")
+		cfgPath := filepath.Join(newRevisionPath, "config.json")
 		cfgBytes, err := os.ReadFile(cfgPath)
 		if err != nil {
 			log.Error("Failed to read config.json", "path", cfgPath, "error", err)

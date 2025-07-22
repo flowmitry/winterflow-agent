@@ -136,14 +136,14 @@ message GetAppRequestV1 {
   BaseMessage base = 1;
   // UUID
   string app_id = 2;
-  uint32 app_version = 3;
+  uint32 app_revision = 3;
 }
 
 message GetAppResponseV1 {
   BaseResponse base = 1;
   AppV1 app = 2;
-  uint32 app_version = 3;
-  repeated uint32 available_versions = 4;
+  uint32 app_revision = 3;
+  repeated uint32 available_revisions = 4;
 }
 
 message UpdateAgentRequestV1 {
