@@ -5,14 +5,22 @@ import (
 	"fmt"
 )
 
+type ExtensionValue struct {
+	Extension      string `json:"extension"`
+	ExtensionAppID string `json:"extension_app_id"`
+}
+
 // AppConfig represents the configuration of an app
 type AppConfig struct {
-	ID        string        `json:"id"`
-	Name      string        `json:"name"`
-	Icon      string        `json:"icon"`
-	Color     string        `json:"color"`
-	Files     []AppFile     `json:"files"`
-	Variables []AppVariable `json:"variables"`
+	ID              string           `json:"id"`
+	Name            string           `json:"name"`
+	Icon            string           `json:"icon"`
+	TemplateID      string           `json:"template_id"`
+	Version         string           `json:"version"`
+	Color           string           `json:"color"`
+	Files           []AppFile        `json:"files"`
+	Variables       []AppVariable    `json:"variables"`
+	ExtensionValues []ExtensionValue `json:"extension_values"`
 }
 
 // AppFile represents a file in the app configuration
