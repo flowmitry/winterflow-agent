@@ -15,9 +15,9 @@ type VariableMap map[string]string
 type FilesMap map[string][]byte
 
 // AppDetails represents the details of an application.
-// It contains the application, the version and the list of available versions.
+// It contains the application, the revision and the list of available revisions.
 type AppDetails struct {
-	App      *App
-	Version  uint32
-	Versions []uint32
+	App       *App
+	Revision  uint32
+	Revisions []uint32
 }

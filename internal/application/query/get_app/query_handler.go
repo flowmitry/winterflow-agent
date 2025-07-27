@@ -12,7 +12,7 @@ import (
 
 // GetAppQueryHandler handles the GetAppQuery
 type GetAppQueryHandler struct {
-	VersionService app.AppVersionServiceInterface
+	VersionService app.RevisionServiceInterface
 }
 
 // Handle executes the GetAppQuery and returns the result
@@ -23,20 +23,20 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.AppDetails, error
 
 	// 1. Determine version directory
 	var targetVersion uint32
-	if query.AppVersion > 0 {
+	if query.AppRevision > 0 {
 		// A specific version was requested by the caller. Validate that it exists.
-		exists, err := h.VersionService.ValidateAppVersion(appID, query.AppVersion)
+		exists, err := h.VersionService.ValidateAppRevision(appID, query.AppRevision)
 		if err != nil {
 			return nil, fmt.Errorf("error validating app version: %w", err)
 		}
 		if !exists {
-			return nil, fmt.Errorf("version %d not found for app %s", query.AppVersion, appID)
+			return nil, fmt.Errorf("version %d not found for app %s", query.AppRevision, appID)
 		}
 
-		targetVersion = query.AppVersion
+		targetVersion = query.AppRevision
 	} else {
 		// No version supplied – resolve to the latest available version using the service.
-		latest, err := h.VersionService.GetLatestAppVersion(appID)
+		latest, err := h.VersionService.GetLatestAppRevision(appID)
 		if err != nil {
 			return nil, fmt.Errorf("error determining latest version for app %s: %w", appID, err)
 		}
@@ -46,7 +46,7 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.AppDetails, error
 		targetVersion = latest
 	}
 
-	templatesDir := h.VersionService.GetVersionDir(appID, targetVersion)
+	templatesDir := h.VersionService.GetRevisionDir(appID, targetVersion)
 	varsDir := h.VersionService.GetVarsDir(appID, targetVersion)
 	filesDir := h.VersionService.GetFilesDir(appID, targetVersion)
 
@@ -78,7 +78,7 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.AppDetails, error
 	}
 
 	// 5. Get all versions for the app
-	versions, err := h.VersionService.GetAppVersions(appID)
+	versions, err := h.VersionService.GetAppRevisions(appID)
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +91,8 @@ func (h *GetAppQueryHandler) Handle(query GetAppQuery) (*model.AppDetails, error
 			Variables: varsMap,
 			Files:     filesMap,
 		},
-		Version:  targetVersion,
-		Versions: versions,
+		Revision:  targetVersion,
+		Revisions: versions,
 	}, nil
 }
 
@@ -148,7 +148,7 @@ func (h *GetAppQueryHandler) loadFiles(appConfig *model.AppConfig, filesDir stri
 			continue
 		}
 
-		filePath := filepath.Join(filesDir, f.Filename)
+		filePath := filepath.Join(filesDir, f.Name)
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			// If the file is missing we log and continue – it might be optional.
@@ -162,7 +162,7 @@ func (h *GetAppQueryHandler) loadFiles(appConfig *model.AppConfig, filesDir stri
 }
 
 // NewGetAppQueryHandler creates a new GetAppQueryHandler
-func NewGetAppQueryHandler(versionService app.AppVersionServiceInterface) *GetAppQueryHandler {
+func NewGetAppQueryHandler(versionService app.RevisionServiceInterface) *GetAppQueryHandler {
 	return &GetAppQueryHandler{
 		VersionService: versionService,
 	}

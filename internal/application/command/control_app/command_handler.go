@@ -13,7 +13,7 @@ import (
 // ControlAppHandler handles the ControlAppCommand
 type ControlAppHandler struct {
 	repository     repository.AppRepository
-	VersionService app.AppVersionServiceInterface
+	VersionService app.RevisionServiceInterface
 }
 
 // Handle executes the ControlAppCommand
@@ -29,7 +29,7 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 	var targetVersion uint32
 	if cmd.AppVersion > 0 {
 		// Validate requested version exists.
-		exists, err := h.VersionService.ValidateAppVersion(cmd.AppID, cmd.AppVersion)
+		exists, err := h.VersionService.ValidateAppRevision(cmd.AppID, cmd.AppVersion)
 		if err != nil {
 			return log.Errorf("failed to validate app version: %w", err)
 		}
@@ -38,7 +38,7 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 		}
 		targetVersion = cmd.AppVersion
 	} else {
-		latest, err := h.VersionService.GetLatestAppVersion(cmd.AppID)
+		latest, err := h.VersionService.GetLatestAppRevision(cmd.AppID)
 		if err != nil {
 			return log.Errorf("failed to determine latest version for app %s: %w", cmd.AppID, err)
 		}
@@ -86,9 +86,9 @@ func (h *ControlAppHandler) Handle(cmd ControlAppCommand) error {
 }
 
 // getAppConfig retrieves the app configuration for the given app ID
-func getAppConfig(versionService app.AppVersionServiceInterface, appID string, version uint32) (*model.AppConfig, error) {
+func getAppConfig(versionService app.RevisionServiceInterface, appID string, version uint32) (*model.AppConfig, error) {
 	// Determine directory for the specified version.
-	versionDir := versionService.GetVersionDir(appID, version)
+	versionDir := versionService.GetRevisionDir(appID, version)
 
 	// Ensure it exists.
 	if _, err := os.Stat(versionDir); os.IsNotExist(err) {
@@ -111,7 +111,7 @@ func getAppConfig(versionService app.AppVersionServiceInterface, appID string, v
 }
 
 // NewControlAppHandler creates a new ControlAppHandler
-func NewControlAppHandler(repository repository.AppRepository, versionService app.AppVersionServiceInterface) *ControlAppHandler {
+func NewControlAppHandler(repository repository.AppRepository, versionService app.RevisionServiceInterface) *ControlAppHandler {
 	return &ControlAppHandler{
 		repository:     repository,
 		VersionService: versionService,

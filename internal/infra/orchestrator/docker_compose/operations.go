@@ -10,20 +10,20 @@ import (
 	"winterflow-agent/pkg/log"
 )
 
-// DeployApp renders templates for the given version of an application and starts the containers.
+// DeployApp renders templates for the given revision of an application and starts the containers.
 func (r *composeRepository) DeployApp(appID string) error {
 	// Ensure the base applications directory exists before proceeding.
 	if err := ensureDir(r.config.GetAppsPath()); err != nil {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
 
-	versionService := appsvc.NewAppVersionService(r.config)
-	latest, err := versionService.GetLatestAppVersion(appID)
+	versionService := appsvc.NewRevisionService(r.config)
+	latest, err := versionService.GetLatestAppRevision(appID)
 	if err != nil {
 		return fmt.Errorf("failed to determine latest version for app %s: %w", appID, err)
 	}
 
-	templateDir := versionService.GetVersionDir(appID, latest)
+	templateDir := versionService.GetRevisionDir(appID, latest)
 	appName, err := r.getAppName(templateDir)
 	if err != nil {
 		return fmt.Errorf("cannot deploy app: %w", err)

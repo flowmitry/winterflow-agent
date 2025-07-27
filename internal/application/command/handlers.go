@@ -18,7 +18,7 @@ import (
 )
 
 func RegisterCommandHandlers(b cqrs.CommandBus, config *config.Config, appRepository repository.AppRepository, registryRepository repository.DockerRegistryRepository, networkRepository repository.DockerNetworkRepository) error {
-	versionService := app.NewAppVersionService(config)
+	versionService := app.NewRevisionService(config)
 
 	if err := b.Register(save_app.NewSaveAppHandler(config.GetAppsTemplatesPath(), config.GetPrivateKeyPath(), versionService)); err != nil {
 		return log.Errorf("failed to register save app handler", "error", err)

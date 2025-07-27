@@ -171,7 +171,7 @@ func RegisterAgent(configPath string, orchestrator string) error {
 			fmt.Println("Visit the WinterFlow.io dashboard and enjoy!")
 			return nil
 
-		case "expired", "unknown":
+		case "expired":
 			// Reset agent status to unknown before restarting registration
 			cfg.AgentStatus = config.AgentStatusUnknown
 			if err := config.SaveConfig(cfg, configPath); err != nil {
@@ -182,8 +182,9 @@ func RegisterAgent(configPath string, orchestrator string) error {
 			fmt.Println("Starting a new registration process...")
 			return RegisterAgent(configPath, orchestrator)
 
-		case "pending":
-			// Wait before checking again
+		case "pending", "unknown":
+			// Wait before checking again. "unknown" status is treated the same as "pending"
+			// because the server may still be processing the registration request.
 			time.Sleep(5 * time.Second)
 			continue
 		}

@@ -20,15 +20,15 @@ func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1
 
 	// Create the query with properties directly
 	query := get_app.GetAppQuery{
-		AppID:      getAppRequest.AppId,
-		AppVersion: getAppRequest.AppVersion,
+		AppID:       getAppRequest.AppId,
+		AppRevision: getAppRequest.AppRevision,
 	}
 
 	var responseCode = pb.ResponseCode_RESPONSE_CODE_SUCCESS
 	var responseMessage = "App retrieved successfully"
 	var app *pb.AppV1
-	var versions []uint32
-	var version = getAppRequest.AppVersion
+	var revisions []uint32
+	var revision = getAppRequest.AppRevision
 
 	// Dispatch the query to the handler
 	result, err := queryBus.Dispatch(query)
@@ -37,7 +37,7 @@ func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1
 		responseCode = pb.ResponseCode_RESPONSE_CODE_SERVER_ERROR
 		responseMessage = fmt.Sprintf("Error retrieving app: %v", err)
 	} else {
-		// Type assertion to get the app data along with versions
+		// Type assertion to get the app data along with revisions
 		appDetails, ok := result.(*model.AppDetails)
 		if !ok {
 			log.Error("Error retrieving app: unexpected result type")
@@ -48,17 +48,17 @@ func HandleGetAppQuery(queryBus cqrs.QueryBus, getAppRequest *pb.GetAppRequestV1
 			if appDetails.App != nil {
 				app = AppToProtoAppV1(appDetails.App)
 			}
-			version = appDetails.Version
-			versions = appDetails.Versions
+			revision = appDetails.Revision
+			revisions = appDetails.Revisions
 		}
 	}
 
 	baseResp := createBaseResponse(getAppRequest.Base.MessageId, agentID, responseCode, responseMessage)
 	getAppResp := &pb.GetAppResponseV1{
-		Base:              &baseResp,
-		App:               app,
-		AppVersion:        version,
-		AvailableVersions: versions,
+		Base:               &baseResp,
+		App:                app,
+		AppRevision:        revision,
+		AvailableRevisions: revisions,
 	}
 
 	agentMsg := &pb.AgentMessage{

@@ -20,13 +20,21 @@ import (
 	"winterflow-agent/pkg/log"
 )
 
+type ExtensionValue struct {
+	Extension      string `json:"extension"`
+	ExtensionAppID string `json:"extension_app_id"`
+}
+
 // AppInfo mirrors the server-side structure used by /api/v1/data/restore.
 // It is duplicated locally to avoid importing server packages.
 type AppInfo struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Icon  string `json:"icon"`
-	Color string `json:"color"`
+	ID              string                  `json:"id"`
+	TemplateID      string                  `json:"template_id"`
+	Version         string                  `json:"version"`
+	Name            string                  `json:"name"`
+	Icon            string                  `json:"icon"`
+	Color           string                  `json:"color"`
+	ExtensionValues []domain.ExtensionValue `json:"extension_values"`
 }
 
 // restoreDataRequest matches the payload expected by the backend.
@@ -38,13 +46,13 @@ type restoreDataRequest struct {
 }
 
 // RestoreAgentData scans the local apps_templates folder, regenerates UUIDs,
-// keeps only the latest version for every app, updates the config.json files
+// keeps only the latest revision for every app, updates the config.json files
 // accordingly and notifies the WinterFlow backend via /api/v1/data/restore.
 //
 // It is intended to be executed via `winterflow-agent --restore` after the
 // agent has been re-installed on a server while preserving the data volume.
 func RestoreAgentData(configPath string) error {
-	fmt.Println("Starting restore procedure…")
+	log.Info("Starting restore procedure")
 
 	// ---------------------------------------------------------------------
 	// 1. Load and validate configuration
@@ -68,11 +76,11 @@ func RestoreAgentData(configPath string) error {
 		return fmt.Errorf("backup directory already exists: %s – aborting to prevent overwrite", backupRoot)
 	}
 
-	fmt.Println("Creating backup of application templates", "source", templatesRoot, "destination", backupRoot)
+	log.Info("Creating backup of application templates", "source", templatesRoot, "destination", backupRoot)
 	if err := copyDirectoryRecursive(templatesRoot, backupRoot); err != nil {
 		return fmt.Errorf("failed to create backup: %w", err)
 	}
-	fmt.Println("Backup created successfully", "path", backupRoot)
+	log.Info("Backup created successfully", "path", backupRoot)
 
 	// ---------------------------------------------------------------------
 	// 3. Iterate over apps_templates and rewrite structure
@@ -84,6 +92,19 @@ func RestoreAgentData(configPath string) error {
 
 	var apps []AppInfo
 
+	// Map of original app IDs to newly generated IDs so we can later update
+	// any cross-references in extension_values.extension_app_id.
+	oldToNewIDs := make(map[string]string)
+
+	// Keep track of paths we need to revisit for updating configs once the
+	// full mapping is known.
+	type processedApp struct {
+		newAppPath      string
+		newRevisionPath string
+		oldID           string
+	}
+	var processedApps []processedApp
+
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -92,7 +113,7 @@ func RestoreAgentData(configPath string) error {
 		oldAppID := entry.Name()
 		oldAppPath := filepath.Join(templatesRoot, oldAppID)
 
-		// Determine latest version subdirectory (highest numeric name).
+		// Determine latest revision subdirectory (highest numeric name).
 		versions, err := os.ReadDir(oldAppPath)
 		if err != nil {
 			log.Error("Failed to list versions", "app", oldAppID, "error", err)
@@ -121,11 +142,19 @@ func RestoreAgentData(configPath string) error {
 		latestVersion := versionNumbers[len(versionNumbers)-1]
 		latestDirName := versionDirNames[latestVersion]
 
-		// Generate new UUID for the app.
+		// Generate new UUID for the app and remember the mapping.
 		newAppID := uuid.New().String()
+		oldToNewIDs[oldAppID] = newAppID
 
 		newAppPath := filepath.Join(templatesRoot, newAppID)
-		newVersionPath := filepath.Join(newAppPath, "1")
+		newRevisionPath := filepath.Join(newAppPath, "1")
+
+		// Record for the second processing phase.
+		processedApps = append(processedApps, processedApp{
+			newAppPath:      newAppPath,
+			newRevisionPath: newRevisionPath,
+			oldID:           oldAppID,
+		})
 
 		// Make sure parent directory exists.
 		if err := os.MkdirAll(newAppPath, 0755); err != nil {
@@ -135,8 +164,8 @@ func RestoreAgentData(configPath string) error {
 
 		// Move (rename) latest version directory to the new location.
 		src := filepath.Join(oldAppPath, latestDirName)
-		if err := os.Rename(src, newVersionPath); err != nil {
-			log.Error("Failed to move version directory", "src", src, "dst", newVersionPath, "error", err)
+		if err := os.Rename(src, newRevisionPath); err != nil {
+			log.Error("Failed to move version directory", "src", src, "dst", newRevisionPath, "error", err)
 			continue
 		}
 
@@ -152,7 +181,7 @@ func RestoreAgentData(configPath string) error {
 		// -----------------------------------------------------------------
 		// 2.1 Update config.json with new app ID
 		// -----------------------------------------------------------------
-		cfgPath := filepath.Join(newVersionPath, "config.json")
+		cfgPath := filepath.Join(newRevisionPath, "config.json")
 		cfgBytes, err := os.ReadFile(cfgPath)
 		if err != nil {
 			log.Error("Failed to read config.json", "path", cfgPath, "error", err)
@@ -194,22 +223,93 @@ func RestoreAgentData(configPath string) error {
 			if err := os.WriteFile(dstCurrentCfgPath, currentCfgBytes, 0644); err != nil {
 				log.Error("Failed to write preserved current.config.json", "path", dstCurrentCfgPath, "error", err)
 			} else {
-				fmt.Println("Preserved current configuration copy", "app_id", newAppID)
+				log.Info("Preserved current configuration copy", "app_id", newAppID)
 			}
 		}
 
-		// Collect info for API call.
-		apps = append(apps, AppInfo{
-			ID:    newAppID,
-			Name:  appCfg.Name,
-			Icon:  appCfg.Icon,
-			Color: appCfg.Color,
+		// Prepare extension values: guarantee non-nil slice and deterministic order
+		extVals := make([]domain.ExtensionValue, len(appCfg.ExtensionValues))
+		copy(extVals, appCfg.ExtensionValues)
+
+		// Sort by (extension, extension_app_id) to keep JSON output stable
+		sort.Slice(extVals, func(i, j int) bool {
+			if extVals[i].Extension == extVals[j].Extension {
+				return extVals[i].ExtensionAppID < extVals[j].ExtensionAppID
+			}
+			return extVals[i].Extension < extVals[j].Extension
 		})
+
+		// Ensure the slice is non-nil even when empty so that JSON encodes as [] not null
+		if extVals == nil {
+			extVals = make([]domain.ExtensionValue, 0)
+		}
+
+		// Collect info for API call with cleaned extension values
+		apps = append(apps, AppInfo{
+			ID:              newAppID,
+			TemplateID:      appCfg.TemplateID,
+			Version:         appCfg.Version,
+			Name:            appCfg.Name,
+			Icon:            appCfg.Icon,
+			Color:           appCfg.Color,
+			ExtensionValues: extVals,
+		})
+	}
+
+	// -----------------------------------------------------------------
+	// 3.1 Second pass: update extension_values.extension_app_id references
+	// -----------------------------------------------------------------
+	for _, p := range processedApps {
+		cfgPath := filepath.Join(p.newRevisionPath, "config.json")
+		cfgBytes, err := os.ReadFile(cfgPath)
+		if err != nil {
+			log.Error("Failed to read config for extension update", "path", cfgPath, "error", err)
+			continue
+		}
+
+		appCfg, err := domain.ParseAppConfig(cfgBytes)
+		if err != nil {
+			log.Error("Failed to parse app config for extension update", "path", cfgPath, "error", err)
+			continue
+		}
+
+		updated := false
+		for i := range appCfg.ExtensionValues {
+			if newID, ok := oldToNewIDs[appCfg.ExtensionValues[i].ExtensionAppID]; ok {
+				if newID != appCfg.ExtensionValues[i].ExtensionAppID {
+					appCfg.ExtensionValues[i].ExtensionAppID = newID
+					updated = true
+				}
+			}
+		}
+
+		if updated {
+			newCfgBytes, err := json.MarshalIndent(appCfg, "", "  ")
+			if err != nil {
+				log.Error("Failed to marshal updated app config", "path", cfgPath, "error", err)
+			} else if err := os.WriteFile(cfgPath, newCfgBytes, 0644); err != nil {
+				log.Error("Failed to write updated app config", "path", cfgPath, "error", err)
+			}
+		}
+	}
+
+	// -----------------------------------------------------------------
+	// 3.2 Update ExtensionValues in apps slice to use new IDs created
+	//     in the first pass. Without this step, the restore payload
+	//     may still reference obsolete application IDs because the
+	//     apps slice was populated before cross-reference rewriting.
+	// -----------------------------------------------------------------
+	for i := range apps {
+		for j := range apps[i].ExtensionValues {
+			if newID, ok := oldToNewIDs[apps[i].ExtensionValues[j].ExtensionAppID]; ok {
+				apps[i].ExtensionValues[j].ExtensionAppID = newID
+			}
+		}
 	}
 
 	// No apps found – nothing to send.
 	if len(apps) == 0 {
-		fmt.Errorf("No application templates found – restore finished")
+		log.Info("No application templates found - restore finished")
 		return nil
 	}
 
@@ -248,7 +348,7 @@ func RestoreAgentData(configPath string) error {
 	}
 
 	url := fmt.Sprintf("%s/api/v1/data/restore", cfg.GetAPIBaseURL())
-	fmt.Println("Sending restore request", "url", url, "payload", string(jsonBody))
+	log.Info("Sending restore request", "url", url)
 
 	httpClient := &http.Client{Timeout: 15 * time.Second}
 	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonBody))
@@ -269,7 +369,7 @@ func RestoreAgentData(configPath string) error {
 		return fmt.Errorf("server responded with %d: %s", resp.StatusCode, string(body))
 	}
 
-	fmt.Println("Restore completed successfully")
+	log.Info("Restore completed successfully")
 	return nil
 }
 

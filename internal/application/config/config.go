@@ -49,7 +49,7 @@ const (
 	appsTemplatesFolder = "apps_templates"
 
 	// Apps versions
-	appsKeepVersions = 3
+	appsKeepRevisions = 3
 
 	// certificatesFolder is the default directory path for storing certificates.
 	certificatesFolder = ".certs"
@@ -326,7 +326,7 @@ func (c *Config) GetGitHubReleasesURL() string {
 	return gitHubReleasesURL
 }
 
-// GetKeepAppVersions returns the number of application versions to keep.
-func (c *Config) GetKeepAppVersions() int {
-	return appsKeepVersions
+// GetKeepAppRevisions returns the number of application revisions to keep.
+func (c *Config) GetKeepAppRevisions() int {
+	return appsKeepRevisions
 }

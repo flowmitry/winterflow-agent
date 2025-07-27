@@ -15,7 +15,7 @@ import (
 
 func RegisterQueryHandlers(b cqrs.QueryBus, config *config.Config, appRepository repository.AppRepository, registryRepository repository.DockerRegistryRepository, networkRepository repository.DockerNetworkRepository) error {
 	// Initialise the service responsible for application versions.
-	versionService := appservice.NewAppVersionService(config)
+	versionService := appservice.NewRevisionService(config)
 
 	if err := b.Register(get_app.NewGetAppQueryHandler(versionService)); err != nil {
 		return log.Errorf("failed to register get app query handler", "error", err)

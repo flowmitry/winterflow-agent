@@ -11,54 +11,41 @@ import (
 	"winterflow-agent/internal/domain/service/util"
 )
 
-// AppVersionServiceInterface defines the contract for app version operations
-type AppVersionServiceInterface interface {
-	// GetAppVersions retrieves all available versions for a given app ID
-	GetAppVersions(appID string) ([]uint32, error)
+type RevisionServiceInterface interface {
+	GetAppRevisions(appID string) ([]uint32, error)
 
-	// ValidateAppVersion checks if a specific version exists for an app
-	ValidateAppVersion(appID string, version uint32) (bool, error)
+	ValidateAppRevision(appID string, revision uint32) (bool, error)
 
-	// DeleteAppVersion deletes a specific version for an app
-	DeleteAppVersion(appID string, version uint32) error
+	DeleteAppRevision(appID string, revision uint32) error
 
-	// DeleteOldVersions deletes old versions of an app, keeping only the specified number of recent versions
-	DeleteOldVersions(appID string) error
+	DeleteOldRevisions(appID string) error
 
-	// CreateVersion creates a new version by copying the latest available version
-	CreateVersion(appID string) (uint32, error)
+	CreateRevision(appID string) (uint32, error)
 
-	// GetLatestAppVersion returns the most recent (highest) available version for the given app.
-	// If the application has no versions yet, it returns 0 and no error.
-	GetLatestAppVersion(appID string) (uint32, error)
+	GetLatestAppRevision(appID string) (uint32, error)
 
-	// GetVersionDir returns the absolute path to a specific version directory for an app.
-	GetVersionDir(appID string, version uint32) string
+	GetRevisionDir(appID string, revision uint32) string
 
-	// GetVarsDir returns the absolute path to the vars directory for a specific app version.
-	GetVarsDir(appID string, version uint32) string
+	GetVarsDir(appID string, revision uint32) string
 
-	// GetFilesDir returns the absolute path to the files directory for a specific app version.
-	GetFilesDir(appID string, version uint32) string
+	GetFilesDir(appID string, revision uint32) string
 }
 
-// AppVersionService provides functionality to retrieve app versions
-type AppVersionService struct {
+type RevisionService struct {
 	config *config.Config
 }
 
-// Ensure AppVersionService implements AppVersionServiceInterface
-var _ AppVersionServiceInterface = (*AppVersionService)(nil)
+// Ensure RevisionService implements RevisionServiceInterface
+var _ RevisionServiceInterface = (*RevisionService)(nil)
 
-// NewAppVersionService creates a new AppVersionService
-func NewAppVersionService(config *config.Config) *AppVersionService {
-	return &AppVersionService{
+// NewRevisionService creates a new RevisionService
+func NewRevisionService(config *config.Config) *RevisionService {
+	return &RevisionService{
 		config: config,
 	}
 }
 
-// GetAppVersions retrieves all available versions for a given app ID
-func (s *AppVersionService) GetAppVersions(appID string) ([]uint32, error) {
+func (s *RevisionService) GetAppRevisions(appID string) ([]uint32, error) {
 	appDir := filepath.Join(s.config.GetAppsTemplatesPath(), appID)
 
 	// Check if the app directory exists
@@ -66,54 +53,53 @@ func (s *AppVersionService) GetAppVersions(appID string) ([]uint32, error) {
 		return []uint32{}, nil // Return empty slice if app doesn't exist
 	}
 
-	// Read the app directory to get version folders
+	// Read the app directory to get revision folders
 	entries, err := os.ReadDir(appDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read app directory %s: %w", appDir, err)
 	}
 
-	var versions []uint32
+	var revisions []uint32
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue // Skip non-directory entries
 		}
 
-		versionStr := entry.Name()
+		revisionStr := entry.Name()
 
-		// Try to parse the version as a number
-		version, err := strconv.ParseUint(versionStr, 10, 32)
+		// Try to parse the revision as a number
+		revision, err := strconv.ParseUint(revisionStr, 10, 32)
 		if err != nil {
-			// Skip non-numeric version folders
+			// Skip non-numeric revision folders
 			continue
 		}
 
-		// Check if the version directory contains a config.json file
-		configPath := filepath.Join(appDir, versionStr, "config.json")
+		// Check if the revision directory contains a config.json file
+		configPath := filepath.Join(appDir, revisionStr, "config.json")
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
-			// Skip version directories without config.json
+			// Skip revision directories without config.json
 			continue
 		}
 
-		versions = append(versions, uint32(version))
+		revisions = append(revisions, uint32(revision))
 	}
 
-	// Sort versions in ascending order
-	sort.Slice(versions, func(i, j int) bool {
-		return versions[i] < versions[j]
+	// Sort revisions in ascending order
+	sort.Slice(revisions, func(i, j int) bool {
+		return revisions[i] < revisions[j]
 	})
 
-	return versions, nil
+	return revisions, nil
 }
 
-// ValidateAppVersion checks if a specific version exists for an app
-func (s *AppVersionService) ValidateAppVersion(appID string, version uint32) (bool, error) {
-	versions, err := s.GetAppVersions(appID)
+func (s *RevisionService) ValidateAppRevision(appID string, revision uint32) (bool, error) {
+	revisions, err := s.GetAppRevisions(appID)
 	if err != nil {
 		return false, err
 	}
 
-	for _, v := range versions {
-		if v == version {
+	for _, v := range revisions {
+		if v == revision {
 			return true, nil
 		}
 	}
@@ -121,92 +107,87 @@ func (s *AppVersionService) ValidateAppVersion(appID string, version uint32) (bo
 	return false, nil
 }
 
-// DeleteAppVersion deletes a specific version for an app
-func (s *AppVersionService) DeleteAppVersion(appID string, version uint32) error {
-	// First validate that the version exists
-	exists, err := s.ValidateAppVersion(appID, version)
+func (s *RevisionService) DeleteAppRevision(appID string, revision uint32) error {
+	// First validate that the revision exists
+	exists, err := s.ValidateAppRevision(appID, revision)
 	if err != nil {
-		return fmt.Errorf("failed to validate app version: %w", err)
+		return fmt.Errorf("failed to validate app revision: %w", err)
 	}
 
 	if !exists {
-		return fmt.Errorf("version %d does not exist for app %s", version, appID)
+		return fmt.Errorf("revision %d does not exist for app %s", revision, appID)
 	}
 
-	// Construct the version directory path
-	versionDir := filepath.Join(s.config.GetAppsTemplatesPath(), appID, fmt.Sprintf("%d", version))
+	// Construct the revision directory path
+	revisionDir := filepath.Join(s.config.GetAppsTemplatesPath(), appID, fmt.Sprintf("%d", revision))
 
-	// Remove the version directory and all its contents
-	err = os.RemoveAll(versionDir)
+	// Remove the revision directory and all its contents
+	err = os.RemoveAll(revisionDir)
 	if err != nil {
-		return fmt.Errorf("failed to delete version directory %s: %w", versionDir, err)
+		return fmt.Errorf("failed to delete revision directory %s: %w", revisionDir, err)
 	}
 
 	return nil
 }
 
-// DeleteOldVersions deletes old versions of an app, keeping only the specified number of recent versions
-func (s *AppVersionService) DeleteOldVersions(appID string) error {
-	// Get all available versions for the app
-	versions, err := s.GetAppVersions(appID)
+func (s *RevisionService) DeleteOldRevisions(appID string) error {
+	revisions, err := s.GetAppRevisions(appID)
 	if err != nil {
-		return fmt.Errorf("failed to get app versions for %s: %w", appID, err)
+		return fmt.Errorf("failed to get app revisions for %s: %w", appID, err)
 	}
 
-	// If we have fewer versions than the keep limit, no need to delete anything
-	keepVersions := s.config.GetKeepAppVersions()
-	if len(versions) <= keepVersions {
+	// If we have fewer revisions than the keep limit, no need to delete anything
+	keepAppRevisions := s.config.GetKeepAppRevisions()
+	if len(revisions) <= keepAppRevisions {
 		return nil
 	}
 
-	// Sort versions in descending order (newest first)
-	sort.Slice(versions, func(i, j int) bool {
-		return versions[i] > versions[j]
+	// Sort revisions in descending order (newest first)
+	sort.Slice(revisions, func(i, j int) bool {
+		return revisions[i] > revisions[j]
 	})
 
-	// Calculate how many versions to delete
-	versionsToDelete := len(versions) - keepVersions
+	// Calculate how many revisions to delete
+	revisionsToDelete := len(revisions) - keepAppRevisions
 
-	// Delete the oldest versions (they are at the end of the sorted slice)
-	for i := 0; i < versionsToDelete; i++ {
-		versionToDelete := versions[len(versions)-1-i] // Get the oldest version
-		err := s.DeleteAppVersion(appID, versionToDelete)
+	// Delete the oldest revisions (they are at the end of the sorted slice)
+	for i := 0; i < revisionsToDelete; i++ {
+		revisionToDelete := revisions[len(revisions)-1-i] // Get the oldest revision
+		err := s.DeleteAppRevision(appID, revisionToDelete)
 		if err != nil {
-			return fmt.Errorf("failed to delete version %d for app %s: %w", versionToDelete, appID, err)
+			return fmt.Errorf("failed to delete revision %d for app %s: %w", revisionToDelete, appID, err)
 		}
 	}
 
 	return nil
 }
 
-// CreateVersion creates a new version by copying the latest available version
-func (s *AppVersionService) CreateVersion(appID string) (uint32, error) {
-	// Determine the latest existing version for the app.
-	latestVersion, err := s.GetLatestAppVersion(appID)
+func (s *RevisionService) CreateRevision(appID string) (uint32, error) {
+	// Determine the latest existing revision for the app.
+	latestRevision, err := s.GetLatestAppRevision(appID)
 	if err != nil {
-		return 0, fmt.Errorf("failed to determine latest version for %s: %w", appID, err)
+		return 0, fmt.Errorf("failed to determine latest revision for %s: %w", appID, err)
 	}
 
-	// If there are no versions yet, bootstrap the first one.
-	if latestVersion == 0 {
-		return s.createFirstVersion(appID)
+	// If there are no revisions yet, bootstrap the first one.
+	if latestRevision == 0 {
+		return s.createFirstRevision(appID)
 	}
 
-	// Build source (latest) and destination (new) version paths.
-	sourceDir := filepath.Join(s.config.GetAppsTemplatesPath(), appID, fmt.Sprintf("%d", latestVersion))
-	newVersion := latestVersion + 1
-	destDir := filepath.Join(s.config.GetAppsTemplatesPath(), appID, fmt.Sprintf("%d", newVersion))
+	// Build source (latest) and destination (new) revision paths.
+	sourceDir := filepath.Join(s.config.GetAppsTemplatesPath(), appID, fmt.Sprintf("%d", latestRevision))
+	newRevision := latestRevision + 1
+	destDir := filepath.Join(s.config.GetAppsTemplatesPath(), appID, fmt.Sprintf("%d", newRevision))
 
-	// Copy the directory recursively to create the new version.
+	// Copy the directory recursively to create the new revision.
 	if err := util.CopyDirectory(sourceDir, destDir); err != nil {
-		return 0, fmt.Errorf("failed to create new version: %w", err)
+		return 0, fmt.Errorf("failed to create new revision: %w", err)
 	}
 
-	return newVersion, nil
+	return newRevision, nil
 }
 
-// createFirstVersion creates the first version (version 1) for an app
-func (s *AppVersionService) createFirstVersion(appID string) (uint32, error) {
+func (s *RevisionService) createFirstRevision(appID string) (uint32, error) {
 	// Create the app directory if it doesn't exist
 	appDir := filepath.Join(s.config.GetAppsTemplatesPath(), appID)
 	err := os.MkdirAll(appDir, 0755)
@@ -214,22 +195,22 @@ func (s *AppVersionService) createFirstVersion(appID string) (uint32, error) {
 		return 0, fmt.Errorf("failed to create app directory %s: %w", appDir, err)
 	}
 
-	// Create the first version directory
-	firstVersionDir := filepath.Join(appDir, "1")
-	err = os.MkdirAll(firstVersionDir, 0755)
+	// Create the first revision directory
+	firstRevisionDir := filepath.Join(appDir, "1")
+	err = os.MkdirAll(firstRevisionDir, 0755)
 	if err != nil {
-		return 0, fmt.Errorf("failed to create first version directory %s: %w", firstVersionDir, err)
+		return 0, fmt.Errorf("failed to create first revision directory %s: %w", firstRevisionDir, err)
 	}
 
 	// Create files directory
-	filesDir := filepath.Join(firstVersionDir, "files")
+	filesDir := filepath.Join(firstRevisionDir, "files")
 	err = os.MkdirAll(filesDir, 0755)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create files directory %s: %w", filesDir, err)
 	}
 
 	// Create vars directory
-	varsDir := filepath.Join(firstVersionDir, "vars")
+	varsDir := filepath.Join(firstRevisionDir, "vars")
 	err = os.MkdirAll(varsDir, 0755)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create vars directory %s: %w", varsDir, err)
@@ -249,7 +230,7 @@ func (s *AppVersionService) createFirstVersion(appID string) (uint32, error) {
 	}
 
 	// Create a basic config.json file
-	configPath := filepath.Join(firstVersionDir, "config.json")
+	configPath := filepath.Join(firstRevisionDir, "config.json")
 	basicConfig := map[string]interface{}{
 		"id":        appID,
 		"name":      "",
@@ -270,38 +251,35 @@ func (s *AppVersionService) createFirstVersion(appID string) (uint32, error) {
 	return 1, nil
 }
 
-// GetLatestAppVersion returns the most recent (highest) available version for the given app.
-// If the application has no versions yet, it returns 0 and no error.
-func (s *AppVersionService) GetLatestAppVersion(appID string) (uint32, error) {
-	// Obtain the list of all existing versions for the application. The helper
+func (s *RevisionService) GetLatestAppRevision(appID string) (uint32, error) {
+	// Obtain the list of all existing revisions for the application. The helper
 	// already filters out invalid directories so we can rely on its output.
-	versions, err := s.GetAppVersions(appID)
+	revisions, err := s.GetAppRevisions(appID)
 	if err != nil {
 		return 0, err
 	}
 
-	// When no versions are found we treat this as an error condition so that
+	// When no revisions are found we treat this as an error condition so that
 	// callers are forced to handle the un-initialised state explicitly.
-	if len(versions) == 0 {
+	if len(revisions) == 0 {
 		return 0, nil
 	}
 
-	// Versions slice is sorted in ascending order, therefore the last element
-	// represents the most recent version.
-	return versions[len(versions)-1], nil
+	// Revisions slice is sorted in ascending order, therefore the last element
+	// represents the most recent revision.
+	return revisions[len(revisions)-1], nil
 }
 
-// New methods for constructing version paths.
-func (s *AppVersionService) GetVersionDir(appID string, version uint32) string {
-	return filepath.Join(s.config.GetAppsTemplatesPath(), appID, fmt.Sprintf("%d", version))
+func (s *RevisionService) GetRevisionDir(appID string, revision uint32) string {
+	return filepath.Join(s.config.GetAppsTemplatesPath(), appID, fmt.Sprintf("%d", revision))
 }
 
-// GetVarsDir returns the vars/ directory within a specific version.
-func (s *AppVersionService) GetVarsDir(appID string, version uint32) string {
-	return filepath.Join(s.GetVersionDir(appID, version), "vars")
+// GetVarsDir returns the vars/ directory within a specific revision.
+func (s *RevisionService) GetVarsDir(appID string, revision uint32) string {
+	return filepath.Join(s.GetRevisionDir(appID, revision), "vars")
 }
 
-// GetFilesDir returns the files/ directory within a specific version.
-func (s *AppVersionService) GetFilesDir(appID string, version uint32) string {
-	return filepath.Join(s.GetVersionDir(appID, version), "files")
+// GetFilesDir returns the files/ directory within a specific revision.
+func (s *RevisionService) GetFilesDir(appID string, revision uint32) string {
+	return filepath.Join(s.GetRevisionDir(appID, revision), "files")
 }

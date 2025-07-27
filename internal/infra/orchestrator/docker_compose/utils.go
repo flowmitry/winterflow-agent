@@ -40,7 +40,7 @@ func ensureDir(path string) error {
 }
 
 // getAppName determines the human-readable application name by inspecting the
-// config.json stored in the latest version directory.
+// config.json stored in the latest revision directory.
 //
 // The function falls back to returning appID when it cannot reliably detect a
 // name (e.g. missing config.json or empty name field). This preserves previous
@@ -48,12 +48,12 @@ func ensureDir(path string) error {
 func (r *composeRepository) getAppNameById(appID string) (string, error) {
 	// Instantiate the version service on-demand – the constructor is cheap and
 	// avoids having to store another dependency inside the repository struct.
-	versionService := appsvc.NewAppVersionService(r.config)
+	versionService := appsvc.NewRevisionService(r.config)
 
 	// Always work with the latest version of the application. If no version
 	// exists yet we fall back to 1 (legacy default) to keep compatibility with
 	// older deployments that did not support versioning.
-	latest, err := versionService.GetLatestAppVersion(appID)
+	latest, err := versionService.GetLatestAppRevision(appID)
 	if err != nil {
 		return appID, fmt.Errorf("failed to determine latest version for app %s: %w", appID, err)
 	}
@@ -63,7 +63,7 @@ func (r *composeRepository) getAppNameById(appID string) (string, error) {
 	}
 	version := latest
 
-	return getAppName(versionService.GetVersionDir(appID, version))
+	return getAppName(versionService.GetRevisionDir(appID, version))
 }
 
 func (r *composeRepository) getAppName(appPath string) (string, error) {
@@ -117,19 +117,19 @@ func (r *composeRepository) removeDeployedFiles(baseDir string, oldCfg, newCfg *
 	newFiles := make(map[string]struct{})
 	if newCfg != nil {
 		for _, nf := range newCfg.Files {
-			newFiles[nf.Filename] = struct{}{}
+			newFiles[nf.Name] = struct{}{}
 		}
 	}
 
 	for _, f := range oldCfg.Files {
 		// If the file is still present in the new configuration, keep it.
-		if _, keep := newFiles[f.Filename]; keep {
+		if _, keep := newFiles[f.Name]; keep {
 			continue
 		}
 
-		rel, err := sanitizeFileRelPath(f.Filename)
+		rel, err := sanitizeFileRelPath(f.Name)
 		if err != nil {
-			log.Warn("[Cleanup] skipping invalid filename", "filename", f.Filename, "error", err)
+			log.Warn("[Cleanup] skipping invalid filename", "filename", f.Name, "error", err)
 			continue
 		}
 

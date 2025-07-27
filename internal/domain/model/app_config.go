@@ -5,20 +5,28 @@ import (
 	"fmt"
 )
 
+type ExtensionValue struct {
+	Extension      string `json:"extension"`
+	ExtensionAppID string `json:"extension_app_id"`
+}
+
 // AppConfig represents the configuration of an app
 type AppConfig struct {
-	ID        string        `json:"id"`
-	Name      string        `json:"name"`
-	Icon      string        `json:"icon"`
-	Color     string        `json:"color"`
-	Files     []AppFile     `json:"files"`
-	Variables []AppVariable `json:"variables"`
+	ID              string           `json:"id"`
+	Name            string           `json:"name"`
+	Icon            string           `json:"icon"`
+	TemplateID      string           `json:"template_id"`
+	Version         string           `json:"version"`
+	Color           string           `json:"color"`
+	Files           []AppFile        `json:"files"`
+	Variables       []AppVariable    `json:"variables"`
+	ExtensionValues []ExtensionValue `json:"extension_values"`
 }
 
 // AppFile represents a file in the app configuration
 type AppFile struct {
 	ID          string      `json:"id"`
-	Filename    string      `json:"filename"`
+	Name        string      `json:"name"`
 	IsEncrypted bool        `json:"is_encrypted"`
 	Type        ContentType `json:"type"`
 }
@@ -35,13 +43,15 @@ type ContentType string
 
 const (
 	ContentTypeTemplate ContentType = "template"
+	ContentTypeConstant ContentType = "constant"
+	ContentTypeSystem   ContentType = "system"
 	ContentTypeUser     ContentType = "user"
 	ContentTypeExpose   ContentType = "expose"
 )
 
 func (ct ContentType) Validate() error {
 	switch ct {
-	case ContentTypeTemplate, ContentTypeUser, ContentTypeExpose:
+	case ContentTypeTemplate, ContentTypeConstant, ContentTypeSystem, ContentTypeUser, ContentTypeExpose:
 		return nil
 	default:
 		return fmt.Errorf("invalid content type: %s", ct)
