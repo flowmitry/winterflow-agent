@@ -8,6 +8,14 @@ import (
 	"winterflow-agent/pkg/log"
 )
 
+// composeExtensionFiles holds all allowed compose file extensions such as
+// "compose.<extension>.yml". The slice can be extended as new compose
+// variants are introduced. The order is preserved when constructing the
+// final -f arguments.
+var composeExtensionFiles = []string{
+	"expose", // compose.expose.yml
+}
+
 // composeUp performs `docker compose up -d` in the provided directory.
 func (r *composeRepository) composeUp(appDir string) error {
 	files, err := r.detectComposeFiles(appDir)
@@ -68,27 +76,47 @@ func (r *composeRepository) composePull(appDir string) error {
 
 // detectComposeFiles mimics the original playbook logic to decide which compose files to use.
 func (r *composeRepository) detectComposeFiles(appDir string) ([]string, error) {
+	// Base compose files recognised by Docker by default
+	dockerCompose := filepath.Join(appDir, "docker-compose.yml")
 	compose := filepath.Join(appDir, "compose.yml")
-	expose := filepath.Join(appDir, "compose.expose.yml")
-	override := filepath.Join(appDir, "compose.override.yml")
 
+	dockerExists := fileExists(dockerCompose)
 	composeExists := fileExists(compose)
-	exposeExists := fileExists(expose)
-	overrideExists := fileExists(override)
 
-	switch {
-	case composeExists && exposeExists && overrideExists:
-		return []string{compose, expose, override}, nil
-	case composeExists && exposeExists:
-		return []string{compose, expose}, nil
-	case composeExists && overrideExists:
-		return []string{compose, override}, nil
-	case composeExists:
-		// With only compose.yml docker automatically detects it – return nil slice.
-		return nil, nil
-	default:
-		return nil, fmt.Errorf("no compose file found in %s", appDir)
+	if !dockerExists && !composeExists {
+		return nil, fmt.Errorf("neither docker-compose.yml nor compose.yml found in %s", appDir)
 	}
+
+	// Collect extension compose files if present
+	var extraFiles []string
+	for _, ext := range composeExtensionFiles {
+		candidate := filepath.Join(appDir, fmt.Sprintf("compose.%s.yml", ext))
+		if fileExists(candidate) {
+			extraFiles = append(extraFiles, candidate)
+		}
+	}
+
+	// Optional override file should be last so it can supersede previous ones
+	override := filepath.Join(appDir, "compose.override.yml")
+	if fileExists(override) {
+		extraFiles = append(extraFiles, override)
+	}
+
+	// If no additional files are found, rely on Docker's implicit file detection.
+	if len(extraFiles) == 0 {
+		return nil, nil
+	}
+
+	// When additional files are present we must explicitly specify the base file first.
+	var files []string
+	if dockerExists {
+		files = append(files, dockerCompose)
+	} else {
+		files = append(files, compose)
+	}
+	files = append(files, extraFiles...)
+
+	return files, nil
 }
 
 // buildComposeFileArgs converts file list into `-f file` CLI arguments.
