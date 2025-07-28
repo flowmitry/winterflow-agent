@@ -41,8 +41,6 @@ const (
 	defaultGRPCServerAddress = "grpc.winterflow.io:50051"
 	// defaultAPIBaseURL is the default HTTP API server URL for web interface
 	defaultAPIBaseURL = "https://app.winterflow.io"
-	// defaultBasePath defines the default file system path used by the application for storing and accessing resources.
-	defaultBasePath = "/opt/winterflow"
 
 	// Apps folders
 	appsFolder          = "apps"
@@ -88,7 +86,7 @@ func prepareConfig(cfg *Config) {
 		cfg.AgentStatus = AgentStatusUnknown
 	}
 	if cfg.BasePath == "" {
-		cfg.BasePath = defaultBasePath
+		cfg.BasePath = filepath.Dir(os.Args[0])
 	}
 	if cfg.LogLevel == "" {
 		cfg.LogLevel = "info"
@@ -134,7 +132,7 @@ func NewConfig() *Config {
 	if basePath != "" {
 		config.BasePath = basePath
 	} else {
-		config.BasePath = defaultBasePath
+		config.BasePath = filepath.Dir(os.Args[0])
 	}
 
 	if orchestrator != "" {
