@@ -34,10 +34,23 @@ func (r *composeRepository) DeployApp(appID string) error {
 		return fmt.Errorf("role directory %s does not exist: %w", templateDir, err)
 	}
 
-	// If the application is already deployed, stop running containers before we re-render.
+	// If the application is already deployed, check if it's running and stop containers before we re-render.
 	if dirExists(outputDir) {
-		if err := r.composeDown(outputDir); err != nil {
-			return fmt.Errorf("failed to stop running containers before deployment: %w", err)
+		// Check if the service is running before attempting to stop it
+		statusResult, statusErr := r.GetAppStatus(appID)
+		containersAreRunning := false
+		if statusErr == nil && statusResult.App != nil {
+			code := statusResult.App.StatusCode
+			containersAreRunning = code != model.ContainerStatusStopped && code != model.ContainerStatusUnknown
+		} else if statusErr != nil {
+			log.Warn("Unable to determine app status before deployment", "app_id", appID, "error", statusErr)
+		}
+
+		// Only stop containers if they are running
+		if containersAreRunning {
+			if err := r.composeDown(outputDir); err != nil {
+				return fmt.Errorf("failed to stop running containers before deployment: %w", err)
+			}
 		}
 	}
 
