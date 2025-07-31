@@ -3,7 +3,7 @@ module winterflow-agent
 go 1.24.0
 
 require (
-	github.com/docker/docker v28.2.2+incompatible
+	github.com/docker/docker v28.3.3+incompatible
 	github.com/google/uuid v1.6.0
 	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.36.6
