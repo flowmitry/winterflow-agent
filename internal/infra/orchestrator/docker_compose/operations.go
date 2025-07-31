@@ -181,14 +181,50 @@ func (r *composeRepository) UpdateApp(appID string) error {
 	return nil
 }
 
-// DeleteApp stops containers (ignoring errors) – additional cleanup is handled elsewhere.
+// DeleteApp stops containers and removes the application directory.
 func (r *composeRepository) DeleteApp(appID string) error {
+	// Ensure the base applications directory exists.
 	if err := ensureDir(r.config.GetAppsPath()); err != nil {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
-	_ = r.StopApp(appID)
-	log.Debug("[Delete] stopping app completed", "app_id", appID)
-	log.Info("[Delete] docker compose cleanup completed", "app_id", appID)
+
+	// Get the app name from the app ID
+	appName, err := r.getAppNameById(appID)
+	if err != nil {
+		return fmt.Errorf("cannot delete app: %w", err)
+	}
+
+	appDir := filepath.Join(r.config.GetAppsPath(), appName)
+
+	// Check if the app directory exists
+	if !dirExists(appDir) {
+		log.Warn("[Delete] app directory does not exist, skipping", "app_id", appID, "app_dir", appDir)
+		return nil
+	}
+
+	// Check if containers are running before attempting to stop them
+	statusResult, statusErr := r.GetAppStatus(appID)
+	containersAreRunning := false
+	if statusErr == nil && statusResult.App != nil {
+		code := statusResult.App.StatusCode
+		containersAreRunning = code != model.ContainerStatusStopped && code != model.ContainerStatusUnknown
+	} else if statusErr != nil {
+		log.Warn("Unable to determine app status before deletion", "app_id", appID, "error", statusErr)
+	}
+
+	// Only attempt to stop containers if they are running
+	if containersAreRunning {
+		if err := r.StopApp(appID); err != nil {
+			log.Warn("Failed to stop app before deletion, continuing with removal", "app_id", appID, "error", err)
+		}
+	}
+
+	// Remove the app directory
+	if err := os.RemoveAll(appDir); err != nil {
+		return fmt.Errorf("failed to delete app directory for app ID %s: %w", appID, err)
+	}
+
+	log.Info("[Delete] successfully deleted app", "app_id", appID)
 	return nil
 }
 
