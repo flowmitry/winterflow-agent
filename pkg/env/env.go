@@ -49,9 +49,17 @@ func Save(path string, vars map[string]string) error {
 			v = strings.ReplaceAll(v, "\n", "\\n")
 			v = strings.ReplaceAll(v, "\r", "\\r")
 
-			// Escape internal backslashes and quotes before quoting the whole value.
-			v = strings.ReplaceAll(v, `\\`, `\\\\`)
-			v = strings.ReplaceAll(v, `"`, `\\"`)
+			// For Docker Compose compatibility, we need to ensure the value is properly quoted
+			// and doesn't contain any unescaped special characters that could confuse the parser.
+			// The safest approach is to wrap the value in double quotes and escape any internal quotes.
+
+			// First, escape any existing backslashes to prevent double-escaping
+			v = strings.ReplaceAll(v, `\`, `\\`)
+
+			// Then escape any double quotes
+			v = strings.ReplaceAll(v, `"`, `\"`)
+
+			// Finally, wrap the entire value in double quotes
 			v = fmt.Sprintf("\"%s\"", v)
 		}
 		if _, err := fmt.Fprintf(f, "%s=%s\n", k, v); err != nil {
