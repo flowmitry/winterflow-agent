@@ -41,7 +41,14 @@ func Save(path string, vars map[string]string) error {
 
 	for _, k := range keys {
 		v := vars[k]
-		if strings.ContainsAny(v, " \t\n\r#") {
+		// Check for any special characters that would require quoting
+		// This includes whitespace, quotes, and special characters like ?, =, etc.
+		if strings.ContainsAny(v, " \t\n\r#\"'?=&$,;:{}[]()\\") {
+			// Handle multiline values by replacing newlines with escaped versions
+			v = strings.ReplaceAll(v, "\r\n", "\\n")
+			v = strings.ReplaceAll(v, "\n", "\\n")
+			v = strings.ReplaceAll(v, "\r", "\\r")
+
 			// Escape internal backslashes and quotes before quoting the whole value.
 			v = strings.ReplaceAll(v, `\\`, `\\\\`)
 			v = strings.ReplaceAll(v, `"`, `\\"`)
