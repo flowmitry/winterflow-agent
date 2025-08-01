@@ -3,7 +3,6 @@ package docker_compose
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"winterflow-agent/internal/domain/model"
 	appsvc "winterflow-agent/internal/domain/service/app"
@@ -24,11 +23,7 @@ func (r *composeRepository) DeployApp(appID string) error {
 	}
 
 	templateDir := versionService.GetRevisionDir(appID, latest)
-	appName, err := r.getAppName(templateDir)
-	if err != nil {
-		return fmt.Errorf("cannot deploy app: %w", err)
-	}
-	outputDir := filepath.Join(r.config.GetAppsPath(), appName)
+	outputDir := r.getAppDir(appID)
 
 	if _, err := os.Stat(templateDir); err != nil {
 		return fmt.Errorf("role directory %s does not exist: %w", templateDir, err)
@@ -64,7 +59,7 @@ func (r *composeRepository) DeployApp(appID string) error {
 		return fmt.Errorf("docker compose up failed: %w", err)
 	}
 
-	log.Info("[Deploy] successfully deployed app", "app_id", appID, "app_name", appName, "version", latest)
+	log.Info("[Deploy] successfully deployed app", "app_id", appID, "version", latest)
 	return nil
 }
 
@@ -75,13 +70,8 @@ func (r *composeRepository) StartApp(appID string) error {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
 
-	// Resolve the human-readable application name from the latest version's config.
-	appName, err := r.getAppNameById(appID)
-	if err != nil {
-		// Could not resolve name – fall back to a full deploy which will surface a clearer error.
-		return r.DeployApp(appID)
-	}
-	outputDir := filepath.Join(r.config.GetAppsPath(), appName)
+	// Get the app directory path using the app ID directly
+	outputDir := r.getAppDir(appID)
 
 	// If the app hasn't been rendered yet, perform a full deploy (render + start).
 	if !dirExists(outputDir) {
@@ -103,11 +93,7 @@ func (r *composeRepository) StopApp(appID string) error {
 	if err := ensureDir(r.config.GetAppsPath()); err != nil {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
-	appName, err := r.getAppNameById(appID)
-	if err != nil {
-		return fmt.Errorf("cannot stop app: %w", err)
-	}
-	appDir := filepath.Join(r.config.GetAppsPath(), appName)
+	appDir := r.getAppDir(appID)
 
 	if _, err := os.Stat(appDir); err != nil {
 		if os.IsNotExist(err) {
@@ -132,12 +118,7 @@ func (r *composeRepository) RestartApp(appID string) error {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
 
-	appName, err := r.getAppNameById(appID)
-	if err != nil {
-		// If we cannot resolve the name it likely means the app hasn't been rendered yet – deploy it.
-		return r.DeployApp(appID)
-	}
-	appDir := filepath.Join(r.config.GetAppsPath(), appName)
+	appDir := r.getAppDir(appID)
 
 	// If the application directory does not exist, fall back to a full deploy (render + start).
 	if !dirExists(appDir) {
@@ -158,11 +139,7 @@ func (r *composeRepository) UpdateApp(appID string) error {
 	if err := ensureDir(r.config.GetAppsPath()); err != nil {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
-	appName, err := r.getAppNameById(appID)
-	if err != nil {
-		return fmt.Errorf("cannot update app: %w", err)
-	}
-	appDir := filepath.Join(r.config.GetAppsPath(), appName)
+	appDir := r.getAppDir(appID)
 	if _, err := os.Stat(appDir); err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("app directory %s does not exist", appDir)
@@ -188,13 +165,8 @@ func (r *composeRepository) DeleteApp(appID string) error {
 		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
 	}
 
-	// Get the app name from the app ID
-	appName, err := r.getAppNameById(appID)
-	if err != nil {
-		return fmt.Errorf("cannot delete app: %w", err)
-	}
-
-	appDir := filepath.Join(r.config.GetAppsPath(), appName)
+	// Get the app directory path using the app ID directly
+	appDir := r.getAppDir(appID)
 
 	// Check if the app directory exists
 	if !dirExists(appDir) {
@@ -225,63 +197,5 @@ func (r *composeRepository) DeleteApp(appID string) error {
 	}
 
 	log.Info("[Delete] successfully deleted app", "app_id", appID)
-	return nil
-}
-
-// RenameApp renames the compose project directory and restarts containers under the new name.
-func (r *composeRepository) RenameApp(appID, appName string) error {
-	if err := ensureDir(r.config.GetAppsPath()); err != nil {
-		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
-	}
-
-	oldName, err := r.getAppNameById(appID)
-	if err != nil {
-		return fmt.Errorf("cannot rename app: %w", err)
-	}
-
-	if oldName == appName {
-		return nil
-	}
-
-	oldDir := filepath.Join(r.config.GetAppsPath(), oldName)
-	if !dirExists(oldDir) {
-		return nil
-	}
-
-	newDir := filepath.Join(r.config.GetAppsPath(), appName)
-	if dirExists(newDir) {
-		return fmt.Errorf("target app directory %s already exists", newDir)
-	}
-
-	statusResult, statusErr := r.GetAppStatus(appID)
-	containersWereRunning := false
-	if statusErr == nil && statusResult.App != nil {
-		code := statusResult.App.StatusCode
-		containersWereRunning = code != model.ContainerStatusStopped && code != model.ContainerStatusUnknown
-	} else if statusErr != nil {
-		log.Warn("Unable to determine app status before rename", "app_id", appID, "error", statusErr)
-	}
-
-	// Always attempt to cleanly stop containers (if any) before the directory move
-	if err := r.composeDown(oldDir); err != nil {
-		return fmt.Errorf("failed to stop containers before rename: %w", err)
-	}
-
-	if err := os.Rename(oldDir, newDir); err != nil {
-		return fmt.Errorf("failed to rename app directory from %s to %s: %w", oldDir, newDir, err)
-	}
-
-	// Restart containers only when they were running prior to the rename.
-	if containersWereRunning {
-		if err := r.composeUp(newDir); err != nil {
-			return fmt.Errorf("failed to start containers after rename: %w", err)
-		}
-	}
-
-	if containersWereRunning {
-		log.Info("[Rename] successfully renamed and restarted app", "app_id", appID, "old_name", oldName, "new_name", appName)
-	} else {
-		log.Info("[Rename] successfully renamed app (was stopped)", "app_id", appID, "old_name", oldName, "new_name", appName)
-	}
 	return nil
 }

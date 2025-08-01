@@ -39,6 +39,12 @@ func ensureDir(path string) error {
 	return os.MkdirAll(path, 0o755) // Create with typical rwxr-xr-x permissions
 }
 
+// getAppDir returns the directory path for an app using its ID directly
+// This is used to store apps by their ID instead of name
+func (r *composeRepository) getAppDir(appID string) string {
+	return filepath.Join(r.config.GetAppsPath(), appID)
+}
+
 // getAppName determines the human-readable application name by inspecting the
 // config.json stored in the latest revision directory.
 //

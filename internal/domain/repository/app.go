@@ -27,9 +27,6 @@ type AppRepository interface {
 	// UpdateApp updates the specified application by its app ID and version.
 	UpdateApp(appID string) error
 
-	// RenameApp renames an application identified by the given appID and returns an error if the operation fails.
-	RenameApp(appID string, appName string) error
-
 	// DeleteApp removes an application identified by the provided appID.
 	DeleteApp(appID string) error
 

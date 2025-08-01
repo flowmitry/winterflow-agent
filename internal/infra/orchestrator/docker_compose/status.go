@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"winterflow-agent/internal/domain/model"
@@ -17,6 +16,10 @@ import (
 
 // GetAppStatus returns detailed information for a single application identified by appID.
 func (r *composeRepository) GetAppStatus(appID string) (model.GetAppStatusResult, error) {
+	// Get the app directory path using the app ID directly
+	appDir := r.getAppDir(appID)
+
+	// Still need to get the app name for logging and other purposes
 	appName, err := r.getAppNameById(appID)
 	if err != nil {
 		return model.GetAppStatusResult{}, fmt.Errorf("cannot get app status: %w", err)
@@ -25,7 +28,6 @@ func (r *composeRepository) GetAppStatus(appID string) (model.GetAppStatusResult
 
 	// Check if the application directory exists. This helps us distinguish between
 	// a stopped application (directory exists but no containers) and an unknown one.
-	appDir := filepath.Join(r.config.GetAppsPath(), appName)
 	appDirExists := dirExists(appDir)
 
 	// List containers that belong to the compose project.

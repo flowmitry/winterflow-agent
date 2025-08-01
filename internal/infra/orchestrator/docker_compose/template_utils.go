@@ -137,6 +137,10 @@ func (r *composeRepository) renderApp(appID, templateDir, destDir string) error 
 	}
 
 	// Generate .winterflow.env file so that compose commands can load variable values.
+	appName, err := r.getAppNameById(appID)
+	if err == nil {
+		vars["COMPOSE_PROJECT_NAME"] = appName
+	}
 	if err := writeEnvFile(destDir, vars); err != nil {
 		return fmt.Errorf("failed to write .winterflow.env: %w", err)
 	}

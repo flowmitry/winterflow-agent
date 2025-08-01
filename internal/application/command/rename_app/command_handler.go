@@ -64,13 +64,6 @@ func (h *RenameAppHandler) Handle(cmd RenameAppCommand) error {
 		return log.Errorf("failed to parse app config", "error", err)
 	}
 
-	// First, rename the container directory via the repository. This must happen BEFORE we
-	// change the config.json so that repository.getAppName() still returns the old name.
-	if err := h.repository.RenameApp(appID, newName); err != nil {
-		return log.Errorf("repository rename failed", "error", err)
-	}
-
-	// Now update config.json with the new name (if it actually changed).
 	if !strings.EqualFold(strings.TrimSpace(cfg.Name), newName) {
 		cfg.Name = newName
 		data, err := json.Marshal(cfg)
@@ -81,6 +74,10 @@ func (h *RenameAppHandler) Handle(cmd RenameAppCommand) error {
 			return log.Errorf("failed to write updated app config", "error", err)
 		}
 		log.Debug("Updated config.json with new application name", "path", configPath)
+
+		if err := h.repository.DeployApp(appID); err != nil {
+			return log.Errorf("repository rename failed", "error", err)
+		}
 	} else {
 		log.Info("[RenameApp] Name is unchanged – skipping config update", "app_id", appID)
 	}
