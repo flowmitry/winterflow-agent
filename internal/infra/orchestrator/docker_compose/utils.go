@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"winterflow-agent/internal/infra/orchestrator"
 
 	"winterflow-agent/internal/domain/model"
 	appsvc "winterflow-agent/internal/domain/service/app"
@@ -52,6 +53,11 @@ func (r *composeRepository) getAppDir(appID string) string {
 // name (e.g. missing config.json or empty name field). This preserves previous
 // behaviour where the app ID served as a safe default.
 func (r *composeRepository) getAppNameById(appID string) (string, error) {
+	appConfig, err := orchestrator.GetCurrentConfig(r.config, appID)
+	if err == nil {
+		return appConfig.Name, nil
+	}
+
 	// Instantiate the version service on-demand – the constructor is cheap and
 	// avoids having to store another dependency inside the repository struct.
 	versionService := appsvc.NewRevisionService(r.config)

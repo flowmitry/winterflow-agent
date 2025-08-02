@@ -19,7 +19,6 @@ func (r *composeRepository) GetAppStatus(appID string) (model.GetAppStatusResult
 	// Get the app directory path using the app ID directly
 	appDir := r.getAppDir(appID)
 
-	// Still need to get the app name for logging and other purposes
 	appName, err := r.getAppNameById(appID)
 	if err != nil {
 		return model.GetAppStatusResult{}, fmt.Errorf("cannot get app status: %w", err)

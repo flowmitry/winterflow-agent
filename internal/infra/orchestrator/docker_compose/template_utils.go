@@ -111,7 +111,7 @@ func (r *composeRepository) renderApp(appID, templateDir, destDir string) error 
 	}
 
 	// Remove files that belonged to the previously deployed version but are absent in the new one.
-	if currentCfg, errCfg := orchestrator.GetCurrentConfig(r.config.GetAppsTemplatesPath(), appID); errCfg == nil {
+	if currentCfg, errCfg := orchestrator.GetCurrentConfig(r.config, appID); errCfg == nil {
 		if err := r.removeDeployedFiles(destDir, currentCfg, newCfg); err != nil {
 			return fmt.Errorf("failed to remove previously deployed files: %w", err)
 		}
@@ -137,10 +137,8 @@ func (r *composeRepository) renderApp(appID, templateDir, destDir string) error 
 	}
 
 	// Generate .winterflow.env file so that compose commands can load variable values.
-	appName, err := r.getAppNameById(appID)
-	if err == nil {
-		vars["COMPOSE_PROJECT_NAME"] = appName
-	}
+	vars["COMPOSE_PROJECT_NAME"] = newCfg.Name
+	vars["_APP_NAME"] = newCfg.Name
 	if err := writeEnvFile(destDir, vars); err != nil {
 		return fmt.Errorf("failed to write .winterflow.env: %w", err)
 	}
@@ -149,6 +147,68 @@ func (r *composeRepository) renderApp(appID, templateDir, destDir string) error 
 	// quickly inspect the active version without having to resolve templateDir themselves.
 	if err := orchestrator.SaveCurrentConfigCopy(r.config, appID, templateDir); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (r *composeRepository) changeTemplateAppName(newName, templateDir string) error {
+	configPath := filepath.Join(templateDir, "config.json")
+	cfgBytes, err := os.ReadFile(configPath)
+	if err != nil {
+		return log.Errorf("failed to read app config", "error", err)
+	}
+
+	cfg, err := model.ParseAppConfig(cfgBytes)
+	if err != nil {
+		return log.Errorf("failed to parse app config", "error", err)
+	}
+
+	// Update the name in the config
+	cfg.Name = newName
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		return log.Errorf("failed to marshal updated app config", "error", err)
+	}
+	if err := os.WriteFile(configPath, data, 0o644); err != nil {
+		return log.Errorf("failed to write updated app config", "error", err)
+	}
+	log.Debug("Updated config.json with new application name", "path", configPath)
+
+	// Update value of _APP_NAME variable in values.json
+	valuesPath := filepath.Join(templateDir, "vars", "values.json")
+
+	// Check if values.json exists
+	if _, err := os.Stat(valuesPath); err == nil {
+		// Read the values.json file
+		valuesData, err := os.ReadFile(valuesPath)
+		if err != nil {
+			return log.Errorf("failed to read values.json", "error", err)
+		}
+
+		// Parse the JSON
+		var values map[string]interface{}
+		if err := json.Unmarshal(valuesData, &values); err != nil {
+			return log.Errorf("failed to parse values.json", "error", err)
+		}
+
+		// Update the _APP_NAME value
+		values["_APP_NAME"] = newName
+
+		// Marshal back to JSON
+		updatedValuesData, err := json.MarshalIndent(values, "", "  ")
+		if err != nil {
+			return log.Errorf("failed to marshal updated values.json", "error", err)
+		}
+
+		// Write the updated values.json file
+		if err := os.WriteFile(valuesPath, updatedValuesData, 0o644); err != nil {
+			return log.Errorf("failed to write updated values.json", "error", err)
+		}
+
+		log.Debug("Updated _APP_NAME in values.json", "path", valuesPath)
+	} else {
+		log.Debug("values.json not found, skipping _APP_NAME update", "path", valuesPath)
 	}
 
 	return nil

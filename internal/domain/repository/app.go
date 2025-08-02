@@ -13,6 +13,9 @@ type AppRepository interface {
 	GetAppsStatus() (model.GetAppsStatusResult, error)
 
 	// DeployApp deploys an application with the specified ID (deploys latest version)
+	// If startApp is true, it will run the app after deployment.
+	// If startApp is false and the app was running before deployment, it will run the app again.
+	// If startApp is false and the app was not running before deployment, it will not run the app.
 	DeployApp(appID string) error
 
 	// StartApp starts an application with the specified ID
@@ -29,6 +32,9 @@ type AppRepository interface {
 
 	// DeleteApp removes an application identified by the provided appID.
 	DeleteApp(appID string) error
+
+	// RenameApp renames an existing app identified by appID to the new name provided in newName. Returns an error on failure.
+	RenameApp(appID, newName string) error
 
 	// GetLogs retrieves logs for a specific application identified by appID.
 	// The time range is defined by unix timestamps (seconds) in the `since` and `until` parameters.

@@ -3,7 +3,6 @@ package docker_compose
 import (
 	"fmt"
 	"os"
-
 	"winterflow-agent/internal/domain/model"
 	appsvc "winterflow-agent/internal/domain/service/app"
 	"winterflow-agent/pkg/log"
@@ -197,5 +196,68 @@ func (r *composeRepository) DeleteApp(appID string) error {
 	}
 
 	log.Info("[Delete] successfully deleted app", "app_id", appID)
+	return nil
+}
+
+func (r *composeRepository) RenameApp(appID, newName string) error {
+	// Ensure the base applications directory exists before proceeding.
+	if err := ensureDir(r.config.GetAppsPath()); err != nil {
+		return fmt.Errorf("failed to ensure apps base directory exists: %w", err)
+	}
+
+	versionService := appsvc.NewRevisionService(r.config)
+	latest, err := versionService.GetLatestAppRevision(appID)
+	if err != nil {
+		return fmt.Errorf("failed to determine latest version for app %s: %w", appID, err)
+	}
+
+	templateDir := versionService.GetRevisionDir(appID, latest)
+
+	err = r.changeTemplateAppName(newName, templateDir)
+	if err != nil {
+		return fmt.Errorf("Failed to update a template revision: %w", err)
+	}
+
+	outputDir := r.getAppDir(appID)
+
+	if _, err := os.Stat(templateDir); err != nil {
+		return fmt.Errorf("role directory %s does not exist: %w", templateDir, err)
+	}
+
+	wasRunning := false
+
+	// If the application is already deployed, check if it's running and stop containers before we re-render.
+	if dirExists(outputDir) {
+		// Check if the service is running before attempting to stop it
+		statusResult, statusErr := r.GetAppStatus(appID)
+		containersAreRunning := false
+		if statusErr == nil && statusResult.App != nil {
+			code := statusResult.App.StatusCode
+			containersAreRunning = code != model.ContainerStatusStopped && code != model.ContainerStatusUnknown
+			wasRunning = containersAreRunning
+		} else if statusErr != nil {
+			log.Warn("Unable to determine app status before deployment", "app_id", appID, "error", statusErr)
+		}
+
+		// Only stop containers if they are running
+		if containersAreRunning {
+			if err := r.composeDown(outputDir); err != nil {
+				return fmt.Errorf("failed to stop running containers before deployment: %w", err)
+			}
+		}
+	}
+
+	// Render (or re-render) the application files on disk.
+	if err := r.renderApp(appID, templateDir, outputDir); err != nil {
+		return err
+	}
+
+	if wasRunning {
+		if err := r.composeUp(outputDir); err != nil {
+			return fmt.Errorf("docker compose up failed: %w", err)
+		}
+	}
+
+	log.Info("[Deploy] successfully renamed app", "app_id", appID, "version", latest, "template_dir", templateDir, "output_dir", outputDir, "wasRunning", wasRunning)
 	return nil
 }

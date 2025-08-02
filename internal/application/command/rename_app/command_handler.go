@@ -1,7 +1,6 @@
 package rename_app
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,47 +41,19 @@ func (h *RenameAppHandler) Handle(cmd RenameAppCommand) error {
 		return log.Errorf("application name is already in use by another app", "app_name", newName)
 	}
 
-	// Resolve the latest version directory via the version service.
-	latestVersion, err := h.VersionService.GetLatestAppRevision(appID)
+	// Create a new revision
+	newVersion, err := h.VersionService.CreateRevision(appID)
 	if err != nil {
-		return log.Errorf("failed to determine latest version for app", "app_id", appID, "error", err)
+		return log.Errorf("failed to create new revision for app", "app_id", appID, "error", err)
 	}
-	if latestVersion == 0 {
-		return log.Errorf("application does not have any versions yet", "app_id", appID)
-	}
+	log.Debug("Created new revision for app", "app_id", appID, "new_revision", newVersion)
 
-	configPath := filepath.Join(h.VersionService.GetRevisionDir(appID, latestVersion), "config.json")
-
-	// Read existing config.
-	cfgBytes, err := os.ReadFile(configPath)
-	if err != nil {
-		return log.Errorf("failed to read app config", "error", err)
+	// Re-Deploy the new revision
+	if err := h.repository.RenameApp(appID, newName); err != nil {
+		return log.Errorf("repository rename failed", "error", err)
 	}
 
-	cfg, err := model.ParseAppConfig(cfgBytes)
-	if err != nil {
-		return log.Errorf("failed to parse app config", "error", err)
-	}
-
-	if !strings.EqualFold(strings.TrimSpace(cfg.Name), newName) {
-		cfg.Name = newName
-		data, err := json.Marshal(cfg)
-		if err != nil {
-			return log.Errorf("failed to marshal updated app config", "error", err)
-		}
-		if err := os.WriteFile(configPath, data, 0o644); err != nil {
-			return log.Errorf("failed to write updated app config", "error", err)
-		}
-		log.Debug("Updated config.json with new application name", "path", configPath)
-
-		if err := h.repository.DeployApp(appID); err != nil {
-			return log.Errorf("repository rename failed", "error", err)
-		}
-	} else {
-		log.Info("[RenameApp] Name is unchanged – skipping config update", "app_id", appID)
-	}
-
-	log.Info("Successfully renamed app", "app_id", appID, "new_name", newName)
+	log.Info("Successfully renamed app", "app_id", appID, "new_name", newName, "new_revision", newVersion)
 	return nil
 }
 
