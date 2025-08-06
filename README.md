@@ -32,7 +32,8 @@ If you prefer to install manually or the automatic installation fails, follow th
 1. **Verify system requirements** and install dependencies
 2. **Create the winterflow user** and add it to the `docker` group
 3. **Create the installation directory**: `/opt/winterflow`
-4. **Download the agent binary** for your architecture from [GitHub Releases](https://github.com/flowmitry/winterflow-agent/releases) to `/opt/winterflow/agent`
+4. **Download the agent binary** for your architecture
+   from [GitHub Releases](https://github.com/winterflowio/winterflow-agent/releases) to `/opt/winterflow/agent`
 5. **Make the binary executable**: `chmod +x /opt/winterflow/agent`
 6. **Register your server**: `./agent --register`
 7. **Create and configure** the systemd service
@@ -136,4 +137,5 @@ The WinterFlow Agent uses the following directory structure:
 For support and documentation, visit:
 - **Web Application**: [https://app.winterflow.io](https://app.winterflow.io)
 - **Documentation**: [https://winterflow.io](https://winterflow.io)
-- **GitHub Repository**: [https://github.com/flowmitry/winterflow-agent](https://github.com/flowmitry/winterflow-agent)
+- **GitHub Repository
+  **: [https://github.com/winterflowio/winterflow-agent](https://github.com/winterflowio/winterflow-agent)

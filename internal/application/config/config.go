@@ -61,7 +61,7 @@ const (
 	agentCACertificateFile = "ca.crt"
 
 	// gitHubReleasesURL is the default URL for GitHub releases where agent binaries can be downloaded.
-	gitHubReleasesURL = "https://github.com/flowmitry/winterflow-agent/releases/download"
+	gitHubReleasesURL = "https://github.com/winterflowio/winterflow-agent/releases/download"
 )
 
 // Config holds the application configuration

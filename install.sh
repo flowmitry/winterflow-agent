@@ -11,7 +11,7 @@
 #   chmod +x winterflow-install.sh
 #   sudo ./winterflow-install.sh
 #
-# Source Code: https://github.com/flowmitry/winterflow-agent
+# Source Code: https://github.com/winterflowio/winterflow-agent
 # Website: https://winterflow.io
 
 # Exit on any error
@@ -39,7 +39,7 @@ CONFIG_FILE="${INSTALL_DIR}/agent.config.json"
 SERVICE_FILE="/etc/systemd/system/winterflow-agent.service"
 
 # URLs
-GITHUB_API="https://api.github.com/repos/flowmitry/winterflow-agent/releases"
+GITHUB_API="https://api.github.com/repos/winterflowio/winterflow-agent/releases"
 
 # Required packages (fail if not installed)
 REQUIRED_PACKAGES="curl"
