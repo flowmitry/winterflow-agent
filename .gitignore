@@ -9,6 +9,8 @@ apps
 # LLM
 .cursor*
 .junie*
+.clinerules
+.github/instructions
 
 # Binaries for programs and plugins
 *.exe

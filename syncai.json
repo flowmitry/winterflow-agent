@@ -1,0 +1,26 @@
+{
+  "config": {
+    "interval": 5,
+    "workdir": ""
+  },
+  "agents": [
+    {
+      "name": "cursor",
+      "rules": {
+        "pattern": ".cursor/rules/*.mdc"
+      }
+    },
+    {
+      "name": "copilot",
+      "rules": {
+        "pattern": ".github/instructions/*.instruction.md"
+      }
+    },
+    {
+      "name": "cline",
+      "rules": {
+        "pattern": ".clinerules/*.md"
+      }
+    }
+  ]
+}
