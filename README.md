@@ -72,14 +72,6 @@ If you re-install the agent, migrate the `/opt/winterflow` directory to a new ma
 ./agent --restore
 ```
 
-### Restoration Process
-
-1. **Backup creation** – A full copy of `apps_templates` is made to `apps_templates.bak`
-   - If the backup directory already exists, the command aborts to avoid overwriting previous data
-2. **UUID regeneration** – Every application ID is replaced with a fresh UUID to avoid collisions
-3. **Version pruning** – Only the newest version directory of each app is kept and renamed to `1` for consistency
-4. **Cloud notification** – Sent to WinterFlow server to recreate *all* applications
-
 If the server responds with `200 OK`, the restore has succeeded. All applications will appear in the dashboard moments later.
 
 ## Uninstallation
