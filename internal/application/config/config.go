@@ -71,7 +71,7 @@ type Config struct {
 	Features    map[string]bool `json:"features"`
 	// BasePath specifies the root directory used to store application-related files and configurations.
 	BasePath string `json:"base_path,omitempty"`
-	// LogLevel specifies the minimum log level to output (debug, info, warn, error).
+	// LogLevel specifies the minimum log level to output (debug, info, warn, error). Defaults to error.
 	LogLevel string `json:"log_level,omitempty"`
 	// Orchestrator specifies the orchestration platform or tool used for managing deployments and configurations.
 	Orchestrator OrchestratorType `json:"orchestrator,omitempty"`
@@ -89,7 +89,7 @@ func prepareConfig(cfg *Config) {
 		cfg.BasePath = filepath.Dir(os.Args[0])
 	}
 	if cfg.LogLevel == "" {
-		cfg.LogLevel = "info"
+		cfg.LogLevel = "error"
 	}
 	if cfg.Orchestrator == "" || !isValidOrchestratorType(cfg.Orchestrator) {
 		cfg.Orchestrator = defaultOrchestrator
