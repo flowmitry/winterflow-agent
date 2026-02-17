@@ -47,6 +47,10 @@ REQUIRED_PACKAGES="curl"
 # User settings
 USER="winterflow"
 
+# Systemd journald log rate limiting (runtime agent logs)
+LOG_RATE_LIMIT_INTERVAL="30s"
+LOG_RATE_LIMIT_BURST="200"
+
 # Temporary file for downloaded binary
 TEMP_AGENT_BINARY=""
 
@@ -343,6 +347,81 @@ handle_agent_binary() {
     return 0
 }
 
+# Function to ensure service logging directives are set while preserving other customizations.
+ensure_service_logging_directives() {
+    local temp_service_file
+    temp_service_file="$(mktemp)"
+
+    if ! awk \
+        -v standard_output="journal" \
+        -v standard_error="journal" \
+        -v rate_interval="${LOG_RATE_LIMIT_INTERVAL}" \
+        -v rate_burst="${LOG_RATE_LIMIT_BURST}" '
+        BEGIN {
+            in_service = 0
+            out_seen = 0
+            err_seen = 0
+            interval_seen = 0
+            burst_seen = 0
+        }
+        /^\[Service\]$/ {
+            in_service = 1
+            print
+            next
+        }
+        /^\[/ {
+            if (in_service == 1) {
+                if (out_seen == 0) print "StandardOutput=" standard_output
+                if (err_seen == 0) print "StandardError=" standard_error
+                if (interval_seen == 0) print "LogRateLimitIntervalSec=" rate_interval
+                if (burst_seen == 0) print "LogRateLimitBurst=" rate_burst
+                in_service = 0
+            }
+            print
+            next
+        }
+        {
+            if (in_service == 1) {
+                if ($0 ~ /^StandardOutput=/) {
+                    print "StandardOutput=" standard_output
+                    out_seen = 1
+                    next
+                }
+                if ($0 ~ /^StandardError=/) {
+                    print "StandardError=" standard_error
+                    err_seen = 1
+                    next
+                }
+                if ($0 ~ /^LogRateLimitIntervalSec=/) {
+                    print "LogRateLimitIntervalSec=" rate_interval
+                    interval_seen = 1
+                    next
+                }
+                if ($0 ~ /^LogRateLimitBurst=/) {
+                    print "LogRateLimitBurst=" rate_burst
+                    burst_seen = 1
+                    next
+                }
+            }
+            print
+        }
+        END {
+            if (in_service == 1) {
+                if (out_seen == 0) print "StandardOutput=" standard_output
+                if (err_seen == 0) print "StandardError=" standard_error
+                if (interval_seen == 0) print "LogRateLimitIntervalSec=" rate_interval
+                if (burst_seen == 0) print "LogRateLimitBurst=" rate_burst
+            }
+        }' "${SERVICE_FILE}" > "${temp_service_file}"; then
+        rm -f "${temp_service_file}"
+        log "error" "Failed to update service logging directives"
+        return 1
+    fi
+
+    mv "${temp_service_file}" "${SERVICE_FILE}"
+    return 0
+}
+
 # Function to manage systemd service
 manage_systemd_service() {
     local service_was_running="$1"
@@ -365,13 +444,19 @@ Group=${USER}
 WorkingDirectory=${INSTALL_DIR}
 StandardOutput=journal
 StandardError=journal
+LogRateLimitIntervalSec=${LOG_RATE_LIMIT_INTERVAL}
+LogRateLimitBurst=${LOG_RATE_LIMIT_BURST}
 SyslogIdentifier=winterflow-agent
 
 [Install]
 WantedBy=multi-user.target
 EOF
     else
-        log "info" "Systemd service file already exists, preserving existing configuration"
+        log "info" "Systemd service file already exists, refreshing managed logging directives"
+    fi
+
+    if ! ensure_service_logging_directives; then
+        return 1
     fi
 
     # Reload systemd
@@ -575,4 +660,3 @@ if ! run_agent_registration; then
 else
     log "info" "Installation and registration completed successfully!"
 fi
-

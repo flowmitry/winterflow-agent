@@ -23,8 +23,6 @@ func NewManager(configPath string) *Manager {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Create a sub-filesystem rooted at the "assets" directory so that the
-	// extracted file paths do not include the top-level "assets" prefix.
 	subFS, err := fs.Sub(certsFS, "assets")
 	if err != nil {
 		log.Fatalf("Failed to create sub filesystem for embedded certificates: %v", err)
@@ -35,7 +33,6 @@ func NewManager(configPath string) *Manager {
 	}
 }
 
-// SyncFiles synchronizes the certificate files using the embeddedManager's SyncFiles method.
 func (m *Manager) SyncFiles() error {
 	log.Debug("Syncing certificates")
 	return m.embeddedManager.SyncFiles()

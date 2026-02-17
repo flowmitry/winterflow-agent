@@ -58,6 +58,31 @@ sudo systemctl start|stop|restart|status winterflow-agent
 sudo journalctl -u winterflow-agent -f
 ```
 
+By default, the installed service applies journald rate limiting to runtime agent logs:
+- `LogRateLimitIntervalSec=30s`
+- `LogRateLimitBurst=200`
+
+To customize these limits, create a systemd override:
+
+```bash
+sudo systemctl edit winterflow-agent
+```
+
+Then add:
+
+```ini
+[Service]
+LogRateLimitIntervalSec=10s
+LogRateLimitBurst=100
+```
+
+Apply changes:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart winterflow-agent
+```
+
 ## Application Restoration
 
 If you re-install the agent, migrate the `/opt/winterflow` directory to a new machine, or re-register your agent, you can safely restore all application templates (not app's data).
